@@ -58,3 +58,51 @@ audit:
       cmd: npm
       args: ["test"]
 ```
+
+## Server lifecycle (runbook)
+
+```yaml
+version: 1
+audit:
+  server:
+    cmd: node
+    args: ["path/to/server.cjs"]
+    base_url: "http://127.0.0.1:3000"
+    readiness:
+      type: http
+      path: "/health"
+      timeout_ms: 8000
+      interval_ms: 200
+```
+
+## URL checks (public)
+
+```yaml
+version: 1
+audit:
+  urls:
+    expect: [200, 304]
+    public:
+      base_url: "http://127.0.0.1:3000"
+      list:
+        - path: "/"
+        - path: "/catalog"
+```
+
+Auth format reserved for Step7:
+
+```yaml
+audit:
+  urls:
+    auth:
+      base_url: "http://127.0.0.1:3000"
+      login:
+        type: form
+        path: /login
+        method: POST
+        fields:
+          email: test@example.com
+          password: testpass
+      list:
+        - path: /cabinet
+```

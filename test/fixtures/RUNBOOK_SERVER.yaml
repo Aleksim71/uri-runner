@@ -1,0 +1,11 @@
+version: 1
+audit:
+  server:
+    cmd: node
+    args: ["test/fixtures/http-server.cjs"]
+    base_url: "http://127.0.0.1:43123"
+    readiness:
+      type: http
+      path: "/health"
+      timeout_ms: 4000
+      interval_ms: 100
