@@ -6,6 +6,7 @@ const os = require("os");
 const { runCmd } = require("./exec.cjs");
 const { runChecks } = require("./checks.cjs");
 const { startServer, stopServer, waitHttpReadiness } = require("./server.cjs");
+const { runUrlChecksPublic } = require("./urls.cjs");
 
 const { unzipToDir, zipFiles } = require("./zip.cjs");
 const { readRunbook } = require("./runbook.cjs");
@@ -74,6 +75,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
   }
 
   try {
+    // 1) inbox exists
     if (!(await fs.pathExists(inboxPath))) {
       step("inbox.exists", false, { path: inboxPath });
       const err = new Error(`inbox not found: ${inboxPath}`);
@@ -82,10 +84,12 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
     }
     step("inbox.exists", true);
 
+    // 2) extract inbox
     await fs.remove(inboxDir);
     await unzipToDir(inboxPath, inboxDir);
     step("inbox.extract", true, { dir: inboxDir });
 
+    // 3) read runbook
     const runbookPath = path.join(inboxDir, "RUNBOOK.yaml");
     if (!(await fs.pathExists(runbookPath))) {
       step("runbook.exists", false);
@@ -93,24 +97,30 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       err.code = "RUNBOOK_MISSING";
       throw err;
     }
-
     const runbook = await readRunbook(runbookPath);
     step("runbook.read", true);
 
+    // 4) prepare report files
     const reportDir = path.join(workRoot, "report");
     await fs.ensureDir(reportDir);
 
+    // 4a) system report
     const systemJsonPath = path.join(reportDir, "system.json");
-    await fs.writeJson(systemJsonPath, {
-      node: process.version,
-      platform: os.platform(),
-      release: os.release(),
-      arch: os.arch(),
-      cwd,
-      pid: process.pid,
-      time: isoNow(),
-    }, { spaces: 2 });
+    await fs.writeJson(
+      systemJsonPath,
+      {
+        node: process.version,
+        platform: os.platform(),
+        release: os.release(),
+        arch: os.arch(),
+        cwd,
+        pid: process.pid,
+        time: isoNow(),
+      },
+      { spaces: 2 }
+    );
 
+    // 4b) git report (best-effort)
     const gitDir = path.join(cwd, ".git");
     const gitReport = { available: false };
 
@@ -144,31 +154,31 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       await fs.writeFile(gitLogPath, "", "utf8");
     }
 
+    // 4c) project tree snapshot (tracked files)
     let treeText = "";
     if (gitReport.available) {
       const ls = await runCmd("git", ["ls-files"], { cwd });
       treeText = ls.exitCode === 0 ? ls.stdout : "";
     }
-
     const treePath = path.join(reportDir, "tree.txt");
     await fs.writeFile(treePath, treeText, "utf8");
 
     const runbookJsonPath = path.join(reportDir, "runbook.json");
     await fs.writeJson(runbookJsonPath, runbook, { spaces: 2 });
 
-    const checks = (runbook.audit && Array.isArray(runbook.audit.checks)) ? runbook.audit.checks : [];
+    // 4d) checks (optional) — runbook.audit.checks
+    const checks = runbook.audit && Array.isArray(runbook.audit.checks) ? runbook.audit.checks : [];
     const checksRes = await runChecks({ cwd, reportDir, checks });
-
     step("checks.run", checksRes.ok, { count: checks.length });
     status.checks = checksRes.results;
 
+    // 5) optional server lifecycle + readiness
     let serverOk = true;
     let readinessAbs = null;
     let serverOutAbs = null;
     let serverErrAbs = null;
 
     const srv = runbook.audit && runbook.audit.server ? runbook.audit.server : null;
-
     if (srv) {
       const started = await startServer({
         cwd,
@@ -193,18 +203,30 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
 
       serverOk = Boolean(readiness.ok);
       status.server = { ok: serverOk, readiness };
-
-      step("server.readiness", serverOk, {
-        url: readiness.url,
-        ms: readiness.ms,
-        attempts: readiness.attempts,
-      });
+      step("server.readiness", serverOk, { url: readiness.url, ms: readiness.ms, attempts: readiness.attempts });
 
       await stopServer(started.child);
     }
 
-    status.ok = Boolean(checksRes.ok) && serverOk;
-    const exitCodeFinal = status.ok ? 0 : (serverOk ? 30 : 41);
+    // 5b) URL checks (public) — runbook.audit.urls.public
+    let urlsPublicOk = true;
+    const urlsCfg = runbook.audit && runbook.audit.urls ? runbook.audit.urls : null;
+    if (urlsCfg && urlsCfg.public && urlsCfg.public.base_url) {
+      const expectCodes = Array.isArray(urlsCfg.expect) ? urlsCfg.expect : [200, 304];
+      const res = await runUrlChecksPublic({
+        reportDir,
+        baseUrl: urlsCfg.public.base_url,
+        list: urlsCfg.public.list || [],
+        expect: expectCodes,
+      });
+      urlsPublicOk = Boolean(res.ok);
+      status.urls_public = { ok: urlsPublicOk, report: "REPORT/urls.public.json" };
+      step("urls.public", urlsPublicOk, { count: (urlsCfg.public.list || []).length });
+    }
+
+    // 6) finalize status + snapshot
+    status.ok = Boolean(checksRes.ok) && serverOk && urlsPublicOk;
+    const exitCodeFinal = status.ok ? 0 : (!serverOk ? 41 : (!checksRes.ok ? 30 : 42));
 
     const snapshotText = writeSnapshot({
       cwd,
@@ -233,26 +255,21 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       "REPORT/tree.txt": treePath,
     };
 
-    if (serverOutAbs && await fs.pathExists(serverOutAbs))
-      outEntries["REPORT/server.out.log"] = serverOutAbs;
+    if (serverOutAbs && (await fs.pathExists(serverOutAbs))) outEntries["REPORT/server.out.log"] = serverOutAbs;
+    if (serverErrAbs && (await fs.pathExists(serverErrAbs))) outEntries["REPORT/server.err.log"] = serverErrAbs;
+    if (readinessAbs && (await fs.pathExists(readinessAbs))) outEntries["REPORT/readiness.json"] = readinessAbs;
 
-    if (serverErrAbs && await fs.pathExists(serverErrAbs))
-      outEntries["REPORT/server.err.log"] = serverErrAbs;
+    // include urls report if generated
+    const urlsPublicPath = path.join(reportDir, "urls.public.json");
+    if (await fs.pathExists(urlsPublicPath)) outEntries["REPORT/urls.public.json"] = urlsPublicPath;
 
-    if (readinessAbs && await fs.pathExists(readinessAbs))
-      outEntries["REPORT/readiness.json"] = readinessAbs;
-
+    // include check logs (if any)
     if (Array.isArray(status.checks)) {
       for (const c of status.checks) {
-        const safe = c.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-        const outAbs = path.join(reportDir, `checks.${safe}.out.log`);
-        const errAbs = path.join(reportDir, `checks.${safe}.err.log`);
-
-        if (await fs.pathExists(outAbs))
-          outEntries[`REPORT/${path.basename(outAbs)}`] = outAbs;
-
-        if (await fs.pathExists(errAbs))
-          outEntries[`REPORT/${path.basename(errAbs)}`] = errAbs;
+        const outAbs = path.join(reportDir, `checks.${c.name.replace(/[^a-zA-Z0-9._-]+/g, "_")}.out.log`);
+        const errAbs = path.join(reportDir, `checks.${c.name.replace(/[^a-zA-Z0-9._-]+/g, "_")}.err.log`);
+        if (await fs.pathExists(outAbs)) outEntries[`REPORT/${path.basename(outAbs)}`] = outAbs;
+        if (await fs.pathExists(errAbs)) outEntries[`REPORT/${path.basename(errAbs)}`] = errAbs;
       }
     }
 
@@ -260,17 +277,17 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
     step("outbox.write", true, { path: outboxPath });
 
     return { exitCode: exitCodeFinal, runId };
-
   } catch (e) {
-    const code = e?.code ?? "UNKNOWN";
+    const code = e && e.code ? e.code : "UNKNOWN";
     status.ok = false;
-    status.errors.push({ code, message: String(e?.message ?? e) });
+    status.errors.push({ code, message: String(e && e.message ? e.message : e) });
 
     let exitCode = 20;
     if (code === "INBOX_MISSING") exitCode = 10;
     if (code === "RUNBOOK_MISSING") exitCode = 11;
     if (code === "RUNBOOK_INVALID") exitCode = 12;
 
+    // Attempt to still write outbox (best effort)
     try {
       await fs.ensureDir(path.dirname(outboxPath));
       await fs.ensureDir(workRoot);
@@ -295,9 +312,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
         "SNAPSHOT.txt": snapshotPath,
         "STATUS.json": statusPath,
       });
-
       step("outbox.write", true, { path: outboxPath, best_effort: true });
-
     } catch (_) {}
 
     return { exitCode, runId };
