@@ -2,6 +2,14 @@ const fs = require("fs-extra");
 const YAML = require("yaml");
 const { z } = require("zod");
 
+const CheckSchema = z.object({
+  name: z.string().min(1),
+  cmd: z.string().min(1),
+  args: z.array(z.string()).optional().default([]),
+  cwd: z.string().optional(), // relative to project root (runner cwd)
+  env: z.record(z.string()).optional(),
+});
+
 const RunbookSchema = z.object({
   version: z.literal(1),
   project: z
@@ -10,7 +18,11 @@ const RunbookSchema = z.object({
       config: z.string().optional(),
     })
     .optional(),
-  audit: z.any().optional(),
+  audit: z
+    .object({
+      checks: z.array(CheckSchema).optional().default([]),
+    })
+    .optional(),
   patch: z.any().optional(),
   execution: z.any().optional(),
 });

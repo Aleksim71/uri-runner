@@ -112,4 +112,45 @@ describe("audit (minimal) smoke", () => {
     expect(status.ok).toBe(false);
     expect(status.errors[0].code).toBe("RUNBOOK_MISSING");
   });
+it("runs audit checks and returns exitCode 30 when a check fails, exporting logs", async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "uri-runner-"));
+  const repo = path.join(tmp, "repo");
+  await fs.ensureDir(repo);
+
+  const inboxDir = path.join(repo, "artifacts", "inbox");
+  const outboxDir = path.join(repo, "artifacts", "outbox");
+  await fs.ensureDir(inboxDir);
+  await fs.ensureDir(outboxDir);
+
+  const runbook = path.resolve("test", "fixtures", "RUNBOOK_CHECKS.yaml");
+  const inboxZip = path.join(inboxDir, "inbox.zip");
+  const outboxZip = path.join(outboxDir, "outbox.zip");
+
+  await makeZip(inboxZip, { "RUNBOOK.yaml": runbook });
+
+  const res = await runAudit({
+    cwd: repo,
+    inboxPath: inboxZip,
+    outboxPath: outboxZip,
+    workspaceDir: path.join(repo, ".runner-work"),
+  });
+
+  expect(res.exitCode).toBe(30);
+
+  const z = await unzipToMem(outboxZip);
+  expect(z.names).toContain("STATUS.json");
+
+  const statusText = await z.getText("STATUS.json");
+  const status = JSON.parse(statusText);
+  expect(status.ok).toBe(false);
+  expect(Array.isArray(status.checks)).toBe(true);
+  expect(status.checks.length).toBe(2);
+
+  // logs should be present
+  expect(z.names).toContain("REPORT/checks.ok.out.log");
+  expect(z.names).toContain("REPORT/checks.ok.err.log");
+  expect(z.names).toContain("REPORT/checks.fail.out.log");
+  expect(z.names).toContain("REPORT/checks.fail.err.log");
+});
+
 });

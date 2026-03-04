@@ -16,6 +16,7 @@ async function runCmd(cmd, args, opts = {}) {
     });
     return { stdout: stdout ?? "", stderr: stderr ?? "", exitCode: 0 };
   } catch (e) {
+    // execFile throws on non-zero exit codes
     const stdout = e && e.stdout ? String(e.stdout) : "";
     const stderr = e && e.stderr ? String(e.stderr) : (e && e.message ? String(e.message) : "");
     const code = typeof e.code === "number" ? e.code : 1;

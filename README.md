@@ -6,7 +6,7 @@ This is a **minimal, test-first** starting point for the `uri-runner` project.
 - CLI binary: **uri**
 - Node: >= 18 (recommended 22)
 
-## What works in this skeleton (step 2)
+## What works in this skeleton (step 4)
 - `uri` / `uri audit`:
   - writes REPORT/system.json, REPORT/git.json, REPORT/tree.txt
   - reads `artifacts/inbox/inbox.zip` (default)
@@ -46,3 +46,15 @@ Incrementally implement:
 - browser capture (Playwright)
 - db probe
 - patch/replace profiles
+
+## Checks (runbook)
+Add optional checks to RUNBOOK.yaml:
+
+```yaml
+version: 1
+audit:
+  checks:
+    - name: test
+      cmd: npm
+      args: ["test"]
+```
