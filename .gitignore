@@ -5,3 +5,7 @@ node_modules/
 node_modules/.vite/
 vitest/
 uri-runner@0.0.0
+.runner-work/
+artifacts/
+bin/
+*.zip

@@ -178,6 +178,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
     let serverOutAbs = null;
     let serverErrAbs = null;
 
+let startedServer = null;
     const srv = runbook.audit && runbook.audit.server ? runbook.audit.server : null;
     if (srv) {
       const started = await startServer({
@@ -188,6 +189,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
         env: srv.env,
       });
 
+startedServer = started;
       serverOutAbs = started.outPath;
       serverErrAbs = started.errPath;
 
@@ -204,8 +206,6 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       serverOk = Boolean(readiness.ok);
       status.server = { ok: serverOk, readiness };
       step("server.readiness", serverOk, { url: readiness.url, ms: readiness.ms, attempts: readiness.attempts });
-
-      await stopServer(started.child);
     }
 
     // 5b) URL checks (public) — runbook.audit.urls.public
