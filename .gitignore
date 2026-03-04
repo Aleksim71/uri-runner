@@ -9,3 +9,7 @@ uri-runner@0.0.0
 artifacts/
 bin/
 *.zip
+# patchpack artifacts (must never live in repo root)
+APPLY.sh
+PATCHES/
+REPLACE/
