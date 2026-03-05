@@ -13,3 +13,4 @@ bin/
 APPLY.sh
 PATCHES/
 REPLACE/
+scripts/local/
