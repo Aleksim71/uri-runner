@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "kind": "info",
+  "project": "tempasi",
+  "profile": "audit",
+  "created_at": "YYYY-MM-DDTHH:mm:ss+01:00",
+  "cwd": "/home/USER/project",
+  "notes": "Replace kind/project/profile/cwd"
+}

@@ -1,232 +1,235 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-URAM_ROOT="${URAM_ROOT:-$HOME/uram}"
-WATCH_DIR="${WATCH_DIR:-$HOME/Загрузки}"
-LOG_FILE="${LOG_FILE:-$URAM_ROOT/Inbox/watch.log}"
+# ============================================================
+# URAM Watcher
+# - Watches downloads folder for "inbox.zip"
+# - If META.json is missing -> DO NOTHING (leave file in Downloads)
+# - If META.json exists but broken -> still process, mark BROKEN META
+# - If META.json valid -> process and show project + kind
+# - Moves processed inbox.zip into ~/uram/Inbox/inbox.zip (single entrypoint)
+# - Does NOT touch any other files (only exact name: inbox.zip)
+#
+# Usage:
+#   watch-inbox.sh                # continuous watch
+#   watch-inbox.sh --once         # process at most one file then exit
+#   watch-inbox.sh --dir <path>   # watch custom directory
+# ============================================================
+
+ts() { date -Iseconds | sed 's/+.*$//'; }
+log() { echo "[$(ts)] $*"; }
 
 ONCE=0
-if [[ "${1:-}" == "--once" ]]; then
-  ONCE=1
-fi
+WATCH_DIR="${HOME}/Загрузки"
 
-ts() { date -Iseconds; }
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --once) ONCE=1; shift ;;
+    --dir)  WATCH_DIR="${2:-}"; shift 2 ;;
+    *) echo "Unknown arg: $1" >&2; exit 2 ;;
+  esac
+done
 
-ensure_dirs() {
-  mkdir -p "$URAM_ROOT/Inbox" "$URAM_ROOT/Inbox/processed"
-  mkdir -p "$URAM_ROOT/patchpacks/_unknown" "$URAM_ROOT/patchpacks/tempasi" "$URAM_ROOT/patchpacks/abonasi"
+URAM_ROOT="${URAM_ROOT:-${HOME}/uram}"
+URAM_INBOX="${URAM_ROOT}/Inbox"
+URAM_PROCESSED="${URAM_INBOX}/processed"
+LOCK_FILE="${URAM_INBOX}/.watch.lock"
+WATCH_LOG="${URAM_INBOX}/watch.log"
+
+mkdir -p "${URAM_INBOX}" "${URAM_PROCESSED}"
+
+append_watch_log() {
+  echo "[$(ts)] $*" >> "${WATCH_LOG}" || true
 }
 
-log() { echo "[$(ts)] $*" | tee -a "$LOG_FILE"; }
-
-zip_has() {
+# ---- helper: check zip contains META.json
+zip_has_meta() {
   local zip="$1"
-  local pattern="$2"
-  unzip -l "$zip" 2>/dev/null | grep -qE "$pattern"
+  unzip -l "$zip" 2>/dev/null | awk '{print $4}' | grep -qx "META.json"
 }
 
-zip_read_meta() {
-  local zip="$1"
-  local meta_path=""
-
-  if unzip -l "$zip" 2>/dev/null | awk '{print $4}' | grep -qx "META.json"; then
-    meta_path="META.json"
-  else
-    meta_path="$(unzip -l "$zip" 2>/dev/null | awk '{print $4}' | grep -m1 -E '/?META\.json$' || true)"
-  fi
-
-  [[ -n "$meta_path" ]] || return 1
-  unzip -p "$zip" "$meta_path" 2>/dev/null || return 1
+# ---- helper: read JSON field via node (safe)
+json_field() {
+  local file="$1"
+  local key="$2"
+  node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));const k=process.argv[2];process.stdout.write(String(j?.[k] ?? ''))" "$file" "$key" 2>/dev/null || true
 }
 
-meta_field() {
-  # meta_field <zip> <fieldName>
-  local zip="$1"
-  local field="$2"
-  local meta=""
-  meta="$(zip_read_meta "$zip" 2>/dev/null || true)"
-  [[ -n "$meta" ]] || { echo ""; return 0; }
-
+# ---- helper: basic META validation (no zod, minimal)
+validate_meta_minimal() {
+  local file="$1"
   node -e '
-    try {
-      const fs = require("fs");
-      const input = fs.readFileSync(0, "utf8");
-      const j = JSON.parse(input);
-      const field = process.argv[1];
-      const v = (j && typeof j[field] === "string") ? j[field].trim() : "";
-      process.stdout.write(v);
-    } catch (e) {
-      process.stdout.write("");
-    }
-  ' "$field" <<<"$meta" 2>/dev/null || echo ""
+    const fs=require("fs");
+    const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+    const errs=[];
+    if (!m || typeof m!=="object") errs.push("META must be an object");
+    if (m.version !== 1) errs.push("version must be 1");
+    if (!m.kind || typeof m.kind!=="string") errs.push("kind is required");
+    if (!m.project || typeof m.project!=="string") errs.push("project is required");
+    if (errs.length){ console.error(errs.join("; ")); process.exit(10); }
+  ' "$file" 2>/dev/null
 }
 
-classify_zip() {
-  local zip="$1"
+# ---- helper: place last run marker in URAM/Inbox
+mark_last_run() {
+  local result="$1" # OK / FAIL
+  : > "${URAM_INBOX}/last_run.${result}" || true
+  cat > "${URAM_INBOX}/last_run.txt" <<EOF
+time: $(ts)
+watch_dir: ${WATCH_DIR}
+file: ${WATCH_DIR}/inbox.zip
+result: ${result}
+EOF
+}
 
-  # 1) Inbox marker
-  if zip_has "$zip" 'RUNBOOK\.yaml$'; then
-    echo "INBOX"
+# ---- helper: safely move downloads/inbox.zip into URAM Inbox entrypoint
+stage_inbox_into_uram() {
+  local src_zip="$1" # downloads/inbox.zip
+  local dst_zip="${URAM_INBOX}/inbox.zip"
+
+  # If dst exists, archive it into processed with timestamp (so we never overwrite silently)
+  if [[ -f "${dst_zip}" ]]; then
+    local bak="${URAM_PROCESSED}/$(date +%F_%H-%M-%S)__prev.inbox.zip"
+    mv -f "${dst_zip}" "${bak}" || true
+  fi
+
+  mv -f "${src_zip}" "${dst_zip}"
+}
+
+# ---- main processor for one detected inbox.zip
+process_one() {
+  local src_zip="${WATCH_DIR}/inbox.zip"
+  [[ -f "${src_zip}" ]] || return 0
+
+  log "--------------------------------------------"
+  log "FILE DETECTED: inbox.zip"
+  log "--------------------------------------------"
+  append_watch_log "FILE DETECTED: inbox.zip"
+
+  # Quick sanity: is it a readable zip?
+  if ! unzip -tq "${src_zip}" >/dev/null 2>&1; then
+    log "BROKEN ZIP (cannot unzip) -> leaving in Downloads (no action)"
+    append_watch_log "BROKEN ZIP -> ignored"
+    mark_last_run "FAIL"
     return 0
   fi
 
-  # 2) META-driven patchpack (new)
-  local kind=""
-  kind="$(meta_field "$zip" "kind")"
-  if [[ "$kind" == "patchpack" ]]; then
-    echo "PATCHPACK"
+  # Rule #1: if META.json missing -> do NOT touch
+  if ! zip_has_meta "${src_zip}"; then
+    log "NO META.json -> leaving in Downloads (ignored)"
+    append_watch_log "NO META -> ignored"
+    # no last_run marker here: it was intentionally ignored
     return 0
   fi
 
-  # 3) Heuristic patchpack markers
-  if zip_has "$zip" '(^| )PATCHES/' || zip_has "$zip" '(^| )REPLACE/' || zip_has "$zip" 'APPLY\.sh$'; then
-    echo "PATCHPACK"
-    return 0
-  fi
+  # Extract META.json to temp
+  local run_id
+  run_id="$(date +%FT%H-%M-%S)__$RANDOM"
+  local tmp_dir="/tmp/uram_watch_${run_id}"
+  mkdir -p "${tmp_dir}"
+  unzip -q "${src_zip}" META.json -d "${tmp_dir}" >/dev/null 2>&1 || true
 
-  echo "UNKNOWN"
-}
+  local meta_file="${tmp_dir}/META.json"
+  local project="_unknown"
+  local kind="unknown"
+  local meta_ok=1
 
-stamp_name() { echo "$1" | sed 's/[ \/]/_/g'; }
-
-write_last_run() {
-  local result="$1"
-  local inbox_path="$2"
-
-  rm -f "$URAM_ROOT/Inbox/last_run.OK" "$URAM_ROOT/Inbox/last_run.FAIL" 2>/dev/null || true
-  : > "$URAM_ROOT/Inbox/last_run.$result"
-
-  {
-    echo "time: $(ts)"
-    echo "inbox: $inbox_path"
-    echo "result: $result"
-  } > "$URAM_ROOT/Inbox/last_run.txt"
-}
-
-process_inbox_zip() {
-  local src_zip="$1"
-
-  log "============================================================"
-  log "detected ZIP → INBOX: $(basename "$src_zip")"
-  log "============================================================"
-
-  local dst="$URAM_ROOT/Inbox/inbox.zip"
-  mv -f "$src_zip" "$dst"
-
-  log "running: uri run"
-  set +e
-  uri run
-  local rc=$?
-  set -e
-
-  if [[ $rc -eq 0 ]]; then
-    log "DONE: OK"
-    write_last_run "OK" "$dst"
+  if [[ ! -f "${meta_file}" ]]; then
+    meta_ok=0
   else
-    log "DONE: FAIL (exit=$rc)"
-    write_last_run "FAIL" "$dst"
-  fi
-
-  return $rc
-}
-
-move_patchpack_by_project() {
-  local src_zip="$1"
-  local base
-  base="$(basename "$src_zip")"
-  local stamped
-  stamped="$(stamp_name "$base")"
-
-  local proj=""
-  proj="$(meta_field "$src_zip" "project")"
-
-  local target_dir="$URAM_ROOT/patchpacks/_unknown"
-  local label="_unknown"
-  if [[ "$proj" == "tempasi" || "$proj" == "abonasi" ]]; then
-    target_dir="$URAM_ROOT/patchpacks/$proj"
-    label="$proj"
-  fi
-
-  mkdir -p "$target_dir"
-  local dst="$target_dir/$(date +%F_%H-%M-%S)__${stamped}"
-
-  log "--------------------------------------------"
-  log "FILE DETECTED: $base"
-  log "PATCHPACK project=$label → $dst"
-  log "--------------------------------------------"
-
-  mv -f "$src_zip" "$dst"
-}
-
-process_unknown_zip() {
-  local src_zip="$1"
-  local base
-  base="$(basename "$src_zip")"
-  local stamped
-  stamped="$(stamp_name "$base")"
-  local dst="$URAM_ROOT/patchpacks/_unknown/$(date +%F_%H-%M-%S)__${stamped}"
-
-  log "--------------------------------------------"
-  log "FILE DETECTED: $base"
-  log "UNKNOWN ZIP → $dst"
-  log "--------------------------------------------"
-
-  mv -f "$src_zip" "$dst"
-}
-
-wait_until_stable() {
-  local f="$1"
-  local last_size="-1"
-  local size="0"
-
-  for _ in {1..30}; do
-    [[ -f "$f" ]] || return 1
-    size="$(stat -c%s "$f" 2>/dev/null || echo 0)"
-    if [[ "$size" == "$last_size" && "$size" -gt 0 ]]; then
-      return 0
+    if validate_meta_minimal "${meta_file}" >/dev/null 2>&1; then
+      meta_ok=1
+      project="$(json_field "${meta_file}" "project")"
+      kind="$(json_field "${meta_file}" "kind")"
+      [[ -n "${project}" ]] || project="_unknown"
+      [[ -n "${kind}" ]] || kind="unknown"
+    else
+      meta_ok=0
+      # best-effort parse if JSON is at least parseable
+      project="$(json_field "${meta_file}" "project")"
+      kind="$(json_field "${meta_file}" "kind")"
+      [[ -n "${project}" ]] || project="_unknown"
+      [[ -n "${kind}" ]] || kind="unknown"
     fi
-    last_size="$size"
-    sleep 0.3
-  done
+  fi
+
+  if [[ "${meta_ok}" -eq 1 ]]; then
+    log "META: OK project=${project} kind=${kind}"
+    append_watch_log "META OK project=${project} kind=${kind}"
+  else
+    log "META: BROKEN -> project=${project} kind=${kind} (will still process)"
+    append_watch_log "META BROKEN project=${project} kind=${kind}"
+  fi
+
+  # Stage into URAM Inbox entrypoint (single inbox.zip)
+  stage_inbox_into_uram "${src_zip}"
+
+  log "STAGED -> ${URAM_INBOX}/inbox.zip"
+  append_watch_log "STAGED -> ${URAM_INBOX}/inbox.zip"
+
+  # NOTE:
+  # Here we only stage. Actual execution is done by you running watcher + URI.
+  # If you want FULL AUTO execution later, we can add:
+  #   - kind=info => uri run
+  #   - kind=patch => cd <project> && uri patch ...
+  #
+  # For now: minimal, safe behavior.
+
+  mark_last_run "OK"
+  rm -rf "${tmp_dir}" >/dev/null 2>&1 || true
   return 0
 }
 
-main() {
-  ensure_dirs
-  touch "$LOG_FILE"
-
-  log "watch started (URAM_ROOT=$URAM_ROOT)"
-  log "Watching: $WATCH_DIR"
-  echo
+# ---- loop impls
+watch_loop_inotify() {
+  log "watch started (URAM_ROOT=${URAM_ROOT})"
+  log "Watching: ${WATCH_DIR}"
+  append_watch_log "watch started (inotify) dir=${WATCH_DIR}"
 
   while true; do
-    local found=""
-    found="$(find "$WATCH_DIR" -maxdepth 1 -type f -name "*.zip" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | awk '{print $2}')"
-
-    if [[ -n "${found:-}" && -f "$found" ]]; then
-      wait_until_stable "$found" || true
-
-      if [[ -f "$found" ]]; then
-        local kind
-        kind="$(classify_zip "$found" || echo "UNKNOWN")"
-
-        if [[ "$kind" == "INBOX" ]]; then
-          process_inbox_zip "$found" || true
-        elif [[ "$kind" == "PATCHPACK" ]]; then
-          move_patchpack_by_project "$found" || true
-        else
-          process_unknown_zip "$found" || true
-        fi
-
-        if [[ $ONCE -eq 1 ]]; then
+    # Wait for create/move-close of inbox.zip only
+    inotifywait -q -e close_write,create,moved_to --format '%f' "${WATCH_DIR}" 2>/dev/null | while read -r fname; do
+      if [[ "${fname}" == "inbox.zip" ]]; then
+        (
+          flock -n 9 || exit 0
+          process_one
+        ) 9>"${LOCK_FILE}"
+        if [[ "${ONCE}" -eq 1 ]]; then
           log "watch --once: done, exiting"
+          append_watch_log "watch --once exit"
           exit 0
         fi
       fi
-    fi
-
-    sleep 0.5
+    done
   done
 }
 
-main "$@"
+watch_loop_poll() {
+  log "watch started (URAM_ROOT=${URAM_ROOT})"
+  log "Watching: ${WATCH_DIR}"
+  log "inotifywait not found -> using polling mode (1s)"
+  append_watch_log "watch started (poll) dir=${WATCH_DIR}"
+
+  while true; do
+    if [[ -f "${WATCH_DIR}/inbox.zip" ]]; then
+      (
+        flock -n 9 || exit 0
+        process_one
+      ) 9>"${LOCK_FILE}"
+
+      if [[ "${ONCE}" -eq 1 ]]; then
+        log "watch --once: done, exiting"
+        append_watch_log "watch --once exit"
+        exit 0
+      fi
+    fi
+    sleep 1
+  done
+}
+
+# Choose strategy
+if command -v inotifywait >/dev/null 2>&1; then
+  watch_loop_inotify
+else
+  watch_loop_poll
+fi
