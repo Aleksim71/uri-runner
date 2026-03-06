@@ -3,11 +3,11 @@ set -euo pipefail
 
 # ============================================================
 # URAM Watcher
-# - Watches downloads folder for "inbox.zip"
+# - Watches a folder for EXACT filename: inbox.zip
 # - If META.json is missing -> DO NOTHING (leave file in Downloads)
 # - If META.json exists but broken -> still process, mark BROKEN META
 # - If META.json valid -> process and show project + kind
-# - Moves processed inbox.zip into ~/uram/Inbox/inbox.zip (single entrypoint)
+# - Stages processed inbox.zip into: ~/uram/Inbox/inbox.zip (single entrypoint)
 # - Does NOT touch any other files (only exact name: inbox.zip)
 #
 # Usage:
@@ -48,14 +48,14 @@ zip_has_meta() {
   unzip -l "$zip" 2>/dev/null | awk '{print $4}' | grep -qx "META.json"
 }
 
-# ---- helper: read JSON field via node (safe)
+# ---- helper: read JSON field via node (best-effort)
 json_field() {
   local file="$1"
   local key="$2"
   node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));const k=process.argv[2];process.stdout.write(String(j?.[k] ?? ''))" "$file" "$key" 2>/dev/null || true
 }
 
-# ---- helper: basic META validation (no zod, minimal)
+# ---- helper: basic META validation (minimal)
 validate_meta_minimal() {
   local file="$1"
   node -e '
@@ -72,13 +72,20 @@ validate_meta_minimal() {
 
 # ---- helper: place last run marker in URAM/Inbox
 mark_last_run() {
-  local result="$1" # OK / FAIL
+  local result="$1"     # OK / FAIL
+  local meta="$2"       # OK / BROKEN / NONE / NA
+
+  # remove opposite marker to avoid stale state
+  rm -f "${URAM_INBOX}/last_run.OK" "${URAM_INBOX}/last_run.FAIL" || true
+
   : > "${URAM_INBOX}/last_run.${result}" || true
+
   cat > "${URAM_INBOX}/last_run.txt" <<EOF
 time: $(ts)
 watch_dir: ${WATCH_DIR}
 file: ${WATCH_DIR}/inbox.zip
 result: ${result}
+meta: ${meta}
 EOF
 }
 
@@ -87,7 +94,7 @@ stage_inbox_into_uram() {
   local src_zip="$1" # downloads/inbox.zip
   local dst_zip="${URAM_INBOX}/inbox.zip"
 
-  # If dst exists, archive it into processed with timestamp (so we never overwrite silently)
+  # If dst exists, archive it into processed with timestamp (never overwrite silently)
   if [[ -f "${dst_zip}" ]]; then
     local bak="${URAM_PROCESSED}/$(date +%F_%H-%M-%S)__prev.inbox.zip"
     mv -f "${dst_zip}" "${bak}" || true
@@ -110,7 +117,7 @@ process_one() {
   if ! unzip -tq "${src_zip}" >/dev/null 2>&1; then
     log "BROKEN ZIP (cannot unzip) -> leaving in Downloads (no action)"
     append_watch_log "BROKEN ZIP -> ignored"
-    mark_last_run "FAIL"
+    mark_last_run "FAIL" "NA"
     return 0
   fi
 
@@ -118,7 +125,7 @@ process_one() {
   if ! zip_has_meta "${src_zip}"; then
     log "NO META.json -> leaving in Downloads (ignored)"
     append_watch_log "NO META -> ignored"
-    # no last_run marker here: it was intentionally ignored
+    # Intentionally no last_run marker: it was ignored by contract.
     return 0
   fi
 
@@ -132,28 +139,25 @@ process_one() {
   local meta_file="${tmp_dir}/META.json"
   local project="_unknown"
   local kind="unknown"
-  local meta_ok=1
+  local meta_status="BROKEN"
 
-  if [[ ! -f "${meta_file}" ]]; then
-    meta_ok=0
-  else
+  if [[ -f "${meta_file}" ]]; then
     if validate_meta_minimal "${meta_file}" >/dev/null 2>&1; then
-      meta_ok=1
-      project="$(json_field "${meta_file}" "project")"
-      kind="$(json_field "${meta_file}" "kind")"
-      [[ -n "${project}" ]] || project="_unknown"
-      [[ -n "${kind}" ]] || kind="unknown"
+      meta_status="OK"
     else
-      meta_ok=0
-      # best-effort parse if JSON is at least parseable
-      project="$(json_field "${meta_file}" "project")"
-      kind="$(json_field "${meta_file}" "kind")"
-      [[ -n "${project}" ]] || project="_unknown"
-      [[ -n "${kind}" ]] || kind="unknown"
+      meta_status="BROKEN"
     fi
+
+    # best-effort parse (works for OK meta, and may work for BROKEN meta)
+    project="$(json_field "${meta_file}" "project")"
+    kind="$(json_field "${meta_file}" "kind")"
+    [[ -n "${project}" ]] || project="_unknown"
+    [[ -n "${kind}" ]] || kind="unknown"
+  else
+    meta_status="BROKEN"
   fi
 
-  if [[ "${meta_ok}" -eq 1 ]]; then
+  if [[ "${meta_status}" == "OK" ]]; then
     log "META: OK project=${project} kind=${kind}"
     append_watch_log "META OK project=${project} kind=${kind}"
   else
@@ -163,19 +167,12 @@ process_one() {
 
   # Stage into URAM Inbox entrypoint (single inbox.zip)
   stage_inbox_into_uram "${src_zip}"
-
   log "STAGED -> ${URAM_INBOX}/inbox.zip"
   append_watch_log "STAGED -> ${URAM_INBOX}/inbox.zip"
 
-  # NOTE:
-  # Here we only stage. Actual execution is done by you running watcher + URI.
-  # If you want FULL AUTO execution later, we can add:
-  #   - kind=info => uri run
-  #   - kind=patch => cd <project> && uri patch ...
-  #
-  # For now: minimal, safe behavior.
+  # For now we only stage. Processing/execution is done by running `uri run` or `uri patch`.
+  mark_last_run "OK" "${meta_status}"
 
-  mark_last_run "OK"
   rm -rf "${tmp_dir}" >/dev/null 2>&1 || true
   return 0
 }
@@ -187,20 +184,20 @@ watch_loop_inotify() {
   append_watch_log "watch started (inotify) dir=${WATCH_DIR}"
 
   while true; do
-    # Wait for create/move-close of inbox.zip only
-    inotifywait -q -e close_write,create,moved_to --format '%f' "${WATCH_DIR}" 2>/dev/null | while read -r fname; do
+    while read -r fname; do
       if [[ "${fname}" == "inbox.zip" ]]; then
         (
           flock -n 9 || exit 0
           process_one
         ) 9>"${LOCK_FILE}"
+
         if [[ "${ONCE}" -eq 1 ]]; then
           log "watch --once: done, exiting"
           append_watch_log "watch --once exit"
           exit 0
         fi
       fi
-    done
+    done < <(inotifywait -q -e close_write,create,moved_to --format '%f' "${WATCH_DIR}" 2>/dev/null)
   done
 }
 
@@ -227,9 +224,12 @@ watch_loop_poll() {
   done
 }
 
-# Choose strategy
-if command -v inotifywait >/dev/null 2>&1; then
-  watch_loop_inotify
-else
-  watch_loop_poll
-fi
+main() {
+  if command -v inotifywait >/dev/null 2>&1; then
+    watch_loop_inotify
+  else
+    watch_loop_poll
+  fi
+}
+
+main "$@"
