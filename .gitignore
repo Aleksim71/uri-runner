@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# vitest / vite cache
+node_modules/.vite/
+vitest/
+uri-runner@0.0.0
+.runner-work/
+.obsidian/
+artifacts/
+bin/
+*.zip
+# patchpack artifacts (must never live in repo root)
+APPLY.sh
+PATCHES/
+REPLACE/
+scripts/local/

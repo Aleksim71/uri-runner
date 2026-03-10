@@ -1,0 +1,79 @@
+.
+├── artifacts
+│   ├── inbox
+│   │   └── .gitkeep
+│   └── outbox
+│       └── .gitkeep
+├── bin
+│   └── uri.cjs
+├── contexts
+│   ├── cf
+│   ├── projects
+│   │   ├── abonasi
+│   │   ├── freelance
+│   │   └── tempasi
+│   └── uri-runner
+├── doc
+│   └── uri_runner_next_phase1_structure.md
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── README.md
+├── src
+│   ├── cli
+│   │   ├── commands
+│   │   │   └── test.cjs
+│   │   └── index.cjs
+│   ├── commands
+│   │   ├── command-registry.cjs
+│   │   ├── context
+│   │   │   ├── audit.cjs
+│   │   │   ├── runbook.cjs
+│   │   │   └── validate-meta.cjs
+│   │   ├── file
+│   │   │   ├── build-inbox.cjs
+│   │   │   ├── patch.cjs
+│   │   │   └── zip.cjs
+│   │   ├── system
+│   │   │   ├── doctor.cjs
+│   │   │   ├── exec.cjs
+│   │   │   ├── server.cjs
+│   │   │   └── urls.cjs
+│   │   └── test
+│   │       ├── checks.cjs
+│   │       └── run-vitest.cjs
+│   ├── lib
+│   │   ├── audit.cjs
+│   │   ├── buildInbox.cjs
+│   │   ├── checks.cjs
+│   │   ├── doctor.cjs
+│   │   ├── exec.cjs
+│   │   ├── meta.validate.cjs
+│   │   ├── patch.cjs
+│   │   ├── runbook.cjs
+│   │   ├── server.cjs
+│   │   ├── urls.cjs
+│   │   └── zip.cjs
+│   └── uram
+│       ├── paths.cjs
+│       ├── pipeline.cjs
+│       ├── run.cjs
+│       └── watch-inbox-once.cjs
+├── test
+│   ├── fixtures
+│   │   └── RUNBOOK.yaml
+│   ├── helpers
+│   │   ├── sandbox.cjs
+│   │   └── zip-create.cjs
+│   ├── sandbox
+│   │   ├── create-sandbox-config.cjs
+│   │   ├── create-sandbox.sh
+│   │   └── write-sandbox-config.cjs
+│   └── scenarios
+│       ├── watch-inbox.accepts-broken-meta.test.mjs
+│       ├── watch-inbox.accepts-valid-meta.test.mjs
+│       └── watch-inbox.strict-intake.test.mjs
+├── URV2_TREE.txt
+└── vitest.config.mjs
+
+28 directories, 49 files
