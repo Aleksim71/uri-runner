@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const { runVitest } = require('../lib/run-vitest.cjs');
+const { runVitest } = require('../../commands/test/run-vitest.cjs');
 
 const WATCHER_TEST_ARGS = [
   'test/scenarios/watch-inbox.accepts-broken-meta.test.mjs',

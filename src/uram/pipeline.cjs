@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const unzipper = require("unzipper");
 const YAML = require("yaml");
 
-const { runAudit } = require("../lib/audit.cjs");
+const { runAudit } = require("../commands/context/audit.cjs");
 const {
   resolveUramRoot,
   getInboxZipPath,
