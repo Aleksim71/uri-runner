@@ -1,0 +1,9 @@
+version: 1
+audit:
+  checks:
+    - name: ok
+      cmd: node
+      args: ["-e", "process.exit(0)"]
+    - name: fail
+      cmd: node
+      args: ["-e", "process.exit(1)"]

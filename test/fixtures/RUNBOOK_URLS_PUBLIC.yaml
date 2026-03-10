@@ -1,0 +1,9 @@
+version: 1
+audit:
+  urls:
+    expect: [200, 304]
+    public:
+      base_url: "http://127.0.0.1:43123"
+      list:
+        - path: "/ok"
+        - path: "/nope"

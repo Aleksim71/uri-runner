@@ -1,6 +1,6 @@
 const fs = require("fs-extra");
 const path = require("path");
-const { runCmd } = require("./exec.cjs");
+const { runCmd } = require("../system/exec.cjs");
 
 /**
  * Run checks defined in runbook.audit.checks.
