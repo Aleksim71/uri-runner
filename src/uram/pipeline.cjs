@@ -19,6 +19,8 @@ const {
   getProjectName,
 } = require("./runbook.cjs");
 
+const { loadExecutableContext } = require("./executable-context.cjs");
+
 const {
   resolveUramRoot,
   getInboxZipPath,
@@ -63,6 +65,8 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
     project,
   });
 
+  const executableCtx = await loadExecutableContext(projectCtx);
+
   const projectBoxDir = getProjectBoxDir(uramRoot, project);
   const historyDir = getHistoryDir(projectBoxDir);
   const latestOutboxPath = getLatestOutboxPath(projectBoxDir);
@@ -100,6 +104,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
         runbook: rb,
         project,
         projectCtx,
+        executableCtx,
         inboxZipPath,
         tmpOutboxPath,
         workspaceRoot,
@@ -135,6 +140,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
 
   return {
     exitCode: engineResult.exitCode,
+    executableCtx,
     ...engineResult.meta,
   };
 }
