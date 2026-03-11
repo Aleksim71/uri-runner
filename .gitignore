@@ -15,3 +15,4 @@ APPLY.sh
 PATCHES/
 REPLACE/
 scripts/local/
+.tmp-uram-e2e/
