@@ -4,7 +4,7 @@
   "description": "URI Runner (CLI: uri) — automation tool to reduce dev routine",
   "type": "commonjs",
   "bin": {
-    "uri": "src/cli.cjs"
+  "uri": "bin/uri.cjs"
   },
   "engines": {
     "node": ">=18"

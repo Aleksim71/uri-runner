@@ -34,6 +34,9 @@ async function callPipeline(mod, argv) {
   if (mod && typeof mod.runUram === "function") {
     return await mod.runUram(argv);
   }
+  if (mod && typeof mod.runUramPipeline === "function") {
+    return await mod.runUramPipeline(argv);
+  }
   if (mod && typeof mod.processInbox === "function") {
     return await mod.processInbox(argv);
   }

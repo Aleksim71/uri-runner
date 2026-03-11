@@ -8,6 +8,12 @@ const unzipper = require("unzipper");
 const YAML = require("yaml");
 
 const { runAudit } = require("../commands/context/audit.cjs");
+const { CommandRegistry } = require("../commands/command-registry.cjs");
+const { loadCommands } = require("../commands/load-commands.cjs");
+const { parseScenario } = require("./scenario-parser.cjs");
+const { executeScenario } = require("./scenario-executor.cjs");
+const { resolveProjectContext } = require("./project-resolver.cjs");
+const { acquireExecutionLock, releaseExecutionLock } = require("./execution-lock.cjs");
 const {
   resolveUramRoot,
   getInboxZipPath,
@@ -61,33 +67,87 @@ function makeRunId() {
   return `${iso}_${rnd}`;
 }
 
+function resolveExecutionKind(runbook) {
+  if (runbook?.meta?.context_kind) {
+    const kind = String(runbook.meta.context_kind).trim();
+
+    if (kind === "executable_context") return "scenario";
+    if (kind === "audit_context") return "audit";
+
+    throw new Error(`[uri] unsupported context_kind: ${kind}`);
+  }
+
+  if (runbook?.profile) {
+    return String(runbook.profile).trim();
+  }
+
+  return "scenario";
+}
+
+function getProjectName(runbook) {
+  if (runbook?.meta?.project) {
+    return String(runbook.meta.project).trim();
+  }
+
+  if (runbook?.project) {
+    return String(runbook.project).trim();
+  }
+
+  return "";
+}
+
 async function ensureDir(p) {
   await fsp.mkdir(p, { recursive: true });
 }
 
 async function readRunbookFromInboxZip(inboxZipPath) {
   const z = fs.createReadStream(inboxZipPath).pipe(unzipper.Parse({ forceStream: true }));
+
   for await (const entry of z) {
     const name = entry.path.replace(/\\/g, "/");
+
     if (name === "RUNBOOK.yaml" || name.endsWith("/RUNBOOK.yaml")) {
       const buf = await entry.buffer();
       const txt = buf.toString("utf-8");
       const runbook = YAML.parse(txt);
       return { runbook, raw: txt };
     }
+
     entry.autodrain();
   }
+
   return { runbook: null, raw: null };
 }
 
 function validateRunbook(runbook) {
-  if (!runbook || typeof runbook !== "object") throw new Error("RUNBOOK.yaml is missing or invalid YAML");
-  if (runbook.version !== 1) throw new Error("RUNBOOK.yaml: version must be 1");
-  if (!runbook.project || typeof runbook.project !== "string") throw new Error("RUNBOOK.yaml: project is required (string)");
-  if (!runbook.cwd || typeof runbook.cwd !== "string") throw new Error("RUNBOOK.yaml: cwd is required (absolute path)");
-  if (!path.isAbsolute(runbook.cwd)) throw new Error("RUNBOOK.yaml: cwd must be an absolute path");
-  if (!runbook.profile || typeof runbook.profile !== "string") throw new Error("RUNBOOK.yaml: profile is required (string)");
+  if (!runbook || typeof runbook !== "object") {
+    throw new Error("RUNBOOK.yaml is missing or invalid YAML");
+  }
+
+  if (runbook.version !== 1) {
+    throw new Error("RUNBOOK.yaml: version must be 1");
+  }
+
+  const project = getProjectName(runbook);
+
+  if (!project) {
+    throw new Error("RUNBOOK.yaml: project must exist (meta.project or project)");
+  }
+
   return runbook;
+}
+
+function getScenarioCommandNames(runbook) {
+  if (!Array.isArray(runbook.steps) || runbook.steps.length === 0) {
+    throw new Error("RUNBOOK.yaml: steps must be a non-empty array for scenario execution");
+  }
+
+  const names = runbook.steps
+    .map((step) => step && step.command)
+    .filter((value) => typeof value === "string" && value.trim())
+    .map((value) => value.trim());
+
+  return Array.from(new Set(names));
 }
 
 async function appendJsonl(filePath, obj) {
@@ -97,9 +157,43 @@ async function appendJsonl(filePath, obj) {
 async function atomicCopyToLatest(srcFile, latestPath, runId) {
   const dir = path.dirname(latestPath);
   await ensureDir(dir);
+
   const tmp = path.join(dir, `.tmp.latest.${runId}.zip`);
   await fsp.copyFile(srcFile, tmp);
   await fsp.rename(tmp, latestPath);
+}
+
+async function writeScenarioOutbox(outboxPath, payload) {
+  const body = JSON.stringify(payload, null, 2);
+  await fsp.writeFile(outboxPath, body, "utf-8");
+}
+
+async function runScenarioProfile({ runbook, commandsDir, quiet, cwd }) {
+  const commandNames = getScenarioCommandNames(runbook);
+  const registry = new CommandRegistry();
+  const loaded = loadCommands(commandsDir, registry, { only: commandNames });
+  const parsed = parseScenario(runbook);
+
+  if (!quiet) {
+    console.log(`[uri] run: scenario commands loaded=${loaded.length}`);
+    console.log(`[uri] run: scenario commands=${commandNames.join(", ")}`);
+  }
+
+  const result = await executeScenario(parsed, {
+    registry,
+    context: {
+      cwd,
+      logger: console,
+      state: { steps: {} },
+    },
+    maxSteps: 100,
+  });
+
+  return {
+    exitCode: result.ok ? 0 : 1,
+    scenarioRes: result,
+    loadedCommands: loaded.map((item) => item.name),
+  };
 }
 
 async function runUramPipeline({ uramCli, workspaceCli, keepWorkspace, verbose, quiet, env, homeDir }) {
@@ -123,14 +217,20 @@ async function runUramPipeline({ uramCli, workspaceCli, keepWorkspace, verbose, 
   }
 
   const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
+
   if (!runbook) {
     if (!quiet) console.error("[uri] run: RUNBOOK.yaml missing in inbox.zip");
     return { exitCode: 11 };
   }
 
   const rb = validateRunbook(runbook);
-  const project = rb.project.trim();
-  const profile = rb.profile.trim();
+  const project = getProjectName(rb);
+  const executionKind = resolveExecutionKind(rb);
+
+  const projectCtx = await resolveProjectContext({
+    uramRoot,
+    project,
+  });
 
   const projectBoxDir = getProjectBoxDir(uramRoot, project);
   const historyDir = getHistoryDir(projectBoxDir);
@@ -146,25 +246,67 @@ async function runUramPipeline({ uramCli, workspaceCli, keepWorkspace, verbose, 
 
   let exitCode = 2;
   let auditRes = null;
+  let scenarioRes = null;
+  let loadedCommands = [];
+  let lock = null;
+
   const prevCwd = process.cwd();
+
   try {
-    if (profile !== "audit") {
-      if (!quiet) console.error(`[uri] run: unsupported profile for v1: ${profile} (only audit)`);
-      return { exitCode: 2 };
+    lock = await acquireExecutionLock({
+      uramRoot,
+      project,
+      runId,
+    });
+
+    process.chdir(projectCtx.cwd);
+
+    if (!quiet) {
+      console.log(`[uri] run: project=${project}, engine=${executionKind}, cwd=${projectCtx.cwd}`);
+      console.log(`[uri] run: lock=${lock.lockPath}`);
     }
 
-    process.chdir(rb.cwd);
-    if (!quiet) console.log(`[uri] run: project=${project}, profile=${profile}, cwd=${rb.cwd}`);
+    if (executionKind === "audit") {
+      auditRes = await runAudit({
+        cwd: projectCtx.cwd,
+        inboxPath: inboxZipPath,
+        outboxPath: tmpOutboxPath,
+        workspaceDir: workspaceRoot,
+      });
 
-    auditRes = await runAudit({
-      cwd: rb.cwd,
-      inboxPath: inboxZipPath,
-      outboxPath: tmpOutboxPath,
-      workspaceDir: workspaceRoot,
-    });
-    exitCode = auditRes.exitCode;
+      exitCode = auditRes.exitCode;
+    } else if (executionKind === "scenario") {
+      const commandsDir = path.resolve(__dirname, "../commands");
+
+      const scenarioRun = await runScenarioProfile({
+        runbook: rb,
+        commandsDir,
+        quiet,
+        cwd: projectCtx.cwd,
+      });
+
+      exitCode = scenarioRun.exitCode;
+      scenarioRes = scenarioRun.scenarioRes;
+      loadedCommands = scenarioRun.loadedCommands;
+
+      await writeScenarioOutbox(tmpOutboxPath, {
+        ok: scenarioRes.ok,
+        engine: "scenario",
+        project,
+        cwd: projectCtx.cwd,
+        loaded_commands: loadedCommands,
+        result: scenarioRes,
+      });
+    } else {
+      if (!quiet) {
+        console.error(`[uri] run: unsupported engine: ${executionKind}`);
+      }
+
+      return { exitCode: 2 };
+    }
   } finally {
     process.chdir(prevCwd);
+    await releaseExecutionLock(lock?.lockPath);
   }
 
   const ok = exitCode === 0;
@@ -172,29 +314,32 @@ async function runUramPipeline({ uramCli, workspaceCli, keepWorkspace, verbose, 
 
   await fsp.access(tmpOutboxPath, fs.constants.R_OK);
 
-  const historyOutboxName = `${stamp}__${profile}__${statusText}__${runId}.outbox.zip`;
+  const historyOutboxName = `${stamp}__${executionKind}__${statusText}__${runId}.outbox.zip`;
   const historyOutboxPath = path.join(historyDir, historyOutboxName);
-  await fsp.rename(tmpOutboxPath, historyOutboxPath);
 
+  await fsp.rename(tmpOutboxPath, historyOutboxPath);
   await atomicCopyToLatest(historyOutboxPath, latestOutboxPath, runId);
 
   const durationMs = Date.now() - startedAt;
   const indexPath = path.join(historyDir, "index.jsonl");
+
   await appendJsonl(indexPath, {
     ts: isoBerlin(),
     run_id: runId,
     project,
-    profile,
+    engine: executionKind,
     ok,
     exit_code: exitCode,
     duration_ms: durationMs,
-    cwd: rb.cwd,
+    cwd: projectCtx.cwd,
     inbox_name: path.basename(inboxZipPath),
     outbox_rel_path: path.join("history", historyOutboxName),
+    loaded_commands: loadedCommands,
   });
 
   const processedInboxName = `${stamp}__${project}__${runId}.inbox.zip`;
   const processedInboxPath = path.join(processedDir, processedInboxName);
+
   await fsp.rename(inboxZipPath, processedInboxPath);
 
   void keepWorkspace;
@@ -206,7 +351,13 @@ async function runUramPipeline({ uramCli, workspaceCli, keepWorkspace, verbose, 
     console.log(`[uri] run: inbox processed=${processedInboxPath}`);
   }
 
-  return { exitCode, auditRes };
+  return {
+    exitCode,
+    auditRes,
+    scenarioRes,
+    loadedCommands,
+    projectCtx,
+  };
 }
 
 module.exports = { runUramPipeline };
