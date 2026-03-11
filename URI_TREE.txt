@@ -1,0 +1,32 @@
+.
+├── architecture
+│   ├── phase1-overview.md
+│   └── project-structure.md
+├── changelog.md
+├── commands
+│   ├── command-libraries.md
+│   └── command-loading.md
+├── context
+│   ├── context-links.md
+│   ├── context-metadata.md
+│   └── context-reading.md
+├── criteria
+│   └── phase1-completion.md
+├── index.md
+├── notes
+│   └── ideas.md
+├── .obsidian
+│   ├── appearance.json
+│   ├── app.json
+│   ├── core-plugins.json
+│   └── workspace.json
+├── README_COMMAND_LOADER_PACK.md
+├── README_EXECUTABLE_CONTEXT_RUNTIME_PATCH.txt
+├── README_EXECUTION_LOCK_PATCH.md
+├── README_META_PIPELINE_PARITY_PATCH.md
+├── README_RUNTIME_PACK.md
+├── scenario
+│   └── scenario-body-v1.md
+└── URI_TREE.txt
+
+8 directories, 22 files
