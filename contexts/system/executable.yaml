@@ -1,0 +1,12 @@
+version: 1
+
+engine: scenario
+
+commands:
+  roots:
+    - system
+    - project
+
+runtime:
+  max_steps: 100
+  strict_commands: true
