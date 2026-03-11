@@ -1,10 +1,7 @@
 "use strict";
 
-const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
-const unzipper = require("unzipper");
-const YAML = require("yaml");
 const crypto = require("crypto");
 
 const { resolveProjectContext } = require("./project-resolver.cjs");
@@ -14,6 +11,13 @@ const { runScenarioEngine } = require("./engines/scenario-engine.cjs");
 const { runAuditEngine } = require("./engines/audit-engine.cjs");
 
 const { finalizeRun } = require("./finalize-run.cjs");
+
+const {
+  readRunbookFromInboxZip,
+  validateRunbook,
+  resolveExecutionKind,
+  getProjectName,
+} = require("./runbook.cjs");
 
 const {
   resolveUramRoot,
@@ -31,44 +35,8 @@ function makeRunId() {
   return `${iso}_${rnd}`;
 }
 
-async function readRunbookFromInboxZip(inboxZipPath) {
-  const z = fs.createReadStream(inboxZipPath).pipe(unzipper.Parse({ forceStream: true }));
-
-  for await (const entry of z) {
-    const name = entry.path.replace(/\\/g, "/");
-
-    if (name === "RUNBOOK.yaml" || name.endsWith("/RUNBOOK.yaml")) {
-      const buf = await entry.buffer();
-      const txt = buf.toString("utf-8");
-      const runbook = YAML.parse(txt);
-      return { runbook, raw: txt };
-    }
-
-    entry.autodrain();
-  }
-
-  return { runbook: null, raw: null };
-}
-
-function validateRunbook(runbook) {
-  if (!runbook || typeof runbook !== "object") {
-    throw new Error("RUNBOOK.yaml is missing or invalid YAML");
-  }
-
-  if (runbook.version !== 1) {
-    throw new Error("RUNBOOK.yaml: version must be 1");
-  }
-
-  if (!runbook.project && !runbook?.meta?.project) {
-    throw new Error("RUNBOOK.yaml: project must exist");
-  }
-
-  return runbook;
-}
-
-function resolveExecutionKind(runbook) {
-  if (runbook?.meta?.context_kind === "audit_context") return "audit";
-  return "scenario";
+async function ensureDir(p) {
+  await fsp.mkdir(p, { recursive: true });
 }
 
 async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
@@ -76,7 +44,9 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
 
   const inboxZipPath = getInboxZipPath(uramRoot);
   const processedDir = getProcessedDir(uramRoot);
-  const workspaceRoot = workspaceCli ? path.resolve(workspaceCli) : getTmpDir(uramRoot);
+  const workspaceRoot = workspaceCli
+    ? path.resolve(workspaceCli)
+    : getTmpDir(uramRoot);
 
   const startedAt = Date.now();
   const runId = makeRunId();
@@ -84,7 +54,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
   const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
   const rb = validateRunbook(runbook);
-  const project = rb.meta?.project || rb.project;
+  const project = getProjectName(rb);
 
   const executionKind = resolveExecutionKind(rb);
 
@@ -97,10 +67,10 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
   const historyDir = getHistoryDir(projectBoxDir);
   const latestOutboxPath = getLatestOutboxPath(projectBoxDir);
 
-  await fsp.mkdir(projectBoxDir, { recursive: true });
-  await fsp.mkdir(historyDir, { recursive: true });
-  await fsp.mkdir(processedDir, { recursive: true });
-  await fsp.mkdir(workspaceRoot, { recursive: true });
+  await ensureDir(projectBoxDir);
+  await ensureDir(historyDir);
+  await ensureDir(processedDir);
+  await ensureDir(workspaceRoot);
 
   const tmpOutboxPath = path.join(projectBoxDir, `.tmp.outbox.${runId}.zip`);
 
@@ -111,10 +81,20 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
 
   const engine = engines[executionKind];
 
+  if (!engine) {
+    throw new Error(`[uri] unsupported engine: ${executionKind}`);
+  }
+
   const engineResult = await withExecutionLock(
     { uramRoot, project, runId },
     async () => {
       process.chdir(projectCtx.cwd);
+
+      if (!quiet) {
+        console.log(
+          `[uri] run: project=${project}, engine=${executionKind}, cwd=${projectCtx.cwd}`
+        );
+      }
 
       return await engine({
         runbook: rb,
