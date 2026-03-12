@@ -1,51 +1,23 @@
 "use strict";
 
-const fs = require("fs/promises");
+const fsp = require("fs/promises");
 const path = require("path");
 
-async function ensureDir(dirPath) {
-  await fs.mkdir(dirPath, { recursive: true });
+async function ensureDir(p) {
+  await fsp.mkdir(p, { recursive: true });
 }
 
-async function appendJsonl(filePath, obj) {
-  await fs.appendFile(filePath, `${JSON.stringify(obj)}\n`, "utf-8");
+async function writeJson(p, obj) {
+  await fsp.writeFile(p, JSON.stringify(obj, null, 2), "utf8");
 }
 
-async function readJsonArrayOrEmpty(filePath) {
+async function readJsonSafe(p) {
   try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    const parsed = JSON.parse(raw);
-
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    if (err && err.code === "ENOENT") {
-      return [];
-    }
-
-    throw err;
+    const raw = await fsp.readFile(p, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
   }
-}
-
-async function writeJsonAtomic(filePath, value, tmpSuffix) {
-  const dir = path.dirname(filePath);
-  await ensureDir(dir);
-
-  const tmpPath = path.join(
-    dir,
-    `.tmp.${path.basename(filePath)}.${tmpSuffix}`
-  );
-
-  await fs.writeFile(tmpPath, JSON.stringify(value, null, 2), "utf-8");
-  await fs.rename(tmpPath, filePath);
-}
-
-async function atomicCopyToLatest(srcFile, latestPath, runId) {
-  const dir = path.dirname(latestPath);
-  await ensureDir(dir);
-
-  const tmpPath = path.join(dir, `.tmp.latest.${runId}.zip`);
-  await fs.copyFile(srcFile, tmpPath);
-  await fs.rename(tmpPath, latestPath);
 }
 
 async function finalizeRun({
@@ -63,70 +35,64 @@ async function finalizeRun({
   loadedCommands,
   cwd,
   quiet,
+  planRelPath = null,
 }) {
+  const historyIndexPath = path.join(historyDir, "index.json");
+  const historyJsonlPath = path.join(historyDir, "index.jsonl");
+
   await ensureDir(historyDir);
   await ensureDir(processedDir);
 
-  const ok = exitCode === 0;
-  const statusText = ok ? "OK" : "FAIL";
+  // move outbox -> latest
+  await fsp.rename(tmpOutboxPath, latestOutboxPath);
 
-  const historyOutboxName =
-    `${stamp}__${executionKind}__${statusText}__${runId}.outbox.zip`;
-  const historyOutboxPath = path.join(historyDir, historyOutboxName);
-
-  await fs.rename(tmpOutboxPath, historyOutboxPath);
-  await atomicCopyToLatest(historyOutboxPath, latestOutboxPath, runId);
-
-  const durationMs = Date.now() - startedAt;
-
-  const entry = {
-    ts: new Date().toISOString(),
-
-    // canonical camelCase fields
+  const runRecord = {
     runId,
     project,
     executionKind,
-    ok,
     exitCode,
-    durationMs,
+    startedAt,
+    finishedAt: Date.now(),
     cwd,
-    inboxName: path.basename(inboxZipPath),
-    outboxRelPath: path.join("history", historyOutboxName),
-    loadedCommands: Array.isArray(loadedCommands) ? loadedCommands : [],
-
-    // compatibility aliases
-    run_id: runId,
-    engine: executionKind,
-    exit_code: exitCode,
-    duration_ms: durationMs,
-    inbox_name: path.basename(inboxZipPath),
-    outbox_rel_path: path.join("history", historyOutboxName),
-    loaded_commands: Array.isArray(loadedCommands) ? loadedCommands : [],
+    loadedCommands,
   };
 
-  // Keep JSONL log for append-only history
-  const indexJsonlPath = path.join(historyDir, "index.jsonl");
-  await appendJsonl(indexJsonlPath, entry);
-
-  // Also maintain index.json array because tests and tooling expect it
-  const indexJsonPath = path.join(historyDir, "index.json");
-  const index = await readJsonArrayOrEmpty(indexJsonPath);
-  index.push(entry);
-  await writeJsonAtomic(indexJsonPath, index, runId);
-
-  const processedInboxName = `${stamp}__${project}__${runId}.inbox.zip`;
-  const processedInboxPath = path.join(processedDir, processedInboxName);
-
-  await fs.rename(inboxZipPath, processedInboxPath);
-
-  if (!quiet) {
-    console.log(`[uri] run: latest=${latestOutboxPath}`);
-    console.log(`[uri] run: history=${historyOutboxPath}`);
-    console.log(`[uri] run: history-index=${indexJsonPath}`);
-    console.log(`[uri] run: inbox processed=${processedInboxPath}`);
+  if (planRelPath) {
+    runRecord.planRelPath = planRelPath;
   }
 
-  return historyOutboxPath;
+  // append jsonl
+  await fsp.appendFile(
+    historyJsonlPath,
+    JSON.stringify(runRecord) + "\n",
+    "utf8"
+  );
+
+  // update index.json
+  const existingIndex = (await readJsonSafe(historyIndexPath)) || {
+    version: 1,
+    runs: [],
+  };
+
+  existingIndex.runs.push(runRecord);
+
+  await writeJson(historyIndexPath, existingIndex);
+
+  // move inbox -> processed
+  const processedName = `${runId}.inbox.zip`;
+  const processedPath = path.join(processedDir, processedName);
+
+  try {
+    await fsp.rename(inboxZipPath, processedPath);
+  } catch {
+    // ignore
+  }
+
+  if (!quiet) {
+    console.log(`[uri] finalize: run ${runId} stored`);
+  }
 }
 
-module.exports = { finalizeRun };
+module.exports = {
+  finalizeRun,
+};

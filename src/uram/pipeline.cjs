@@ -7,9 +7,7 @@ const crypto = require("crypto");
 const { resolveProjectContext } = require("./project-resolver.cjs");
 const { withExecutionLock } = require("./execution-lock.cjs");
 
-const { runScenarioEngine } = require("./engines/scenario-engine.cjs");
 const { runAuditEngine } = require("./engines/audit-engine.cjs");
-
 const { finalizeRun } = require("./finalize-run.cjs");
 
 const {
@@ -32,6 +30,16 @@ const {
 } = require("./paths.cjs");
 
 const { ERROR_CODES, isKnownErrorCode } = require("./error-codes.cjs");
+const { compilePlan } = require("./compile-plan.cjs");
+const { runPlan } = require("./run-plan.cjs");
+const { writePlanToFile } = require("./plan-io.cjs");
+const {
+  getPlansDir,
+  getLatestPlanPath,
+  getHistoryPlansDir,
+  getHistoryPlanPath,
+  getHistoryPlanRelPath,
+} = require("./plan-paths.cjs");
 
 class UramRuntimeError extends Error {
   constructor(message, code = ERROR_CODES.PIPELINE_INTERNAL_ERROR, details = {}) {
@@ -172,6 +180,69 @@ function normalizeEngineError(err, fallbackEngine) {
   };
 }
 
+async function persistPlanArtifacts({
+  plan,
+  projectBoxDir,
+  historyDir,
+  runId,
+}) {
+  const plansDir = getPlansDir(projectBoxDir);
+  const latestPlanPath = getLatestPlanPath(projectBoxDir);
+  const historyPlansDir = getHistoryPlansDir(historyDir);
+  const historyPlanPath = getHistoryPlanPath(historyDir, runId);
+
+  await ensureDir(plansDir);
+  await ensureDir(historyPlansDir);
+
+  await writePlanToFile(plan, latestPlanPath);
+  await writePlanToFile(plan, historyPlanPath);
+
+  return {
+    latestPlanPath,
+    historyPlanPath,
+    planRelPath: getHistoryPlanRelPath(runId),
+  };
+}
+
+async function runScenarioPhases({
+  runbook,
+  project,
+  executableCtx,
+  projectRoot,
+  projectBoxDir,
+  historyDir,
+  runId,
+  workspaceDir,
+}) {
+  const plan = compilePlan({
+    runbook,
+    project,
+    executionKind: "scenario",
+    executableCtx,
+  });
+
+  const planArtifacts = await persistPlanArtifacts({
+    plan,
+    projectBoxDir,
+    historyDir,
+    runId,
+  });
+
+  const engineResult = await runPlan({
+    plan,
+    projectRoot,
+    runId,
+    workspaceDir,
+  });
+
+  engineResult.meta = engineResult.meta || {};
+  engineResult.meta.plan = {
+    path: planArtifacts.planRelPath,
+  };
+
+  return engineResult;
+}
+
 async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
   const uramRoot = resolveUramRoot({ cliUram: uramCli, env, homeDir });
 
@@ -220,21 +291,6 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
 
     tmpOutboxPath = path.join(projectBoxDir, `.tmp.outbox.${runId}.zip`);
 
-    const engines = {
-      scenario: runScenarioEngine,
-      audit: runAuditEngine,
-    };
-
-    const engine = engines[executionKind];
-
-    if (!engine) {
-      throw new UramRuntimeError(
-        `[uri] unsupported engine: ${executionKind}`,
-        ERROR_CODES.ENGINE_NOT_ALLOWED,
-        { executionKind }
-      );
-    }
-
     const engineResult = await withExecutionLock(
       { uramRoot, project, runId },
       async () => {
@@ -246,19 +302,37 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
           );
         }
 
-        return await engine({
-          runbook: rb,
-          project,
-          projectCtx,
-          executableCtx,
-          projectRoot: projectCtx.cwd,
-          inboxZipPath,
-          tmpOutboxPath,
-          workspaceRoot,
-          workspaceDir: workspaceRoot,
-          quiet,
-          runId,
-        });
+        if (executionKind === "scenario") {
+          return await runScenarioPhases({
+            runbook: rb,
+            project,
+            executableCtx,
+            projectRoot: projectCtx.cwd,
+            projectBoxDir,
+            historyDir,
+            runId,
+            workspaceDir: workspaceRoot,
+          });
+        }
+
+        if (executionKind === "audit") {
+          return await runAuditEngine({
+            runbook: rb,
+            project,
+            projectCtx,
+            executableCtx,
+            inboxZipPath,
+            tmpOutboxPath,
+            workspaceRoot,
+            quiet,
+          });
+        }
+
+        throw new UramRuntimeError(
+          `[uri] unsupported engine: ${executionKind}`,
+          ERROR_CODES.ENGINE_NOT_ALLOWED,
+          { executionKind }
+        );
       }
     );
 
@@ -285,6 +359,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
       loadedCommands: engineResult.meta?.loadedCommands || [],
       cwd: projectCtx.cwd,
       quiet,
+      planRelPath: engineResult.meta?.plan?.path || null,
     });
 
     return {
@@ -335,6 +410,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
           loadedCommands: normalizedResult.meta?.loadedCommands || [],
           cwd: projectCtx?.cwd || workspaceRoot,
           quiet,
+          planRelPath: normalizedResult.meta?.plan?.path || null,
         });
       } catch (finalizeErr) {
         const finalizeMessage =
