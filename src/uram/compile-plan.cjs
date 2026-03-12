@@ -1,6 +1,11 @@
 "use strict";
 
 const { ERROR_CODES } = require("./error-codes.cjs");
+const {
+  PLAN_VERSION,
+  PLAN_KIND_SCENARIO,
+  assertPlanShape,
+} = require("./plan-schema.cjs");
 
 class PlanCompileError extends Error {
   constructor(code, message, details = undefined) {
@@ -59,7 +64,9 @@ function getAllowedRoots(executableCtx) {
 
 function getRuntimeOptions(executableCtx) {
   const runtime =
-    executableCtx && executableCtx.runtime && typeof executableCtx.runtime === "object"
+    executableCtx &&
+    executableCtx.runtime &&
+    typeof executableCtx.runtime === "object"
       ? executableCtx.runtime
       : {};
 
@@ -216,9 +223,9 @@ function compilePlan(params) {
 
   const runtime = getRuntimeOptions(executableCtx);
 
-  return {
-    version: 1,
-    kind: "scenario-plan",
+  const draftPlan = {
+    version: PLAN_VERSION,
+    kind: PLAN_KIND_SCENARIO,
     engine: "scenario",
     project: project || runbook?.project || "unknown",
     runtime,
@@ -229,6 +236,8 @@ function compilePlan(params) {
     },
     steps: compiledSteps,
   };
+
+  return assertPlanShape(draftPlan);
 }
 
 module.exports = {

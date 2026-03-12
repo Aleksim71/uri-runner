@@ -2,6 +2,7 @@
 
 const path = require("path");
 const { ERROR_CODES } = require("./error-codes.cjs");
+const { assertPlanShape } = require("./plan-schema.cjs");
 
 class PlanRunError extends Error {
   constructor(code, message, details = undefined) {
@@ -171,27 +172,15 @@ async function runPlan(params) {
     workspaceDir = null,
   } = params || {};
 
-  if (!plan || typeof plan !== "object") {
-    throw createPlanRunError(
-      ERROR_CODES.SCENARIO_INVALID,
-      "Plan is invalid: object expected"
-    );
-  }
-
-  if (plan.kind !== "scenario-plan") {
-    throw createPlanRunError(
-      ERROR_CODES.SCENARIO_INVALID,
-      `Plan is invalid: unsupported kind ${String(plan.kind || "") || "unknown"}`
-    );
-  }
+  const normalizedPlan = assertPlanShape(plan);
 
   const commands = await loadPlanCommands({
     projectRoot,
-    executableCtxSnapshot: plan.executableCtxSnapshot || {},
+    executableCtxSnapshot: normalizedPlan.executableCtxSnapshot,
   });
 
   const loadedCommands = normalizeLoadedCommands(commands);
-  const strictCommands = plan.runtime?.strictCommands === true;
+  const strictCommands = normalizedPlan.runtime.strictCommands === true;
 
   const executionContext = {
     runId,
@@ -199,11 +188,11 @@ async function runPlan(params) {
     projectRoot,
     commands,
     loadedCommands,
-    plan,
+    plan: normalizedPlan,
     results: [],
   };
 
-  for (const step of plan.steps || []) {
+  for (const step of normalizedPlan.steps) {
     ensureCommandAvailable(step.command, loadedCommands, strictCommands);
 
     const value = await executePlanStep(step, executionContext);
@@ -220,8 +209,8 @@ async function runPlan(params) {
     exitCode: 0,
     outboxPayload: {
       ok: true,
-      engine: plan.engine,
-      project: plan.project,
+      engine: normalizedPlan.engine,
+      project: normalizedPlan.project,
       loaded_commands: loadedCommands,
       result: {
         results: executionContext.results,
