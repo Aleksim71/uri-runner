@@ -41,6 +41,20 @@ async function ensureDir(p) {
   await fsp.mkdir(p, { recursive: true });
 }
 
+function assertEngineAllowed(executionKind, executableCtx) {
+  const configuredEngine = executableCtx?.engine;
+
+  if (!configuredEngine) {
+    return;
+  }
+
+  if (configuredEngine !== executionKind) {
+    throw new Error(
+      `[uri] engine not allowed by executable context: requested=${executionKind}, configured=${configuredEngine}`
+    );
+  }
+}
+
 async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
   const uramRoot = resolveUramRoot({ cliUram: uramCli, env, homeDir });
 
@@ -66,6 +80,8 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
   });
 
   const executableCtx = await loadExecutableContext(projectCtx);
+
+  assertEngineAllowed(executionKind, executableCtx);
 
   const projectBoxDir = getProjectBoxDir(uramRoot, project);
   const historyDir = getHistoryDir(projectBoxDir);
@@ -139,7 +155,11 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
   });
 
   return {
+    runId,
+    project,
+    engine: executionKind,
     exitCode: engineResult.exitCode,
+    ok: engineResult.exitCode === 0,
     executableCtx,
     ...engineResult.meta,
   };
