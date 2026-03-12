@@ -21,13 +21,49 @@ function getScenarioCommandNames(runbook) {
   return Array.from(new Set(names));
 }
 
-async function runScenarioEngine({ runbook, projectCtx, quiet }) {
+function validateCommandRoots(commandNames, executableCtx) {
+  const allowedRoots = executableCtx?.commands?.roots || [];
+
+  if (!allowedRoots.length) {
+    return;
+  }
+
+  for (const name of commandNames) {
+    const root = name.split(".")[0];
+
+    if (!allowedRoots.includes(root)) {
+      throw new Error(
+        `[uri] command root not allowed by executable context: ${name}`
+      );
+    }
+  }
+}
+
+function preflightCommands(commandNames, registry, executableCtx) {
+  for (const name of commandNames) {
+    registry.assertAllowed(name, executableCtx);
+  }
+}
+
+async function runScenarioEngine({
+  runbook,
+  projectCtx,
+  executableCtx,
+  quiet,
+}) {
   const commandNames = getScenarioCommandNames(runbook);
 
   const commandsDir = path.resolve(__dirname, "../../commands");
 
+  validateCommandRoots(commandNames, executableCtx);
+
   const registry = new CommandRegistry();
-  const loaded = loadCommands(commandsDir, registry, { only: commandNames });
+
+  const loaded = loadCommands(commandsDir, registry, {
+    only: commandNames,
+  });
+
+  preflightCommands(commandNames, registry, executableCtx);
 
   const parsed = parseScenario(runbook);
 
@@ -36,6 +72,11 @@ async function runScenarioEngine({ runbook, projectCtx, quiet }) {
     console.log(`[uri] run: scenario commands=${commandNames.join(", ")}`);
   }
 
+  const maxSteps =
+    executableCtx?.runtime?.maxSteps && Number.isInteger(executableCtx.runtime.maxSteps)
+      ? executableCtx.runtime.maxSteps
+      : 100;
+
   const result = await executeScenario(parsed, {
     registry,
     context: {
@@ -43,7 +84,7 @@ async function runScenarioEngine({ runbook, projectCtx, quiet }) {
       logger: console,
       state: { steps: {} },
     },
-    maxSteps: 100,
+    maxSteps,
   });
 
   const loadedCommands = loaded.map((item) => item.name);

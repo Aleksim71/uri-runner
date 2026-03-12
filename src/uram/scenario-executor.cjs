@@ -1,5 +1,7 @@
+"use strict";
+
 function createDefaultState(initialState) {
-  if (initialState && typeof initialState === 'object' && !Array.isArray(initialState)) {
+  if (initialState && typeof initialState === "object" && !Array.isArray(initialState)) {
     if (!initialState.steps) {
       initialState.steps = {};
     }
@@ -9,12 +11,75 @@ function createDefaultState(initialState) {
   return { steps: {} };
 }
 
-async function executeScenario(parsedScenario, options = {}) {
-  const { registry, maxSteps = 100 } = options;
+function preflightScenario(parsedScenario, options = {}) {
+  const { registry, executableCtx } = options;
 
   if (!registry) {
-    throw new Error('executeScenario: registry is required');
+    throw new Error("preflightScenario: registry is required");
   }
+
+  const { steps, stepMap, startStepId } = parsedScenario || {};
+
+  if (!Array.isArray(steps) || steps.length === 0) {
+    throw new Error("preflightScenario: steps must be a non-empty array");
+  }
+
+  if (!stepMap || typeof stepMap !== "object") {
+    throw new Error("preflightScenario: stepMap is required");
+  }
+
+  if (!startStepId || !stepMap[startStepId]) {
+    throw new Error("preflightScenario: startStepId is missing or invalid");
+  }
+
+  for (const step of steps) {
+    if (!step || typeof step !== "object") {
+      throw new Error("preflightScenario: step must be an object");
+    }
+
+    if (!step.id || typeof step.id !== "string") {
+      throw new Error("preflightScenario: step id must be a non-empty string");
+    }
+
+    if (!step.command || typeof step.command !== "string") {
+      throw new Error(`preflightScenario: step "${step.id}" must have a command`);
+    }
+
+    registry.assertAllowed(step.command, executableCtx);
+  }
+
+  return true;
+}
+
+async function executeStep(step, options = {}) {
+  const { registry, context = {}, executableCtx = null } = options;
+
+  const handler = registry.resolve(step.command, executableCtx);
+
+  try {
+    const result = await handler(step.args, {
+      ...context,
+      step,
+    });
+
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      code: "COMMAND_THROW",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function executeScenario(parsedScenario, options = {}) {
+  const { registry, maxSteps = 100, executableCtx = null } = options;
+
+  if (!registry) {
+    throw new Error("executeScenario: registry is required");
+  }
+
+  preflightScenario(parsedScenario, { registry, executableCtx });
 
   const logger = options.context?.logger ?? console;
   const cwd = options.context?.cwd ?? process.cwd();
@@ -40,7 +105,7 @@ async function executeScenario(parsedScenario, options = {}) {
       return {
         ok: false,
         finished: false,
-        stopReason: 'max_steps_exceeded',
+        stopReason: "max_steps_exceeded",
         currentStepId,
         visitedSteps,
         state,
@@ -53,7 +118,7 @@ async function executeScenario(parsedScenario, options = {}) {
       return {
         ok: false,
         finished: false,
-        stopReason: 'unknown_step',
+        stopReason: "unknown_step",
         currentStepId,
         visitedSteps,
         state,
@@ -62,20 +127,11 @@ async function executeScenario(parsedScenario, options = {}) {
 
     visitedSteps.push(step.id);
 
-    let result;
-    try {
-      const handler = registry.resolve(step.command);
-      result = await handler(step.args, {
-        ...context,
-        step,
-      });
-    } catch (error) {
-      result = {
-        ok: false,
-        code: 'COMMAND_THROW',
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
+    const result = await executeStep(step, {
+      registry,
+      context,
+      executableCtx,
+    });
 
     state.steps[step.id] = result;
 
@@ -83,7 +139,7 @@ async function executeScenario(parsedScenario, options = {}) {
       return {
         ok: result.ok === true,
         finished: true,
-        stopReason: 'stop_flag',
+        stopReason: "stop_flag",
         currentStepId: step.id,
         visitedSteps,
         state,
@@ -103,7 +159,7 @@ async function executeScenario(parsedScenario, options = {}) {
         return {
           ok: true,
           finished: true,
-          stopReason: 'end_of_steps',
+          stopReason: "end_of_steps",
           currentStepId: step.id,
           visitedSteps,
           state,
@@ -121,7 +177,7 @@ async function executeScenario(parsedScenario, options = {}) {
     return {
       ok: false,
       finished: true,
-      stopReason: 'step_failed',
+      stopReason: "step_failed",
       currentStepId: step.id,
       visitedSteps,
       state,
@@ -131,11 +187,14 @@ async function executeScenario(parsedScenario, options = {}) {
   return {
     ok: true,
     finished: true,
-    stopReason: 'no_current_step',
+    stopReason: "no_current_step",
     currentStepId: null,
     visitedSteps,
     state,
   };
 }
 
-module.exports = { executeScenario };
+module.exports = {
+  preflightScenario,
+  executeScenario,
+};
