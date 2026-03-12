@@ -8,6 +8,12 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 const { runUramPipeline } = require("../../src/uram/pipeline.cjs");
+const {
+  getProcessedDir,
+  getProjectBoxDir,
+  getHistoryDir,
+  getLatestOutboxPath,
+} = require("../../src/uram/paths.cjs");
 
 async function ensureDir(p) {
   await fsp.mkdir(p, { recursive: true });
@@ -16,6 +22,10 @@ async function ensureDir(p) {
 async function writeFile(p, body) {
   await ensureDir(path.dirname(p));
   await fsp.writeFile(p, body, "utf8");
+}
+
+function readJson(p) {
+  return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 
 function zipRunbook(tempDir, runbookText) {
@@ -33,8 +43,10 @@ function zipRunbook(tempDir, runbookText) {
 }
 
 describe("scenario runtime unknown command", () => {
-  it("fails when strict_commands is true and command is unknown", async () => {
-    const root = await fsp.mkdtemp(path.join(os.tmpdir(), "uri-v2-unknown-command-"));
+  it("finalizes run when strict_commands is true and command is unknown", async () => {
+    const root = await fsp.mkdtemp(
+      path.join(os.tmpdir(), "uri-v2-unknown-command-")
+    );
 
     const uramRoot = path.join(root, "uram");
     const projectName = "demo";
@@ -95,14 +107,64 @@ describe("scenario runtime unknown command", () => {
     const inboxZipPath = path.join(inboxDir, "inbox.zip");
     await fsp.copyFile(builtInboxZip, inboxZipPath);
 
-    await expect(
-      runUramPipeline({
-        uramCli: uramRoot,
-        workspaceCli: path.join(root, "workspace"),
-        quiet: true,
-        env: process.env,
-        homeDir: os.homedir(),
-      })
-    ).rejects.toThrow();
+    const result = await runUramPipeline({
+      uramCli: uramRoot,
+      workspaceCli: path.join(root, "workspace"),
+      quiet: true,
+      env: process.env,
+      homeDir: os.homedir(),
+    });
+
+    console.dir(result, { depth: null });
+
+    expect(result.ok).toBe(false);
+    expect(result.exitCode).toBe(1);
+    expect(result.project).toBe(projectName);
+    expect(result.engine).toBe("scenario");
+
+    expect(result.error).toBeDefined();
+    expect(typeof result.error.code).toBe("string");
+    expect(result.error.code.length).toBeGreaterThan(0);
+    expect(result.error.code).toBe("COMMAND_NOT_FOUND");
+    expect(typeof result.error.message).toBe("string");
+    expect(result.error.message.length).toBeGreaterThan(0);
+
+    const processedDir = getProcessedDir(uramRoot);
+    const projectBoxDir = getProjectBoxDir(uramRoot, projectName);
+    const latestOutboxPath = getLatestOutboxPath(projectBoxDir);
+    const historyDir = getHistoryDir(projectBoxDir);
+    const indexPath = path.join(historyDir, "index.json");
+
+    expect(fs.existsSync(latestOutboxPath)).toBe(true);
+    expect(fs.existsSync(indexPath)).toBe(true);
+    expect(fs.existsSync(inboxZipPath)).toBe(false);
+
+    const processedFiles = fs
+      .readdirSync(processedDir)
+      .filter((name) => name.endsWith(".inbox.zip"));
+
+    expect(processedFiles.length).toBe(1);
+    expect(processedFiles[0]).toContain(
+      `__${projectName}__${result.runId}.inbox.zip`
+    );
+
+    const latest = readJson(latestOutboxPath);
+    expect(latest.ok).toBe(false);
+    expect(latest.engine).toBe("scenario");
+    expect(latest.error).toBeDefined();
+    expect(typeof latest.error.code).toBe("string");
+    expect(latest.error.code.length).toBeGreaterThan(0);
+    expect(latest.error.code).toBe("COMMAND_NOT_FOUND");
+    expect(typeof latest.error.message).toBe("string");
+
+    const historyIndex = readJson(indexPath);
+    expect(Array.isArray(historyIndex)).toBe(true);
+    expect(historyIndex.length).toBeGreaterThan(0);
+
+    const lastEntry = historyIndex[historyIndex.length - 1];
+    expect(lastEntry.runId).toBe(result.runId);
+    expect(lastEntry.project).toBe(projectName);
+    expect(lastEntry.executionKind).toBe("scenario");
+    expect(lastEntry.exitCode).toBe(1);
   });
 });

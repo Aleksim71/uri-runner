@@ -129,6 +129,8 @@ describe("scenario runtime smoke", () => {
       homeDir: os.homedir(),
     });
 
+    console.dir(res, { depth: null });
+
     expect(res.exitCode).toBe(0);
 
     const allFiles = await walk(uramRoot);

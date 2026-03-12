@@ -1,101 +1,155 @@
-import { describe, it, expect } from "vitest";
 import fs from "fs";
-import path from "path";
 import os from "os";
-import { execSync } from "child_process";
+import path from "path";
+import { execFileSync } from "child_process";
+import { describe, expect, it } from "vitest";
+
+import { runUramPipeline } from "../../src/uram/pipeline.cjs";
+import {
+  getProcessedDir,
+  getProjectBoxDir,
+  getHistoryDir,
+  getLatestOutboxPath,
+} from "../../src/uram/paths.cjs";
 
 function writeFile(filePath, content) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, "utf8");
 }
 
-function zipRunbook(tmpDir) {
-  execSync("zip -j inbox.zip RUNBOOK.yaml", { cwd: tmpDir, stdio: "pipe" });
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function zipSingleFile(zipPath, filePath) {
+  fs.mkdirSync(path.dirname(zipPath), { recursive: true });
+  execFileSync("zip", ["-j", zipPath, filePath], {
+    stdio: "ignore",
+  });
 }
 
 describe("scenario runtime root policy", () => {
-  it("fails when command root is not allowed", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "uri-root-policy-"));
-    const uram = path.join(tmp, "uram");
-    const projectDir = path.join(tmp, "project");
+  it("finalizes run when command root is not allowed", async () => {
+    const tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "uri-scenario-root-policy-")
+    );
 
+    const uramRoot = path.join(tempRoot, "uram");
+    const inboxDir = path.join(uramRoot, "Inbox");
+    const processedDir = getProcessedDir(uramRoot);
+    const projectsRoot = path.join(uramRoot, "projects");
+
+    const projectName = "demo";
+    const projectDir = path.join(projectsRoot, projectName);
+
+    fs.mkdirSync(inboxDir, { recursive: true });
+    fs.mkdirSync(processedDir, { recursive: true });
     fs.mkdirSync(projectDir, { recursive: true });
+
+    writeFile(
+      path.join(projectDir, "package.json"),
+      JSON.stringify(
+        {
+          name: "demo",
+          version: "1.0.0",
+        },
+        null,
+        2
+      )
+    );
 
     writeFile(
       path.join(projectDir, "contexts/system/executable.yaml"),
       `
 version: 1
-
 engine: scenario
 
 commands:
   roots:
-    - system
+    - project
 
 runtime:
-  max_steps: 10
+  max_steps: 100
   strict_commands: true
-`
+`.trim() + "\n"
     );
 
+    const runbookPath = path.join(tempRoot, "RUNBOOK.yaml");
     writeFile(
-      path.join(uram, "config/projects.yaml"),
+      runbookPath,
       `
 version: 1
-projects:
-  testproj:
-    cwd: ${projectDir}
-`
-    );
 
-    writeFile(
-      path.join(tmp, "RUNBOOK.yaml"),
-      `
-version: 1
-project: testproj
+meta:
+  project: ${projectName}
+
+execution:
+  kind: scenario
 
 steps:
-  - id: bad
-    command: project.some_command
-`
+  - id: step_1
+    command: system.echo
+    args:
+      text: "should fail by root policy"
+`.trim() + "\n"
     );
 
-    zipRunbook(tmp);
+    const inboxZipPath = path.join(inboxDir, "inbox.zip");
+    zipSingleFile(inboxZipPath, runbookPath);
 
-    fs.mkdirSync(path.join(uram, "Inbox"), { recursive: true });
-    fs.copyFileSync(
-      path.join(tmp, "inbox.zip"),
-      path.join(uram, "Inbox", "inbox.zip")
-    );
+    const result = await runUramPipeline({
+      uramCli: uramRoot,
+      workspaceCli: path.join(tempRoot, "workspace"),
+      quiet: true,
+      env: process.env,
+      homeDir: os.homedir(),
+    });
 
-    let failed = false;
+    expect(result.ok).toBe(false);
+    expect(result.exitCode).toBe(1);
+    expect(result.project).toBe(projectName);
+    expect(result.engine).toBe("scenario");
 
-    try {
-      execSync(`uri run --uram ${uram}`, {
-        cwd: process.cwd(),
-        stdio: "pipe",
-      });
-    } catch {
-      failed = true;
-    }
+    expect(result.error).toBeDefined();
+    expect(typeof result.error.code).toBe("string");
+    expect(result.error.code.length).toBeGreaterThan(0);
+    expect(typeof result.error.message).toBe("string");
+    expect(result.error.message.length).toBeGreaterThan(0);
 
-    expect(failed).toBe(true);
+    const projectBoxDir = getProjectBoxDir(uramRoot, projectName);
+    const latestOutboxPath = getLatestOutboxPath(projectBoxDir);
+    const historyDir = getHistoryDir(projectBoxDir);
+    const indexPath = path.join(historyDir, "index.json");
 
-    const projectBoxDir = path.join(uram, "testprojBox");
-    const historyDir = path.join(projectBoxDir, "history");
-    const latestOutboxPath = path.join(projectBoxDir, "outbox.latest.zip");
-    const indexPath = path.join(historyDir, "index.jsonl");
-    const inboxZipPath = path.join(uram, "Inbox", "inbox.zip");
+    expect(fs.existsSync(latestOutboxPath)).toBe(true);
+    expect(fs.existsSync(indexPath)).toBe(true);
+    expect(fs.existsSync(inboxZipPath)).toBe(false);
 
-    expect(fs.existsSync(projectBoxDir)).toBe(true);
-    expect(fs.existsSync(historyDir)).toBe(true);
+    // processed inbox name now includes stamp + project + runId
+    const processedFiles = fs
+      .readdirSync(processedDir)
+      .filter((name) => name.endsWith(".inbox.zip"));
 
-    // В текущей архитектуре policy failure происходит до finalizeRun,
-    // поэтому latest outbox и history index могут не появиться.
-    expect(fs.existsSync(latestOutboxPath)).toBe(false);
-    expect(fs.existsSync(indexPath)).toBe(false);
+    expect(processedFiles.length).toBe(1);
+    expect(processedFiles[0]).toContain(`__${projectName}__${result.runId}.inbox.zip`);
 
-    // Inbox тоже остаётся на месте, потому что finalizeRun не был вызван.
-    expect(fs.existsSync(inboxZipPath)).toBe(true);
+    const latest = readJson(latestOutboxPath);
+    expect(latest.ok).toBe(false);
+    expect(latest.engine).toBe("scenario");
+    expect(latest.error).toBeDefined();
+    expect(typeof latest.error.code).toBe("string");
+    expect(latest.error.code.length).toBeGreaterThan(0);
+    expect(typeof latest.error.message).toBe("string");
+    expect(latest.error.message.length).toBeGreaterThan(0);
+
+    const historyIndex = readJson(indexPath);
+    expect(Array.isArray(historyIndex)).toBe(true);
+    expect(historyIndex.length).toBeGreaterThan(0);
+
+    const lastEntry = historyIndex[historyIndex.length - 1];
+    expect(lastEntry.runId).toBe(result.runId);
+    expect(lastEntry.project).toBe(projectName);
+    expect(lastEntry.executionKind).toBe("scenario");
+    expect(lastEntry.exitCode).toBe(1);
   });
 });

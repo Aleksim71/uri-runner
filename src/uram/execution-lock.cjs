@@ -1,48 +1,85 @@
 "use strict";
 
-const fs = require("fs/promises");
+const fsp = require("fs/promises");
 const path = require("path");
+const { ERROR_CODES } = require("./error-codes.cjs");
 
-async function acquireExecutionLock({ uramRoot, project, runId }) {
-  const lockPath = path.join(uramRoot, "locks", `${project}.lock`);
-
-  await fs.mkdir(path.dirname(lockPath), { recursive: true });
-
-  await fs.writeFile(
-    lockPath,
-    JSON.stringify({
-      project,
-      runId,
-      ts: new Date().toISOString(),
-    }),
-    { flag: "wx" }
-  );
-
-  return { lockPath };
+async function ensureDir(dirPath) {
+  await fsp.mkdir(dirPath, { recursive: true });
 }
 
-async function releaseExecutionLock(lockPath) {
-  if (!lockPath) return;
-
+async function fileExists(filePath) {
   try {
-    await fs.unlink(lockPath);
+    await fsp.access(filePath);
+    return true;
   } catch {
-    // ignore
+    return false;
   }
 }
 
-async function withExecutionLock(params, fn) {
-  const lock = await acquireExecutionLock(params);
+async function removeIfExists(filePath) {
+  try {
+    await fsp.rm(filePath, { force: true });
+  } catch {
+    // ignore cleanup errors
+  }
+}
+
+function getLocksDir(uramRoot) {
+  return path.join(uramRoot, "locks");
+}
+
+function makeLockFilePath(uramRoot, project) {
+  return path.join(getLocksDir(uramRoot), `${project}.lock`);
+}
+
+async function acquireLock(lockFilePath, payload) {
+  const body = JSON.stringify(payload, null, 2);
 
   try {
-    return await fn(lock);
+    const handle = await fsp.open(lockFilePath, "wx");
+    try {
+      await handle.writeFile(body, "utf8");
+    } finally {
+      await handle.close();
+    }
+  } catch (err) {
+    if (err && err.code === "EEXIST") {
+      const lockErr = new Error(
+        `[uri] execution lock already held: ${path.basename(lockFilePath)}`
+      );
+      lockErr.name = "ExecutionLockError";
+      lockErr.code = ERROR_CODES.EXECUTION_LOCKED;
+      lockErr.details = { lockFilePath };
+      throw lockErr;
+    }
+
+    throw err;
+  }
+}
+
+async function withExecutionLock({ uramRoot, project, runId }, fn) {
+  const locksDir = getLocksDir(uramRoot);
+  const lockFilePath = makeLockFilePath(uramRoot, project);
+
+  await ensureDir(locksDir);
+
+  await acquireLock(lockFilePath, {
+    project,
+    runId,
+    pid: process.pid,
+    createdAt: new Date().toISOString(),
+  });
+
+  try {
+    return await fn();
   } finally {
-    await releaseExecutionLock(lock.lockPath);
+    if (await fileExists(lockFilePath)) {
+      await removeIfExists(lockFilePath);
+    }
   }
 }
 
 module.exports = {
-  acquireExecutionLock,
-  releaseExecutionLock,
   withExecutionLock,
 };
