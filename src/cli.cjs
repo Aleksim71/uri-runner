@@ -9,6 +9,8 @@ const { runUramPipeline } = require("./uram/pipeline.cjs");
 const { debugPlan } = require("./cli/commands/debug-plan.cjs");
 const { debugRunbook } = require("./cli/commands/debug-runbook.cjs");
 const { debugCommands } = require("./cli/commands/debug-commands.cjs");
+const { compileInboxToPlan } = require("./cli/commands/compile.cjs");
+const { runPlanFile } = require("./cli/commands/run-plan.cjs");
 
 function resolveUramRoot(cliUram) {
   if (cliUram) {
@@ -25,6 +27,8 @@ function resolveUramRoot(cliUram) {
 function printUsage() {
   console.error("usage:");
   console.error("  uri run");
+  console.error("  uri compile <inbox.zip> <plan.json>");
+  console.error("  uri run-plan <plan.json>");
   console.error("  uri debug plan <inbox.zip>");
   console.error("  uri debug runbook <inbox.zip>");
   console.error("  uri debug commands <inbox.zip>");
@@ -60,6 +64,59 @@ async function main() {
 
     if (!result.ok) {
       process.exit(result.exitCode || 1);
+    }
+
+    return;
+  }
+
+  /*
+  --------------------------------
+  uri compile
+  --------------------------------
+  */
+
+  if (cmd === "compile") {
+    const inboxZip = args[1];
+    const outputPlan = args[2];
+
+    if (!inboxZip || !outputPlan) {
+      console.error("usage: uri compile <inbox.zip> <plan.json>");
+      process.exit(1);
+    }
+
+    await compileInboxToPlan({
+      uramRoot,
+      inboxZipPath: path.resolve(inboxZip),
+      outputPlanPath: path.resolve(outputPlan),
+    });
+
+    return;
+  }
+
+  /*
+  --------------------------------
+  uri run-plan
+  --------------------------------
+  */
+
+  if (cmd === "run-plan") {
+    const planFile = args[1];
+
+    if (!planFile) {
+      console.error("usage: uri run-plan <plan.json>");
+      process.exit(1);
+    }
+
+    const workspace = process.env.URI_WORKSPACE || null;
+
+    const result = await runPlanFile({
+      uramRoot,
+      planFilePath: path.resolve(planFile),
+      workspaceDir: workspace,
+    });
+
+    if (!result || result.exitCode !== 0) {
+      process.exit((result && result.exitCode) || 1);
     }
 
     return;
