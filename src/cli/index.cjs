@@ -1,122 +1,111 @@
-"use strict";
+'use strict';
 
-const path = require("path");
-const { registerTestCommand } = require("./commands/test.cjs");
-const { runWatchInboxOnce } = require("../uram/watch-inbox-once.cjs");
-const { run } = require("../uram/run.cjs");
-
-function printHelp() {
-  console.log(`uri - URI Runner Next
-
-Usage:
-  uri --help
-  uri watch-inbox-once [--root <path>]
-  uri test <target>
-  uri run [--uram <path>] [--workspace <path>] [--verbose] [--quiet]
-
-Commands:
-  watch-inbox-once   Run watcher once against configured folders
-  test               Run test targets
-  run                Run URAM pipeline against inbox.zip
-
-Options:
-  --help             Show this help message
-  --root <path>      Override URAM root for watcher
-  --uram <path>      Override URAM root for run
-  --workspace <path> Override workspace directory for run
-  --verbose          Print extra logs
-  --quiet            Reduce logs
-`);
-}
-
-function readArgValue(args, name) {
-  const idx = args.indexOf(name);
-  if (idx === -1) return null;
-  return args[idx + 1] ?? null;
-}
-
-function hasFlag(args, name) {
-  return args.includes(name);
-}
-
-function createProgramShim() {
-  return {
-    command(name) {
-      const commandName = String(name).trim();
-
-      return {
-        description() {
-          return this;
-        },
-
-        argument() {
-          return this;
-        },
-
-        action(handler) {
-          this._handler = handler;
-          createProgramShim.handlers.set(commandName, handler);
-          return this;
-        },
-      };
-    },
-  };
-}
-
-createProgramShim.handlers = new Map();
+/**
+ * URI CLI
+ * Main command router
+ *
+ * Commands are loaded lazily so one broken command
+ * does not break the whole CLI.
+ */
 
 async function main(argv = process.argv.slice(2)) {
-  const args = Array.isArray(argv) ? argv : [];
+  const args = Array.isArray(argv) ? argv.slice(0) : [];
 
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+  const command = args[0];
+  const commandArgs = args.slice(1);
+
+  if (!command) {
     printHelp();
     return;
   }
 
-  const program = createProgramShim();
-  registerTestCommand(program);
+  if (command === 'compile') {
+    const {
+      compileInboxToPlan
+    } = require('./commands/compile.cjs');
 
-  const command = args[0];
+    const inboxZipPath = commandArgs[0];
+    const outputPlanPath = commandArgs[1];
 
-  if (command === "watch-inbox-once") {
-    const rootArg = readArgValue(args, "--root");
-    const uramRoot = rootArg ? path.resolve(rootArg) : process.cwd();
-
-    await runWatchInboxOnce({ uramRoot });
-    return;
-  }
-
-  if (command === "run") {
-    const uramCli = readArgValue(args, "--uram");
-    const workspaceCli = readArgValue(args, "--workspace");
-    const verbose = hasFlag(args, "--verbose");
-    const quiet = hasFlag(args, "--quiet");
-
-    const result = await run({
-      uramCli,
-      workspaceCli,
-      keepWorkspace: false,
-      verbose,
-      quiet,
-      env: process.env,
-      homeDir: process.env.HOME,
-    });
-
-    if (result && typeof result.exitCode === "number") {
-      process.exitCode = result.exitCode;
+    if (!inboxZipPath || !outputPlanPath) {
+      throw new Error('compile requires <inbox.zip> <output-plan.json>');
     }
 
-    return;
+    return compileInboxToPlan({
+      uramRoot: process.cwd(),
+      inboxZipPath,
+      outputPlanPath
+    });
   }
 
-  const registeredHandler = createProgramShim.handlers.get(command);
-  if (registeredHandler) {
-    const target = args[1];
-    await registeredHandler(target);
-    return;
+  if (command === 'history') {
+    const {
+      runHistoryCommand
+    } = require('./commands/history.cjs');
+
+    return runHistoryCommand(commandArgs);
+  }
+
+  if (command === 'last') {
+    const {
+      runLastCommand
+    } = require('./commands/last.cjs');
+
+    return runLastCommand(commandArgs);
+  }
+
+  if (command === 'show') {
+    const {
+      runShowCommand
+    } = require('./commands/show.cjs');
+
+    const runId = commandArgs[0];
+
+    return runShowCommand(runId);
+  }
+
+  if (command === 'replay') {
+    const {
+      runReplayCommand
+    } = require('./commands/replay.cjs');
+
+    return runReplayCommand(commandArgs);
+  }
+
+  if (command === 'run-plan') {
+    const {
+      runPlanFile
+    } = require('./commands/run-plan.cjs');
+
+    const planFilePath = commandArgs[0];
+
+    if (!planFilePath) {
+      throw new Error('run-plan requires <plan-file>');
+    }
+
+    return runPlanFile({
+      uramRoot: process.cwd(),
+      planFilePath
+    });
   }
 
   throw new Error(`Unknown command: ${command}`);
 }
 
-module.exports = { main };
+function printHelp() {
+  console.log('');
+  console.log('URI CLI');
+  console.log('────────────────────────');
+  console.log('Available commands:');
+  console.log('  compile <inbox.zip> <output-plan.json>');
+  console.log('  history');
+  console.log('  last');
+  console.log('  show <runId>');
+  console.log('  replay <trace-file>');
+  console.log('  run-plan <plan-file>');
+  console.log('');
+}
+
+module.exports = {
+  main
+};
