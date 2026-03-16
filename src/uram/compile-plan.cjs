@@ -108,13 +108,31 @@ function normalizeEnvironmentPolicy(environment) {
         timeoutSec: Number.isFinite(healthcheckSource.timeoutSec)
           ? healthcheckSource.timeoutSec
           : 30,
+        host:
+          typeof healthcheckSource.host === "string"
+            ? healthcheckSource.host
+            : "",
+        port:
+          Number.isInteger(healthcheckSource.port) &&
+          healthcheckSource.port > 0
+            ? healthcheckSource.port
+            : null,
+        pid:
+          Number.isInteger(healthcheckSource.pid) &&
+          healthcheckSource.pid > 0
+            ? healthcheckSource.pid
+            : null,
       },
     },
   };
 }
 
 function validateManagedProcess(processEntry, index) {
-  if (!processEntry || typeof processEntry !== "object" || Array.isArray(processEntry)) {
+  if (
+    !processEntry ||
+    typeof processEntry !== "object" ||
+    Array.isArray(processEntry)
+  ) {
     throw createPlanCompileError(
       ERROR_CODES.SCENARIO_INVALID,
       "invalid runtime.environment.managed_processes entry: expected object",
@@ -307,6 +325,64 @@ function validateEnvironmentPolicy(executableCtx) {
   }
 
   if (
+    healthcheck &&
+    Object.prototype.hasOwnProperty.call(healthcheck, "url") &&
+    typeof healthcheck.url !== "string"
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.url: expected string",
+      {
+        field: "runtime.environment.startup.healthcheck.url",
+      }
+    );
+  }
+
+  if (
+    healthcheck &&
+    Object.prototype.hasOwnProperty.call(healthcheck, "host") &&
+    typeof healthcheck.host !== "string"
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.host: expected string",
+      {
+        field: "runtime.environment.startup.healthcheck.host",
+      }
+    );
+  }
+
+  if (
+    healthcheck &&
+    Object.prototype.hasOwnProperty.call(healthcheck, "port") &&
+    healthcheck.port !== null &&
+    (!Number.isInteger(healthcheck.port) || healthcheck.port <= 0)
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.port: expected positive integer",
+      {
+        field: "runtime.environment.startup.healthcheck.port",
+      }
+    );
+  }
+
+  if (
+    healthcheck &&
+    Object.prototype.hasOwnProperty.call(healthcheck, "pid") &&
+    healthcheck.pid !== null &&
+    (!Number.isInteger(healthcheck.pid) || healthcheck.pid <= 0)
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.pid: expected positive integer",
+      {
+        field: "runtime.environment.startup.healthcheck.pid",
+      }
+    );
+  }
+
+  if (
     normalized.startup.healthcheck.type === "http_ok" &&
     normalized.startup.healthcheck.url.trim().length === 0
   ) {
@@ -315,6 +391,32 @@ function validateEnvironmentPolicy(executableCtx) {
       "invalid runtime.environment.startup.healthcheck.url: required for http_ok",
       {
         field: "runtime.environment.startup.healthcheck.url",
+      }
+    );
+  }
+
+  if (
+    normalized.startup.healthcheck.type === "port_open" &&
+    !Number.isInteger(normalized.startup.healthcheck.port)
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.port: required for port_open",
+      {
+        field: "runtime.environment.startup.healthcheck.port",
+      }
+    );
+  }
+
+  if (
+    normalized.startup.healthcheck.type === "process_alive" &&
+    !Number.isInteger(normalized.startup.healthcheck.pid)
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.pid: required for process_alive",
+      {
+        field: "runtime.environment.startup.healthcheck.pid",
       }
     );
   }

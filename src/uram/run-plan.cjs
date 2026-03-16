@@ -4,8 +4,8 @@ const path = require("path");
 const { ERROR_CODES } = require("./error-codes.cjs");
 const { assertPlanShape } = require("./plan-schema.cjs");
 const {
-  stopManagedProcesses,
-} = require("../runtime/environment/stop-managed-processes.cjs");
+  resetEnvironment,
+} = require("../runtime/environment/reset-environment.cjs");
 
 class PlanRunError extends Error {
   constructor(code, message, details = undefined) {
@@ -203,18 +203,20 @@ async function runPlan(params) {
       : null;
 
   if (environmentPolicy && environmentPolicy.reset_before_run === true) {
-    const environmentReset = await stopManagedProcesses({
-      managedProcesses: environmentPolicy.managed_processes || [],
-    });
+    try {
+      const environmentReset = await resetEnvironment({
+        environment: environmentPolicy,
+        cwd: projectRoot,
+        workspaceDir,
+      });
 
-    executionContext.environmentReset = environmentReset;
-
-    if (environmentReset.failed.length > 0) {
+      executionContext.environmentReset = environmentReset;
+    } catch (error) {
       throw createPlanRunError(
-        ERROR_CODES.PIPELINE_INTERNAL_ERROR,
-        "Failed to stop managed processes before execution",
-        {
-          environmentReset,
+        error?.code || ERROR_CODES.PIPELINE_INTERNAL_ERROR,
+        error?.message || "Failed to reset environment before execution",
+        error?.details || {
+          cause: error?.message || String(error),
         }
       );
     }

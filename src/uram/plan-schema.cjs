@@ -4,11 +4,7 @@ const PLAN_VERSION = 1;
 const PLAN_KIND_SCENARIO = "scenario-plan";
 
 function isPlainObject(value) {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value)
-  );
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function createPlanSchemaError(message, details = undefined) {
@@ -64,6 +60,164 @@ function assertOptionalArray(value, fieldName, details = undefined) {
   return value;
 }
 
+function assertRuntimeEnvironmentShape(environment) {
+  if (environment === undefined || environment === null) {
+    return undefined;
+  }
+
+  if (!isPlainObject(environment)) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment must be an object",
+      { field: "runtime.environment" }
+    );
+  }
+
+  if (
+    environment.reset_before_run !== undefined &&
+    typeof environment.reset_before_run !== "boolean"
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.reset_before_run must be a boolean",
+      { field: "runtime.environment.reset_before_run" }
+    );
+  }
+
+  if (
+    environment.managed_processes !== undefined &&
+    !Array.isArray(environment.managed_processes)
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.managed_processes must be an array",
+      { field: "runtime.environment.managed_processes" }
+    );
+  }
+
+  if (
+    environment.startup !== undefined &&
+    !isPlainObject(environment.startup)
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup must be an object",
+      { field: "runtime.environment.startup" }
+    );
+  }
+
+  const startup = environment.startup || {};
+
+  if (
+    startup.command !== undefined &&
+    typeof startup.command !== "string"
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.command must be a string",
+      { field: "runtime.environment.startup.command" }
+    );
+  }
+
+  if (
+    startup.healthcheck !== undefined &&
+    !isPlainObject(startup.healthcheck)
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.healthcheck must be an object",
+      { field: "runtime.environment.startup.healthcheck" }
+    );
+  }
+
+  const healthcheck = startup.healthcheck || {};
+
+  if (
+    healthcheck.type !== undefined &&
+    typeof healthcheck.type !== "string"
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.healthcheck.type must be a string",
+      { field: "runtime.environment.startup.healthcheck.type" }
+    );
+  }
+
+  if (
+    healthcheck.url !== undefined &&
+    typeof healthcheck.url !== "string"
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.healthcheck.url must be a string",
+      { field: "runtime.environment.startup.healthcheck.url" }
+    );
+  }
+
+  if (
+    healthcheck.timeoutSec !== undefined &&
+    !Number.isFinite(healthcheck.timeoutSec)
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.healthcheck.timeoutSec must be a finite number",
+      { field: "runtime.environment.startup.healthcheck.timeoutSec" }
+    );
+  }
+
+  if (
+    healthcheck.host !== undefined &&
+    typeof healthcheck.host !== "string"
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.healthcheck.host must be a string",
+      { field: "runtime.environment.startup.healthcheck.host" }
+    );
+  }
+
+  if (
+    healthcheck.port !== undefined &&
+    healthcheck.port !== null &&
+    (!Number.isInteger(healthcheck.port) || healthcheck.port <= 0)
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.healthcheck.port must be a positive integer or null",
+      { field: "runtime.environment.startup.healthcheck.port" }
+    );
+  }
+
+  if (
+    healthcheck.pid !== undefined &&
+    healthcheck.pid !== null &&
+    (!Number.isInteger(healthcheck.pid) || healthcheck.pid <= 0)
+  ) {
+    throw createPlanSchemaError(
+      "Plan runtime is invalid: environment.startup.healthcheck.pid must be a positive integer or null",
+      { field: "runtime.environment.startup.healthcheck.pid" }
+    );
+  }
+
+  return {
+    reset_before_run: environment.reset_before_run === true,
+    managed_processes: Array.isArray(environment.managed_processes)
+      ? environment.managed_processes
+      : [],
+    startup: {
+      command:
+        typeof startup.command === "string" ? startup.command : "",
+      healthcheck: {
+        type:
+          typeof healthcheck.type === "string" ? healthcheck.type : "http_ok",
+        url:
+          typeof healthcheck.url === "string" ? healthcheck.url : "",
+        timeoutSec:
+          Number.isFinite(healthcheck.timeoutSec) ? healthcheck.timeoutSec : 30,
+        host:
+          typeof healthcheck.host === "string" ? healthcheck.host : "",
+        port:
+          Number.isInteger(healthcheck.port) && healthcheck.port > 0
+            ? healthcheck.port
+            : null,
+        pid:
+          Number.isInteger(healthcheck.pid) && healthcheck.pid > 0
+            ? healthcheck.pid
+            : null,
+      },
+    },
+  };
+}
+
 function assertRuntimeShape(runtime) {
   const normalized = assertOptionalPlainObject(runtime, "runtime");
 
@@ -88,6 +242,8 @@ function assertRuntimeShape(runtime) {
     );
   }
 
+  const environment = assertRuntimeEnvironmentShape(normalized.environment);
+
   return {
     maxSteps:
       normalized.maxSteps === undefined ? null : normalized.maxSteps,
@@ -95,6 +251,7 @@ function assertRuntimeShape(runtime) {
       normalized.strictCommands === undefined
         ? false
         : normalized.strictCommands,
+    ...(environment !== undefined ? { environment } : {}),
   };
 }
 
