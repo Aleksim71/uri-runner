@@ -1,0 +1,114 @@
+URI Runner Runtime Finalize Contract
+
+Overview
+
+The finalize stage converts runtime execution results into stable artifacts
+used by both URI internal systems and external AI integrations.
+
+Success Run Contract
+
+For successful runs (exitCode = 0):
+
+latest outbox is stored as ZIP artifact.
+
+Structure:
+
+latest.outbox.zip
+
+```
+outbox.json
+provided/
+```
+
+Minimal success payload:
+
+{
+"status": "success",
+"attempts": 1
+}
+
+Optional fields:
+
+provided
+trace
+
+Error Run Contract
+
+For failed runs (exitCode != 0):
+
+latest outbox is stored as JSON runtime summary.
+
+Structure:
+
+latest.outbox.json
+
+Example:
+
+{
+"runId": "...",
+"project": "...",
+"engine": "scenario",
+"exitCode": 1,
+"ok": false,
+"error": {
+"name": "...",
+"code": "...",
+"message": "...",
+"details": {}
+}
+}
+
+History Artifacts
+
+Every run produces history artifacts.
+
+history/
+
+```
+<runId>__<engine>__OK.outbox.zip
+<runId>__<engine>__ERR.outbox.zip
+```
+
+Each history artifact contains:
+
+outbox.json
+provided/*
+
+History Index
+
+Two compatible formats exist.
+
+Structured format (success runs):
+
+{
+"version": 1,
+"runs": [...]
+}
+
+Legacy format (error compatibility):
+
+[
+runRecord,
+runRecord
+]
+
+This dual format exists to maintain compatibility
+with scenario runtime regression tests.
+
+Design Principle
+
+Execution report and runtime summary are intentionally separated.
+
+Layer 1:
+
+outbox.json
+Minimal execution report intended for external AI.
+
+Layer 2:
+
+runtime summary
+history index
+trace files
+
+Operational telemetry used by URI runtime itself.
+
