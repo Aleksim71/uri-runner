@@ -3,6 +3,9 @@
 const path = require("path");
 const { ERROR_CODES } = require("./error-codes.cjs");
 const { assertPlanShape } = require("./plan-schema.cjs");
+const {
+  stopManagedProcesses,
+} = require("../runtime/environment/stop-managed-processes.cjs");
 
 class PlanRunError extends Error {
   constructor(code, message, details = undefined) {
@@ -191,6 +194,31 @@ async function runPlan(params) {
     plan: normalizedPlan,
     results: [],
   };
+
+  const environmentPolicy =
+    normalizedPlan.runtime &&
+    normalizedPlan.runtime.environment &&
+    typeof normalizedPlan.runtime.environment === "object"
+      ? normalizedPlan.runtime.environment
+      : null;
+
+  if (environmentPolicy && environmentPolicy.reset_before_run === true) {
+    const environmentReset = await stopManagedProcesses({
+      managedProcesses: environmentPolicy.managed_processes || [],
+    });
+
+    executionContext.environmentReset = environmentReset;
+
+    if (environmentReset.failed.length > 0) {
+      throw createPlanRunError(
+        ERROR_CODES.PIPELINE_INTERNAL_ERROR,
+        "Failed to stop managed processes before execution",
+        {
+          environmentReset,
+        }
+      );
+    }
+  }
 
   for (const step of normalizedPlan.steps) {
     ensureCommandAvailable(step.command, loadedCommands, strictCommands);
