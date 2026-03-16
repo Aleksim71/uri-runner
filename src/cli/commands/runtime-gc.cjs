@@ -19,7 +19,7 @@ async function runRuntimeGcCommand(args = []) {
     console.log("");
     console.log("URI RUNTIME GC");
     console.log("────────────────────────");
-    console.log(`projectRoot: ${result.projectRoot || resolveProjectRoot(options.projectRoot)}`);
+    console.log(`projectRoot: ${result.projectRoot || options.projectRoot}`);
     console.log(`dryRun: ${String(result.dryRun)}`);
     console.log(`keepLastRuns: ${result.keepLastRuns}`);
     console.log(`scannedRuns: ${result.scannedRuns}`);
@@ -85,6 +85,10 @@ function parseArgs(args = []) {
         throw new Error("--keep-last-runs requires a number");
       }
 
+      if (typeof next === "string" && next.startsWith("-")) {
+        throw new Error("--keep-last-runs requires a non-negative integer");
+      }
+
       const parsed = Number(next);
 
       if (!Number.isInteger(parsed) || parsed < 0) {
@@ -94,6 +98,10 @@ function parseArgs(args = []) {
       keepLastRuns = parsed;
       i += 1;
       continue;
+    }
+
+    if (typeof value === "string" && value.startsWith("-")) {
+      throw new Error(`Unknown option: ${value}`);
     }
 
     if (projectRoot == null) {
@@ -107,7 +115,7 @@ function parseArgs(args = []) {
   return {
     keepLastRuns,
     dryRun,
-    projectRoot,
+    projectRoot: projectRoot || resolveProjectRoot(),
   };
 }
 

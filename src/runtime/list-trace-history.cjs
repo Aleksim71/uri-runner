@@ -20,6 +20,10 @@ const TRACE_SCHEMA = 'uri.trace.v1';
  * Fallback sources:
  *   runtime/traces/*.trace.json
  *   runtime/runs/<runId>/traces/*.trace.json
+ *
+ * Important:
+ *   If history index exists, it is the source of truth,
+ *   even when it contains zero runs.
  */
 
 async function listTraceHistory(options = {}) {
@@ -28,8 +32,10 @@ async function listTraceHistory(options = {}) {
   try {
     const { exists, index } = await readHistoryIndex({ historyIndexPath });
 
-    if (exists && Array.isArray(index.runs) && index.runs.length) {
-      return index.runs
+    if (exists) {
+      const runs = Array.isArray(index.runs) ? index.runs : [];
+
+      return runs
         .slice()
         .sort(compareHistoryEntriesDesc)
         .map((run) => ({
@@ -45,7 +51,8 @@ async function listTraceHistory(options = {}) {
         }));
     }
   } catch (error) {
-    // Fall back to direct trace scan for backward compatibility.
+    // Fall back to direct trace scan for backward compatibility
+    // only when history index is missing or unreadable.
   }
 
   return scanTraceDirectory(options);

@@ -4,22 +4,40 @@ const {
   listTraceHistory
 } = require('../../runtime/list-trace-history.cjs');
 
+const {
+  runHistoryPruneCommand
+} = require('./history-prune.cjs');
+
 /**
  * URI CLI
  * history command
  *
  * Usage:
  *   uri history
+ *   uri history prune --dry-run
+ *   uri history prune
  */
 
-async function runHistoryCommand() {
+async function runHistoryCommand(args = []) {
+  const input = Array.isArray(args) ? args.slice(0) : [];
+  const subcommand = input[0];
 
+  if (!subcommand) {
+    return printHistoryList();
+  }
+
+  if (subcommand === 'prune') {
+    return runHistoryPruneCommand(input.slice(1));
+  }
+
+  throw new Error(`Unknown history command: ${subcommand}`);
+}
+
+async function printHistoryList() {
   try {
-
     const runs = await listTraceHistory();
 
     if (!runs.length) {
-
       console.log('');
       console.log('URI HISTORY');
       console.log('────────────────────────');
@@ -27,7 +45,6 @@ async function runHistoryCommand() {
       console.log('');
 
       return { status: 'success' };
-
     }
 
     console.log('');
@@ -35,7 +52,6 @@ async function runHistoryCommand() {
     console.log('────────────────────────');
 
     for (const run of runs) {
-
       console.log('');
 
       if (run.createdAt) {
@@ -55,7 +71,6 @@ async function runHistoryCommand() {
       if (run.traceRelPath) {
         console.log(`  Trace: ${run.traceRelPath}`);
       }
-
     }
 
     console.log('');
@@ -64,9 +79,7 @@ async function runHistoryCommand() {
       status: 'success',
       runs: runs.length
     };
-
   } catch (error) {
-
     console.error('');
     console.error('URI HISTORY ERROR');
     console.error('────────────────────────');
@@ -77,9 +90,7 @@ async function runHistoryCommand() {
       status: 'error',
       error: error.message
     };
-
   }
-
 }
 
 module.exports = {

@@ -132,6 +132,7 @@ function printHelp() {
   console.log("  debug plan <inbox.zip>");
   console.log("  debug runbook <inbox.zip>");
   console.log("  history");
+  console.log("  history prune [--dry-run] [project]");
   console.log("  last");
   console.log("  show <runId>");
   console.log("  replay <trace-file|runId> [project]");
