@@ -9,6 +9,13 @@ uri-runner@0.0.0
 .obsidian/
 artifacts/
 bin/
+runtime/traces/*
+runtime/history/index.json
+runtime/test-plan.json
+
+.tmp-uram-e2e/
+artifacts/outbox/*
+artifacts/inbox/*
 *.zip
 # patchpack artifacts (must never live in repo root)
 APPLY.sh
@@ -17,3 +24,4 @@ REPLACE/
 scripts/local/
 .tmp-uram-e2e/
 PILIGRIM*
+
