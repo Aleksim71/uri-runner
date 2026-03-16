@@ -36,7 +36,31 @@ Launch project server defined in runtime policy.
 Verify that the server is reachable and ready.
 
 
+Cleanup Rules
+
+cleanup-runtime-state removes temporary runtime artifacts:
+
+*.pid  
+*.lock  
+*.tmp  
+
+Temporary runtime directories:
+
+tmp  
+.runtime-tmp  
+.uri-tmp  
+
+
+Selective Cleanup
+
+Runtime may also perform targeted cleanup of run sandbox
+temporary directories such as:
+
+runtime/runs/<runId>/tmp
+
+
 Healthcheck Types
+
 
 http_ok
 
@@ -57,17 +81,17 @@ Failure Handling
 
 If environment reset fails:
 
-scenario execution is aborted
-run is marked as failed
-error is reported in outbox
+scenario execution is aborted  
+run is marked as failed  
+error is reported in outbox  
 
 
 Location in Execution Lifecycle
 
 Environment Reset runs after:
 
-Plan Compile
-Baseline Capture
+Plan Compile  
+Run Sandbox Initialization  
 
 and before:
 

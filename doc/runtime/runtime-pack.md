@@ -8,11 +8,11 @@ Runtime Pack describes minimal runtime modules required to execute scenario RUNB
 
 Core Runtime Modules
 
-command registry
-scenario parser
-scenario executor
-execution event bus
-trace system
+command registry  
+scenario parser  
+scenario executor  
+execution event bus  
+trace system  
 
 
 Runtime Environment System
@@ -22,25 +22,51 @@ starts in a deterministic runtime state.
 
 Modules:
 
-stop-managed-processes
-cleanup-runtime-state
-start-managed-server
-run-healthcheck
+stop-managed-processes  
+cleanup-runtime-state  
+start-managed-server  
+run-healthcheck  
 reset-environment
+
+
+Run Sandbox System
+
+Each execution run is isolated inside a per-run sandbox.
+
+Structure:
+
+runtime/runs/<runId>/
+
+Sandbox directories:
+
+traces  
+artifacts  
+provided  
+logs  
+tmp  
+
+
+Purpose:
+
+deterministic artifact routing  
+isolation between runs  
+safe cleanup policies  
+reproducible execution traces  
 
 
 Execution Path
 
-RUNBOOK
-→ compilePlan
-→ runPlan
-→ environment reset
-→ execution events
-→ event bus
-→ trace recording
-→ trace.json
-→ outbox.zip
-→ history index update
+RUNBOOK  
+→ compilePlan  
+→ runPlan  
+→ sandbox initialization  
+→ environment reset  
+→ execution events  
+→ event bus  
+→ trace recording  
+→ trace.json  
+→ outbox.zip  
+→ history index update  
 
 
 Runtime Systems
@@ -78,21 +104,21 @@ uri replay trace.json
 
 History System
 
-Runtime stores execution traces in:
+Runtime stores execution traces inside run sandbox.
 
-runtime/traces
+runtime/runs/<runId>/traces
 
 Runtime also maintains a compact history index:
 
 runtime/history/index.json
 
-The index provides fast lookup of past runs without scanning the
-trace directory.
+The index provides fast lookup of past runs without scanning
+all sandbox directories.
 
 CLI commands using the history index:
 
-uri history
-uri last
+uri history  
+uri last  
 uri show <runId>
 
 
@@ -102,5 +128,5 @@ Runtime produces outbox.zip as final execution artifact.
 
 outbox.zip contains:
 
-outbox.json
+outbox.json  
 optional provided data

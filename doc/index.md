@@ -65,11 +65,28 @@ project execution scenarios.
 Execution Artifacts
 ------------------------------------------------
 
+Run Sandbox System
+
+Each execution run is isolated inside its own runtime sandbox.
+
+Structure:
+
+runtime/runs/<runId>/
+
+Contained artifacts:
+
+traces  
+artifacts  
+provided  
+logs  
+tmp
+
+
 Trace System
 
-runtime/traces
+Execution traces are stored inside run sandbox:
 
-Execution trace artifacts.
+runtime/runs/<runId>/traces
 
 
 History System
@@ -103,6 +120,8 @@ RUNBOOK / executable.yaml
 compilePlan
         ↓
 plan validation
+        ↓
+run sandbox initialization
         ↓
 environment reset
         ↓

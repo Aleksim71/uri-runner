@@ -12,13 +12,14 @@ Canonical Lifecycle
 1 Inbox Intake
 2 Scenario Decode
 3 Plan Compile
-4 Baseline Capture
-5 Environment Reset
-6 Execution
-7 Restore / Rollback
-8 Baseline Verification
-9 Outbox Packaging
-10 History Persistence
+4 Run Sandbox Initialization
+5 Baseline Capture
+6 Environment Reset
+7 Execution
+8 Restore / Rollback
+9 Baseline Verification
+10 Outbox Packaging
+11 History Persistence
 
 
 Phase Details
@@ -37,6 +38,29 @@ RUNBOOK.yaml is extracted and validated.
 Plan Compile
 
 RUNBOOK is compiled into internal execution plan.
+
+
+Run Sandbox Initialization
+
+A dedicated runtime sandbox is created for the run.
+
+Structure:
+
+runtime/runs/<runId>/
+
+Subdirectories created:
+
+traces
+artifacts
+provided
+logs
+tmp
+
+Purpose:
+
+isolate execution artifacts
+prevent cross-run contamination
+enable deterministic trace storage.
 
 
 Baseline Capture
@@ -115,6 +139,7 @@ supports CLI commands:
 uri history
 uri last
 uri show <runId>
+
 
 Trace files remain the canonical source of truth for each run.
 
