@@ -10,3 +10,12 @@ commands:
 runtime:
   max_steps: 100
   strict_commands: true
+  environment:
+    reset_before_run: false
+    managed_processes: []
+    startup:
+      command: ""
+      healthcheck:
+        type: http_ok
+        url: "http://127.0.0.1:3000/health"
+        timeoutSec: 30

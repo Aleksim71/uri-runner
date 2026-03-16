@@ -7,6 +7,12 @@ const {
   assertPlanShape,
 } = require("./plan-schema.cjs");
 
+const SUPPORTED_HEALTHCHECK_TYPES = new Set([
+  "http_ok",
+  "port_open",
+  "process_alive",
+]);
+
 class PlanCompileError extends Error {
   constructor(code, message, details = undefined) {
     super(message);
@@ -62,6 +68,260 @@ function getAllowedRoots(executableCtx) {
   return roots;
 }
 
+function normalizeEnvironmentPolicy(environment) {
+  const source =
+    environment && typeof environment === "object" && !Array.isArray(environment)
+      ? environment
+      : {};
+
+  const startupSource =
+    source.startup &&
+    typeof source.startup === "object" &&
+    !Array.isArray(source.startup)
+      ? source.startup
+      : {};
+
+  const healthcheckSource =
+    startupSource.healthcheck &&
+    typeof startupSource.healthcheck === "object" &&
+    !Array.isArray(startupSource.healthcheck)
+      ? startupSource.healthcheck
+      : {};
+
+  return {
+    reset_before_run: source.reset_before_run === true,
+    managed_processes: Array.isArray(source.managed_processes)
+      ? source.managed_processes
+      : [],
+    startup: {
+      command:
+        typeof startupSource.command === "string" ? startupSource.command : "",
+      healthcheck: {
+        type:
+          typeof healthcheckSource.type === "string"
+            ? healthcheckSource.type
+            : "http_ok",
+        url:
+          typeof healthcheckSource.url === "string"
+            ? healthcheckSource.url
+            : "",
+        timeoutSec: Number.isFinite(healthcheckSource.timeoutSec)
+          ? healthcheckSource.timeoutSec
+          : 30,
+      },
+    },
+  };
+}
+
+function validateManagedProcess(processEntry, index) {
+  if (!processEntry || typeof processEntry !== "object" || Array.isArray(processEntry)) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.managed_processes entry: expected object",
+      {
+        field: `runtime.environment.managed_processes[${index}]`,
+      }
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(processEntry, "name") &&
+    typeof processEntry.name !== "string"
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.managed_processes entry: name must be a string",
+      {
+        field: `runtime.environment.managed_processes[${index}].name`,
+      }
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(processEntry, "command_contains") &&
+    typeof processEntry.command_contains !== "string"
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.managed_processes entry: command_contains must be a string",
+      {
+        field: `runtime.environment.managed_processes[${index}].command_contains`,
+      }
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(processEntry, "ports") &&
+    (!Array.isArray(processEntry.ports) ||
+      processEntry.ports.some((port) => !Number.isInteger(port) || port <= 0))
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.managed_processes entry: ports must be an array of positive integers",
+      {
+        field: `runtime.environment.managed_processes[${index}].ports`,
+      }
+    );
+  }
+}
+
+function validateEnvironmentPolicy(executableCtx) {
+  const runtime =
+    executableCtx &&
+    executableCtx.runtime &&
+    typeof executableCtx.runtime === "object" &&
+    !Array.isArray(executableCtx.runtime)
+      ? executableCtx.runtime
+      : {};
+
+  if (!Object.prototype.hasOwnProperty.call(runtime, "environment")) {
+    return normalizeEnvironmentPolicy(undefined);
+  }
+
+  const environment = runtime.environment;
+
+  if (!environment || typeof environment !== "object" || Array.isArray(environment)) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment: expected object",
+      {
+        field: "runtime.environment",
+      }
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(environment, "reset_before_run") &&
+    typeof environment.reset_before_run !== "boolean"
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.reset_before_run: expected boolean",
+      {
+        field: "runtime.environment.reset_before_run",
+      }
+    );
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(environment, "managed_processes") &&
+    !Array.isArray(environment.managed_processes)
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.managed_processes: expected array",
+      {
+        field: "runtime.environment.managed_processes",
+      }
+    );
+  }
+
+  const normalized = normalizeEnvironmentPolicy(environment);
+
+  normalized.managed_processes.forEach((entry, index) =>
+    validateManagedProcess(entry, index)
+  );
+
+  const startup = environment.startup;
+
+  if (
+    Object.prototype.hasOwnProperty.call(environment, "startup") &&
+    (!startup || typeof startup !== "object" || Array.isArray(startup))
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup: expected object",
+      {
+        field: "runtime.environment.startup",
+      }
+    );
+  }
+
+  if (
+    startup &&
+    Object.prototype.hasOwnProperty.call(startup, "command") &&
+    typeof startup.command !== "string"
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.command: expected string",
+      {
+        field: "runtime.environment.startup.command",
+      }
+    );
+  }
+
+  const healthcheck = startup && startup.healthcheck;
+
+  if (
+    startup &&
+    Object.prototype.hasOwnProperty.call(startup, "healthcheck") &&
+    (!healthcheck || typeof healthcheck !== "object" || Array.isArray(healthcheck))
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck: expected object",
+      {
+        field: "runtime.environment.startup.healthcheck",
+      }
+    );
+  }
+
+  if (
+    healthcheck &&
+    Object.prototype.hasOwnProperty.call(healthcheck, "type") &&
+    typeof healthcheck.type !== "string"
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.type: expected string",
+      {
+        field: "runtime.environment.startup.healthcheck.type",
+      }
+    );
+  }
+
+  if (!SUPPORTED_HEALTHCHECK_TYPES.has(normalized.startup.healthcheck.type)) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.type: unsupported value",
+      {
+        field: "runtime.environment.startup.healthcheck.type",
+        supportedValues: Array.from(SUPPORTED_HEALTHCHECK_TYPES),
+      }
+    );
+  }
+
+  if (
+    healthcheck &&
+    Object.prototype.hasOwnProperty.call(healthcheck, "timeoutSec") &&
+    (!Number.isFinite(healthcheck.timeoutSec) || healthcheck.timeoutSec <= 0)
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.timeoutSec: expected positive number",
+      {
+        field: "runtime.environment.startup.healthcheck.timeoutSec",
+      }
+    );
+  }
+
+  if (
+    normalized.startup.healthcheck.type === "http_ok" &&
+    normalized.startup.healthcheck.url.trim().length === 0
+  ) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "invalid runtime.environment.startup.healthcheck.url: required for http_ok",
+      {
+        field: "runtime.environment.startup.healthcheck.url",
+      }
+    );
+  }
+
+  return normalized;
+}
+
 function getRuntimeOptions(executableCtx) {
   const runtime =
     executableCtx &&
@@ -73,6 +333,7 @@ function getRuntimeOptions(executableCtx) {
   return {
     maxSteps: Number.isFinite(runtime.max_steps) ? runtime.max_steps : null,
     strictCommands: runtime.strict_commands === true,
+    environment: validateEnvironmentPolicy(executableCtx),
   };
 }
 
@@ -232,7 +493,10 @@ function compilePlan(params) {
     executableCtxSnapshot: {
       engine: executableCtx?.engine || null,
       commands: executableCtx?.commands || {},
-      runtime: executableCtx?.runtime || {},
+      runtime: {
+        ...(executableCtx?.runtime || {}),
+        environment: runtime.environment,
+      },
     },
     steps: compiledSteps,
   };
@@ -244,5 +508,6 @@ module.exports = {
   PlanCompileError,
   createPlanCompileError,
   getCommandRoot,
+  validateEnvironmentPolicy,
   compilePlan,
 };
