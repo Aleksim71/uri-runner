@@ -1,0 +1,88 @@
+URI Runner
+Runtime Architecture
+
+Version: 1
+
+
+Overview
+
+Runtime Architecture описывает execution ядро URI Runner.
+
+URI — artifact-driven execution engine.
+
+
+Execution Goals
+
+deterministic execution
+artifact-driven pipeline
+baseline restoration
+AI-compatible reporting
+
+
+Execution Pipeline
+
+1 Inbox Intake
+2 Scenario Decode
+3 Plan Compile
+4 Baseline Capture
+5 Execution
+6 Restore / Rollback
+7 Baseline Verification
+8 Outbox Packaging
+
+
+Artifact System
+
+Основные execution artifacts:
+
+PLAN
+TRACE
+RESULT
+ROLLBACK_PLAN
+ROLLBACK_RESULT
+BASELINE_VERIFY_RESULT
+META
+
+
+State Domains
+
+files
+database
+environment
+server/runtime
+processes
+temp workspace
+
+
+Baseline Principle
+
+После каждого run система должна возвращаться к baseline состоянию.
+
+
+Execution Graph
+
+Runtime поддерживает graph-based execution.
+
+Nodes:
+
+command
+group
+branch
+rollback
+verify
+finalize
+
+
+Edges:
+
+depends-on
+on-success
+on-failure
+always
+
+
+AI Interaction
+
+URI взаимодействует с AI через inbox/outbox protocol.
+
+AI получает execution artifacts и может продолжить работу.

@@ -1,0 +1,98 @@
+URI Runner
+Execution Lifecycle
+
+
+Overview
+
+URI execution consists of sequential phases.
+
+
+Canonical Lifecycle
+
+1. Inbox Intake
+2. Scenario Decode
+3. Plan Compile
+4. Baseline Capture
+5. Execution
+6. Restore / Rollback
+7. Baseline Verification
+8. Outbox Packaging
+9. History Persistence
+
+
+Phase Details
+
+
+Inbox Intake
+
+URI detects inbox.zip in Inbox directory.
+
+
+Scenario Decode
+
+RUNBOOK.yaml is extracted and validated.
+
+
+Plan Compile
+
+RUNBOOK is compiled into internal execution plan.
+
+
+Baseline Capture
+
+Initial system state is captured.
+
+
+Execution
+
+Steps defined in RUNBOOK execute section are performed.
+
+
+Restore / Rollback
+
+System state is restored if needed.
+
+
+Baseline Verification
+
+Verification checks confirm environment stability.
+
+
+Outbox Packaging
+
+URI creates execution result package.
+
+outbox.zip
+
+Contents:
+
+outbox.json
+optional provided files
+
+
+History Persistence
+
+Execution artifacts and metadata are stored in runtime history.
+
+Artifacts written during this phase:
+
+trace.json
+execution trace produced from execution events
+
+outbox.zip
+execution result package
+
+history index
+
+runtime/history/index.json
+
+The history index provides fast lookup for completed runs and
+supports CLI commands:
+
+uri history
+uri last
+uri show <runId>
+
+Trace files remain the canonical source of truth for each run.
+
+The history index is a compact registry pointing to trace artifacts.

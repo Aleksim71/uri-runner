@@ -1,0 +1,78 @@
+URI Runner
+Artifact Contract
+
+
+Overview
+
+Artifacts are files produced during URI execution.
+
+
+Artifact Categories
+
+1. Internal runtime artifacts
+2. External artifacts returned to AI
+
+
+Internal Runtime Artifacts
+
+Examples:
+
+PLAN.json
+events.jsonl
+trace.json
+RESULT.json
+ROLLBACK_RESULT.json
+BASELINE_VERIFY_RESULT.json
+
+
+These artifacts are stored inside runtime history.
+
+They are never exported automatically.
+
+
+Trace Artifact
+
+trace.json represents deterministic execution trace.
+
+Structure:
+
+schema
+runId
+goal
+finalStatus
+attempts
+steps
+
+
+External Artifacts
+
+External artifacts are exported via outbox.zip.
+
+
+Execution Result Artifact
+
+External execution result is defined by outbox.json.
+
+Fields:
+
+status
+attempts
+trace (optional)
+provided (optional)
+
+
+Trace Contract
+
+trace field appears only when status == error.
+
+
+Provided Data
+
+If RUNBOOK contains provide section,
+URI collects requested data and includes them in outbox.zip.
+
+
+Supported provide kinds
+
+file
+file_fragment

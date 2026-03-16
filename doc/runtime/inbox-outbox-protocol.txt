@@ -1,0 +1,33 @@
+Execution Outputs
+
+
+URI produces two categories of outputs.
+
+
+External Output (AI facing)
+
+outbox.zip
+
+Contains:
+
+outbox.json
+provided data
+
+
+Internal Output (runtime history)
+
+trace.json
+events.jsonl
+
+
+Important Rule
+
+External AI receives only outbox.zip.
+
+Internal execution traces remain inside runtime history.
+
+
+Purpose
+
+outbox.json → communication with AI
+trace.json → debugging and replay

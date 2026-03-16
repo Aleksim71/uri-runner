@@ -1,0 +1,33 @@
+Baseline Restoration
+
+Baseline — исходное состояние системы.
+
+
+Environment Drift
+
+Изменения среды накапливаются во время разработки.
+
+
+Restoration Domains
+
+files
+database
+environment
+server/runtime
+processes
+temp workspace
+
+
+Restoration Strategies
+
+files → git restore
+database → snapshot / transaction
+environment → env restore
+server → restart
+processes → terminate
+temp workspace → cleanup
+
+
+Verification
+
+После восстановления выполняется baseline verification.

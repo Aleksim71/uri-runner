@@ -1,41 +1,27 @@
-# URI Documentation Index
+URI Runner Documentation Index
 
-Главная точка входа для всей документации проекта URI.
 
-## Architecture
+Core Documents
 
--   architecture/phase1-overview.md
--   architecture/project-structure.md
+runtime/runtime-pack.txt
+runtime/execution-lifecycle.txt
+runtime/artifact-contract.txt
+runtime/inbox-outbox-protocol.txt
+runtime/history-index-contract.txt
 
-## Scenario
 
--   scenario/scenario-body-v1.md
+Additional Documents
 
-## Context System
+runtime/state-domains.txt
+runtime/baseline-restoration.txt
+runtime/execution-graph.txt
 
--   context/context-metadata.md
--   context/context-links.md
--   context/context-reading.md
 
-## Commands
+System Documents
 
--   commands/command-libraries.md
+system/executable-context-runtime.txt
 
-## Criteria
 
--   criteria/phase1-completion.md
+Change Log
 
-## Notes / Ideas
-
--   notes/ideas.md
-
-## History
-
--   changelog.md
-
-## Runtime
-
-- runtime/runtime-pack.md
-- runtime/execution-lock.md
-- runtime/meta-pipeline.md
-- system/executable-context-runtime.md
+changelog.txt

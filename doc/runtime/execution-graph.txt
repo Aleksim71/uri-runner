@@ -1,0 +1,35 @@
+Execution Graph
+
+
+Execution Graph описывает зависимости между шагами.
+
+
+Graph Elements
+
+nodes
+edges
+
+
+Node Types
+
+command
+group
+branch
+rollback
+verify
+finalize
+
+
+Edge Types
+
+depends-on
+on-success
+on-failure
+always
+
+
+Execution Paths
+
+execute
+ ├ success → restore → verify → package
+ └ failure → rollback → verify → package

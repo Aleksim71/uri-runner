@@ -1,0 +1,709 @@
+TASKLIST_STAGE3.txt
+
+PROJECT
+URI Runner
+
+STAGE
+Stage 3 — Execution Safety (A8–A12)
+
+GOAL
+Implement controlled execution safety for uri run-plan:
+- environment reset before execution
+- per-step validation after each command
+- final goal validation after all commands
+- git checkpoint before changes
+- rollback tracked files on failure
+- database backup/restore on failure
+- unified report inside outbox.zip
+
+────────────────────────────────
+IMPLEMENTATION ORDER
+────────────────────────────────
+
+Wave 1
+A8 Environment Reset
+A9 Step Checks
+A10 Goal Checks
+
+Wave 2
+A11 Git Checkpoint + Rollback
+
+Wave 3
+A12 DB Backup/Restore + Unified Report
+
+
+────────────────────────────────
+A8 — ENVIRONMENT RESET
+────────────────────────────────
+
+Task A8.1 — Add runtime environment policy
+
+Files
+- contexts/system/executable.yaml
+- src/uram/compile-plan.cjs
+
+Changes
+- add runtime.environment policy support
+- validate minimal structure
+- include policy snapshot in compiled plan
+
+Policy shape
+runtime:
+  environment:
+    reset_before_run: true
+    managed_processes: []
+    startup:
+      command: ""
+      healthcheck:
+        type: http_ok
+        url: ""
+        timeoutSec: 30
+
+Tests
+- test/scenarios/scenario-runtime.compile-includes-environment-policy.test.mjs
+- test/scenarios/scenario-runtime.compile-rejects-invalid-environment-policy.test.mjs
+
+Done when
+- valid environment policy compiles
+- invalid environment policy fails compile
+- compiled plan includes environment snapshot
+
+
+Task A8.2 — Stop managed processes
+
+Files
+- src/runtime/environment/stop-managed-processes.cjs
+- test/unit/runtime-environment.stop-managed-processes.test.mjs
+
+Changes
+- detect project-managed processes
+- support match by command substring
+- optional known ports support
+- graceful stop first
+- force kill fallback
+- return structured summary
+
+Expected summary
+{
+  "attempted": true,
+  "stopped": [],
+  "failed": []
+}
+
+Tests
+- stops matching managed process
+- ignores unrelated process
+- force kill fallback works when graceful stop fails
+
+Done when
+- managed project processes can be stopped safely
+
+
+Task A8.3 — Cleanup runtime state
+
+Files
+- src/runtime/environment/cleanup-runtime-state.cjs
+- test/unit/runtime-environment.cleanup-runtime-state.test.mjs
+
+Changes
+- clean controlled runtime garbage only
+- remove .pid files
+- remove .lock files
+- remove stale temp files
+- remove temp dirs from controlled scope
+
+Tests
+- removes lock/pid files inside controlled scope
+- does not remove files outside controlled scope
+
+Done when
+- runtime cleanup is safe and scope-limited
+
+
+Task A8.4 — Start managed server
+
+Files
+- src/runtime/environment/start-managed-server.cjs
+- test/unit/runtime-environment.start-managed-server.test.mjs
+
+Changes
+- start server from startup policy
+- return pid and startup metadata
+
+Expected summary
+{
+  "attempted": true,
+  "pid": 12345,
+  "command": "npm run dev",
+  "cwd": "/project/path",
+  "startedAt": "ISO"
+}
+
+Tests
+- starts configured command
+- returns pid and metadata
+- reports failure on startup error
+
+Done when
+- URI can start the server as a managed process
+
+
+Task A8.5 — Run healthcheck
+
+Files
+- src/runtime/environment/run-healthcheck.cjs
+- test/unit/runtime-environment.run-healthcheck.test.mjs
+
+Changes
+- support healthcheck types v1:
+  - http_ok
+  - port_open
+  - process_alive
+
+Tests
+- passing http healthcheck
+- failing http healthcheck
+- passing port_open
+- failing port_open
+
+Done when
+- healthcheck is available as a standalone module
+
+
+Task A8.6 — Build reset-environment orchestrator
+
+Files
+- src/runtime/environment/reset-environment.cjs
+- src/uram/run-plan.cjs
+- test/scenarios/scenario-runtime.environment-reset-success.test.mjs
+- test/scenarios/scenario-runtime.environment-reset-healthcheck-fail.test.mjs
+
+Changes
+- orchestrate pipeline:
+  1. stop managed processes
+  2. cleanup runtime state
+  3. start managed server
+  4. run healthcheck
+- integrate before first execution step in run-plan.cjs
+
+Tests
+- environment reset succeeds before step execution
+- failed healthcheck stops run before step 1
+
+Done when
+- every run can start from a clean runtime environment
+
+
+────────────────────────────────
+A9 — STEP CHECKS
+────────────────────────────────
+
+Task A9.1 — Add checks to compiled steps
+
+Files
+- src/uram/compile-plan.cjs
+- test/scenarios/scenario-runtime.compile-step-checks.test.mjs
+
+Changes
+- allow checks[] per step in runbook/plan
+- validate minimal checks schema
+- include checks in compiled step
+
+Example
+steps:
+  - command: system.echo
+    args:
+      text: hello
+    checks:
+      - type: exit_code
+        equals: 0
+
+Tests
+- compile preserves step checks
+- invalid checks schema fails compile
+
+Done when
+- compiled steps may contain checks
+
+
+Task A9.2 — Create step check router
+
+Files
+- src/runtime/validation/checks/index.cjs
+- src/runtime/validation/run-step-checks.cjs
+- test/unit/runtime-validation.run-step-checks.test.mjs
+
+Changes
+- dispatch checks by type
+- return checks result list and overall status
+- fail on unknown check type
+
+Tests
+- router calls proper checker
+- unknown check type raises validation error
+
+Done when
+- there is one unified entry point for step checks
+
+
+Task A9.3 — Implement base step checkers
+
+Files
+- src/runtime/validation/checks/check-exit-code.cjs
+- src/runtime/validation/checks/check-file-exists.cjs
+- src/runtime/validation/checks/check-file-contains.cjs
+- src/runtime/validation/checks/check-port-open.cjs
+- src/runtime/validation/checks/check-http-ok.cjs
+- test/unit/runtime-validation.check-exit-code.test.mjs
+- test/unit/runtime-validation.check-file-exists.test.mjs
+- test/unit/runtime-validation.check-file-contains.test.mjs
+- test/unit/runtime-validation.check-port-open.test.mjs
+- test/unit/runtime-validation.check-http-ok.test.mjs
+
+Changes
+- add v1 checkers:
+  - exit_code
+  - file_exists
+  - file_contains
+  - port_open
+  - http_ok
+
+Done when
+- minimal local post-command validation exists
+
+
+Task A9.4 — Integrate step checks into execution pipeline
+
+Files
+- src/uram/run-plan.cjs
+- test/scenarios/scenario-runtime.step-checks-pass.test.mjs
+- test/scenarios/scenario-runtime.step-checks-fail-stop-pipeline.test.mjs
+
+Changes
+- after each step:
+  1. execute step
+  2. run step checks
+  3. stop pipeline if checks fail
+- write results into trace
+
+Tests
+- successful checks allow next step
+- failed checks stop further execution
+
+Done when
+- each command is validated immediately after execution
+
+
+────────────────────────────────
+A10 — GOAL CHECKS
+────────────────────────────────
+
+Task A10.1 — Add goalChecks to compiled plan
+
+Files
+- src/uram/compile-plan.cjs
+- test/scenarios/scenario-runtime.compile-goal-checks.test.mjs
+
+Changes
+- allow top-level goalChecks[] in runbook/plan
+- validate goalChecks schema
+- include goalChecks in compiled plan
+
+Example
+goalChecks:
+  - type: command_success
+    command: "npm test"
+
+Tests
+- compile preserves goalChecks
+- invalid goalChecks schema fails compile
+
+Done when
+- compiled plan supports final goal validation
+
+
+Task A10.2 — Create goal check router
+
+Files
+- src/runtime/validation/goal-checks/index.cjs
+- src/runtime/validation/run-goal-checks.cjs
+- test/unit/runtime-validation.run-goal-checks.test.mjs
+
+Changes
+- route goal checks by type
+- fail on unknown goal check type
+- return overall passed/failed summary
+
+Tests
+- router calls proper goal checker
+- unknown goal check type fails validation
+
+Done when
+- final goal validation has a dedicated entry point
+
+
+Task A10.3 — Implement base goal checkers
+
+Files
+- src/runtime/validation/goal-checks/check-command-success.cjs
+- src/runtime/validation/goal-checks/check-http-ok.cjs
+- src/runtime/validation/goal-checks/check-file-exists.cjs
+- test/unit/runtime-goal-check.command-success.test.mjs
+- test/unit/runtime-goal-check.http-ok.test.mjs
+- test/unit/runtime-goal-check.file-exists.test.mjs
+
+Changes
+- add v1 goal checkers:
+  - command_success
+  - http_ok
+  - file_exists
+
+Done when
+- minimal final goal validation exists
+
+
+Task A10.4 — Integrate goal checks into run pipeline
+
+Files
+- src/uram/run-plan.cjs
+- test/scenarios/scenario-runtime.goal-checks-pass.test.mjs
+- test/scenarios/scenario-runtime.goal-checks-fail.test.mjs
+
+Changes
+- run goal checks only after all steps succeed
+- if goal checks fail:
+  - finalStatus = failed
+  - trigger rollback path
+- write goal validation results into trace
+
+Tests
+- goal checks run only after successful steps
+- failed goal checks mark run as failed
+
+Done when
+- URI distinguishes between step success and real goal achievement
+
+
+────────────────────────────────
+A11 — GIT CHECKPOINT + ROLLBACK
+────────────────────────────────
+
+Task A11.1 — Create git client wrapper
+
+Files
+- src/runtime/git/git-client.cjs
+- test/unit/runtime-git.git-client.test.mjs
+
+Changes
+- implement thin git wrapper with methods:
+  - getHead()
+  - getBranch()
+  - isClean()
+  - createTagCheckpoint()
+  - diffNameStatus()
+  - restorePaths()
+
+Tests
+- reads head and branch
+- detects clean vs dirty repo
+- creates checkpoint tag
+
+Done when
+- git operations are centralized behind a small adapter
+
+
+Task A11.2 — Create checkpoint before run
+
+Files
+- src/runtime/git/create-checkpoint.cjs
+- test/scenarios/scenario-runtime.git-checkpoint-created.test.mjs
+- test/scenarios/scenario-runtime.git-checkpoint-dirty-repo-blocks.test.mjs
+
+Changes
+- checkpoint policy v1:
+  - clean repo → create tag checkpoint
+  - dirty repo → fail fast
+
+Tests
+- checkpoint is created on clean repo
+- dirty repo blocks run
+
+Done when
+- tracked file baseline exists before execution begins
+
+
+Task A11.3 — Collect run file changes
+
+Files
+- src/runtime/git/collect-run-file-changes.cjs
+- test/unit/runtime-git.collect-run-file-changes.test.mjs
+
+Changes
+- classify tracked file changes relative to checkpoint:
+  - modified
+  - deleted
+  - created
+
+Tests
+- diff classification is correct
+
+Done when
+- URI knows what tracked files changed during the run
+
+
+Task A11.4 — Restore tracked files on failure
+
+Files
+- src/runtime/git/rollback-to-checkpoint.cjs
+- src/runtime/rollback/run-rollback.cjs
+- test/scenarios/scenario-runtime.rollback-restores-tracked-file.test.mjs
+
+Changes
+- on failure:
+  - restore modified tracked files
+  - restore deleted tracked files
+  - cleanup created tracked files using diff logic
+- return rollback summary
+
+Tests
+- modified tracked file is restored
+- deleted tracked file is restored
+- created tracked file is removed/restored correctly
+
+Done when
+- git rollback v1 works for tracked files
+
+
+Task A11.5 — Integrate rollback into all failure paths
+
+Files
+- src/uram/run-plan.cjs
+- src/cli/commands/run-plan.cjs
+- test/scenarios/scenario-runtime.goal-failure-triggers-rollback.test.mjs
+- test/scenarios/scenario-runtime.step-check-failure-triggers-rollback.test.mjs
+
+Changes
+- trigger rollback on:
+  - step execution failure
+  - step check failure
+  - goal check failure
+- include rollback summary in trace and terminal report
+
+Tests
+- rollback runs after goal failure
+- rollback runs after step validation failure
+
+Done when
+- tracked files return to baseline on execution failure
+
+
+────────────────────────────────
+A12 — DB BACKUP/RESTORE + UNIFIED REPORT
+────────────────────────────────
+
+Task A12.1 — Add DB runtime policy
+
+Files
+- contexts/system/executable.yaml
+- src/uram/compile-plan.cjs
+- test/scenarios/scenario-runtime.compile-db-policy.test.mjs
+
+Changes
+- add database policy support:
+runtime:
+  database:
+    enabled: false
+    restore_on_failure: true
+    targets: []
+- validate policy
+- include snapshot in compiled plan
+
+Tests
+- valid DB policy compiles
+- invalid DB policy fails compile
+
+Done when
+- compiled plan knows DB safety policy
+
+
+Task A12.2 — Create postgres DB client
+
+Files
+- src/runtime/db/db-client-postgres.cjs
+- test/unit/runtime-db.postgres-client.test.mjs
+
+Changes
+- implement adapter methods:
+  - createDump(target, outputPath)
+  - restoreDump(target, dumpPath)
+- v1 may wrap pg_dump and psql
+
+Tests
+- builds correct backup command
+- builds correct restore command
+- reports success/failure correctly
+
+Done when
+- minimal postgres backup/restore adapter exists
+
+
+Task A12.3 — Create DB backup before execution
+
+Files
+- src/runtime/db/create-db-backup.cjs
+- src/uram/run-plan.cjs
+- test/scenarios/scenario-runtime.db-backup-created-before-run.test.mjs
+
+Changes
+- before step execution:
+  - if database.enabled = true
+  - create DB dump
+  - store dump path and metadata
+
+Tests
+- backup is created when DB is enabled
+- backup is skipped when DB is disabled
+
+Done when
+- run can capture DB baseline before changes
+
+
+Task A12.4 — Restore DB on failure
+
+Files
+- src/runtime/db/restore-db-backup.cjs
+- src/runtime/rollback/run-rollback.cjs
+- test/scenarios/scenario-runtime.db-restore-on-failure.test.mjs
+
+Changes
+- on failure and when backup exists:
+  - restore DB from dump
+  - record restore result
+
+Tests
+- DB restore runs on failure
+- DB restore does not run on success
+
+Done when
+- DB rollback v1 works through dump/restore
+
+
+Task A12.5 — Build unified run report
+
+Files
+- src/runtime/report/build-run-report.cjs
+- test/unit/runtime-report.build-run-report.test.mjs
+
+Changes
+- build single report from:
+  - baseline
+  - environment
+  - steps
+  - step checks
+  - goal checks
+  - rollback
+  - database
+
+Tests
+- report contains all required sections
+- report reflects success/failure/rollback correctly
+
+Done when
+- there is one canonical execution report model
+
+
+Task A12.6 — Write report into outbox
+
+Files
+- src/runtime/report/write-outbox-report.cjs
+- src/uram/run-plan.cjs
+- src/cli/commands/run-plan.cjs
+- test/scenarios/scenario-runtime.outbox-report-success.test.mjs
+- test/scenarios/scenario-runtime.outbox-report-failure.test.mjs
+
+Changes
+- add report to outbox payload
+- minimum artifacts:
+  - REPORT.json
+  - optional REPORT.txt
+
+Tests
+- success run writes report to outbox
+- failure run writes report with rollback summary to outbox
+
+Done when
+- outbox.zip contains full execution report
+
+
+────────────────────────────────
+COMMIT PLAN
+────────────────────────────────
+
+Commit 1
+feat(runtime-a8): add environment policy and reset pipeline
+
+Commit 2
+feat(runtime-a9): add per-step validation checks
+
+Commit 3
+feat(runtime-a10): add goal validation checks
+
+Commit 4
+feat(runtime-a11): add git checkpoint and rollback
+
+Commit 5
+feat(runtime-a12): add db backup restore and unified outbox report
+
+
+────────────────────────────────
+MINIMAL POST-STAGE SMOKE FLOW
+────────────────────────────────
+
+Expected flow after Stage 3 implementation:
+
+uri compile inbox.zip runtime/test-plan.json
+uri run-plan runtime/test-plan.json
+
+Internal sequence:
+- create git checkpoint
+- create DB backup if enabled
+- stop managed processes
+- cleanup runtime state
+- start server
+- run healthcheck
+- execute step 1
+- run step 1 checks
+- execute remaining steps
+- run goal checks
+- on failure run rollback
+- write trace
+- update history index
+- write outbox.zip report
+
+
+────────────────────────────────
+NON-GOALS FOR THIS STAGE
+────────────────────────────────
+
+Do not include yet:
+- parallel execution
+- graph execution
+- multi-root orchestration
+- external HTTP side-effect rollback
+- full workspace clone engine
+- advanced DB snapshot engines beyond dump/restore
+
+
+────────────────────────────────
+SUCCESS CRITERIA FOR WHOLE STAGE
+────────────────────────────────
+
+Stage 3 is complete when:
+- run starts from controlled clean environment
+- each step can be validated locally
+- final goal state is validated explicitly
+- failure triggers tracked-file rollback
+- optional DB restore works through dump/restore
+- outbox.zip contains a full execution report
+
+END OF TASKLIST_STAGE3.txt

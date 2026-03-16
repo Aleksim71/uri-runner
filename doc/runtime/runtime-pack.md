@@ -1,41 +1,91 @@
-# URI Runner Next Runtime Pack
+URI Runner Runtime Pack
 
-Содержимое архива:
 
-- `src/commands/command-registry.cjs`
-- `src/uram/scenario-parser.cjs`
-- `src/uram/scenario-executor.cjs`
-- `src/commands/system/echo.cjs`
-- `test/scenarios/scenario-runtime.smoke.test.mjs`
+Purpose
 
-## Назначение
+Runtime Pack describes minimal runtime modules required to execute scenario RUNBOOK.
 
-Это минимальный working skeleton для Scenario Runtime v1:
 
-- registry
-- parser
-- executor
-- test command
-- smoke test
+Core Runtime Modules
 
-## Ожидаемый smoke path
+command registry
+scenario parser
+scenario executor
+execution event bus
+trace system
 
-`scenario doc -> parseScenario -> executeScenario -> command registry -> command handler`
 
-## Что поддержано
+Execution Path
 
-- `scenario.start`
-- `steps[]`
-- `step.id`
-- `step.command`
-- `step.args`
-- `step.on_success`
-- `step.on_failure`
-- `step.stop`
+RUNBOOK
+→ compilePlan
+→ runPlan
+→ execution events
+→ event bus
+→ trace recording
+→ trace.json
+→ outbox.zip
+→ history index update
 
-## Что пока не включено
 
-- `if`
-- safe expression evaluator
-- cycle analysis на parser-уровне
-- auto-loader команд
+Runtime Systems
+
+
+Execution Event Bus
+
+Runtime emits execution events describing scenario progress.
+
+
+Trace System
+
+Execution events are recorded into events.jsonl.
+
+Events are converted into deterministic execution trace:
+
+trace.json
+
+
+Trace Schema
+
+trace.json contains schema identifier.
+
+schema = uri.trace.v1
+
+
+Replay System
+
+Runtime supports replay of execution traces.
+
+CLI:
+
+uri replay trace.json
+
+
+History System
+
+Runtime stores execution traces in:
+
+runtime/traces
+
+Runtime also maintains a compact history index:
+
+runtime/history/index.json
+
+The index provides fast lookup of past runs without scanning the
+trace directory.
+
+CLI commands using the history index:
+
+uri history
+uri last
+uri show <runId>
+
+
+Outbox Protocol
+
+Runtime produces outbox.zip as final execution artifact.
+
+outbox.zip contains:
+
+outbox.json
+optional provided data

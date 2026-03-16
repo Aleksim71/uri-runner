@@ -1,0 +1,140 @@
+HISTORY INDEX CONTRACT
+runtime/history/index.json
+
+STATUS
+V3 Stage 2
+A7 — History Index Contract
+
+
+PURPOSE
+
+runtime/history/index.json is a compact runtime history registry.
+
+It provides:
+
+- fast history lookup
+- support for `uri history`
+- support for `uri last`
+- support for `uri show <runId>`
+
+The index is not a replacement for trace.json.
+
+trace.json remains the canonical source of truth for a run.
+
+
+LOCATION
+
+runtime/history/index.json
+
+
+SCHEMA
+
+{
+  "version": 1,
+  "updatedAt": "ISO_TIMESTAMP",
+  "runs": [
+    {
+      "runId": "string",
+      "createdAt": "ISO_TIMESTAMP",
+      "goal": "string",
+      "finalStatus": "success | failed | partial",
+      "attempts": 1,
+      "stepCount": 4,
+      "traceRelPath": "runtime/traces/<runId>/trace.json",
+      "outboxRelPath": "runtime/traces/<runId>/outbox.json",
+      "planRelPath": "runtime/traces/<runId>/plan.json"
+    }
+  ]
+}
+
+
+INVARIANTS
+
+1. version must always exist.
+2. runs must always be an array.
+3. runId must be unique.
+4. runs are stored in append order.
+5. the last entry represents the latest run.
+6. traceRelPath is mandatory.
+7. trace.json is the canonical per-run record.
+8. history index is a derived artifact.
+
+
+WRITE LIFECYCLE
+
+RUNBOOK
+↓
+compilePlan
+↓
+PLAN
+↓
+runPlan
+↓
+execution events
+↓
+event bus
+↓
+events.jsonl
+↓
+trace builder
+↓
+trace.json
+↓
+outbox.zip
+↓
+history index update
+↓
+runtime/history/index.json
+
+
+WRITE RULES
+
+1. Load index.json if it exists.
+2. If it does not exist, create a new document:
+
+version = 1
+runs = []
+
+3. Build a compact entry from finalized trace data.
+4. Reject duplicate runId.
+5. Append entry to runs.
+6. Update updatedAt.
+7. Save index.json.
+
+
+CLI SEMANTICS
+
+uri history
+- lists runs from history index
+
+uri last
+- returns the last run entry
+
+uri show <runId>
+- resolves run through history index
+- loads corresponding trace.json
+
+
+ERROR HANDLING
+
+Missing index.json
+
+uri history → history index not found
+uri last → no runs found
+uri show → history index not found
+
+Missing trace.json
+
+uri show → trace file missing
+
+
+NON-GOALS
+
+History index must NOT store:
+
+- execution events
+- events.jsonl
+- full trace steps
+- artifact payloads
+
+Index must remain compact.
