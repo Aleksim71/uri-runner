@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs/promises');
 
 const {
   createExecutionEventBus
@@ -23,6 +24,11 @@ const {
 } = require('./execution/create-deterministic-run-id.cjs');
 
 const {
+  buildRuntimePaths,
+  ensureRuntimeDirectories
+} = require('./runtime-paths.cjs');
+
+const {
   runPlan
 } = require('./run-plan.cjs');
 
@@ -39,12 +45,27 @@ const {
  * - finalize normalized trace.json
  *
  * Important:
- * - traceDir resolves from project root, not from process.cwd()
+ * - default traceDir resolves from runtimePaths.runTracesDir
+ * - explicit context.traceDir still overrides default behavior
  */
 
 async function runWithTrace(plan, context = {}) {
   const runId = createDeterministicRunId(plan, context);
-  const traceDir = resolveTraceDir(context.traceDir);
+  const runtimePaths = resolveRuntimePaths({
+    context,
+    runId
+  });
+
+  const traceDir = resolveTraceDir({
+    inputTraceDir: context.traceDir,
+    runtimePaths
+  });
+
+  if (runtimePaths) {
+    ensureRuntimeDirectories(runtimePaths);
+  } else {
+    await ensureDir(traceDir);
+  }
 
   const eventBus = createExecutionEventBus();
 
@@ -64,6 +85,7 @@ async function runWithTrace(plan, context = {}) {
     ...context,
     runId,
     traceDir,
+    runtimePaths,
     executionEvents
   };
 
@@ -111,16 +133,50 @@ async function runWithTrace(plan, context = {}) {
     ...result,
     runId,
     traceDir,
+    runtimePaths,
     trace: finalizeResult
   };
 }
 
-function resolveTraceDir(inputTraceDir) {
+function resolveRuntimePaths({ context, runId }) {
+  if (!context || typeof context !== 'object') {
+    return null;
+  }
+
+  const projectRoot = resolveProjectRoot(context.projectRoot);
+  if (!projectRoot) {
+    return null;
+  }
+
+  return buildRuntimePaths({
+    projectRoot,
+    runId,
+    workspaceDir: context.workspaceDir || null
+  });
+}
+
+function resolveTraceDir({ inputTraceDir, runtimePaths }) {
   if (typeof inputTraceDir === 'string' && inputTraceDir.trim() !== '') {
     return path.resolve(inputTraceDir);
   }
 
+  if (runtimePaths && runtimePaths.runTracesDir) {
+    return runtimePaths.runTracesDir;
+  }
+
   return path.resolve(__dirname, '../../runtime/traces');
+}
+
+function resolveProjectRoot(projectRoot) {
+  if (typeof projectRoot === 'string' && projectRoot.trim() !== '') {
+    return path.resolve(projectRoot);
+  }
+
+  return null;
+}
+
+async function ensureDir(dir) {
+  await fs.mkdir(dir, { recursive: true });
 }
 
 module.exports = {

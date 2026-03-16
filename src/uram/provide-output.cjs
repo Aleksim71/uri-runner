@@ -115,6 +115,7 @@ async function collectProvideOutputs({
   projectRoot,
   tmpRoot,
   runId,
+  runtimePaths = null,
   tolerateErrors = false,
 }) {
   const items = Array.isArray(provide) ? provide : [];
@@ -126,9 +127,17 @@ async function collectProvideOutputs({
     };
   }
 
-  const token = crypto.randomBytes(4).toString("hex");
-  const tmpProvidedDir = path.join(tmpRoot, `outbox-provided-${runId}-${token}`);
-  const providedDir = path.join(tmpProvidedDir, "provided");
+  let tmpProvidedDir;
+  let providedDir;
+
+  if (runtimePaths && runtimePaths.runDir && runtimePaths.runProvidedDir) {
+    tmpProvidedDir = runtimePaths.runDir;
+    providedDir = runtimePaths.runProvidedDir;
+  } else {
+    const token = crypto.randomBytes(4).toString("hex");
+    tmpProvidedDir = path.join(tmpRoot, `outbox-provided-${runId}-${token}`);
+    providedDir = path.join(tmpProvidedDir, "provided");
+  }
 
   await ensureDir(providedDir);
 

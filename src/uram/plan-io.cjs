@@ -48,9 +48,15 @@ async function readPlanFromFile(filePath) {
 async function writePlanArtifact({
   plan,
   artifactsDir,
+  runtimePaths,
   runId,
 }) {
-  if (!artifactsDir) {
+  const resolvedArtifactsDir =
+    artifactsDir ||
+    (runtimePaths && runtimePaths.runArtifactsDir) ||
+    null;
+
+  if (!resolvedArtifactsDir) {
     throw new Error("[uri] artifactsDir is required");
   }
 
@@ -59,7 +65,7 @@ async function writePlanArtifact({
   }
 
   const fileName = `${runId}.plan.json`;
-  const filePath = path.join(artifactsDir, fileName);
+  const filePath = path.join(resolvedArtifactsDir, fileName);
 
   const result = await writePlanToFile(plan, filePath);
 

@@ -6,6 +6,10 @@ const fs = require("fs/promises");
 const { readPlanFromFile } = require("../../uram/plan-io.cjs");
 const { resolveProjectContext } = require("../../uram/project-resolver.cjs");
 const { runPlan } = require("../../uram/run-plan.cjs");
+const {
+  buildRuntimePaths,
+  ensureRuntimeDirectories,
+} = require("../../runtime/runtime-paths.cjs");
 
 async function withMutedStdout(fn) {
   const originalWrite = process.stdout.write.bind(process.stdout);
@@ -81,19 +85,24 @@ function buildTrace({ runId, plan, result }) {
   };
 }
 
-async function writeTrace(runtimeDir, trace) {
-  const tracesDir = path.join(runtimeDir, "traces");
-  await ensureDir(tracesDir);
+async function writeTrace(runtimePaths, trace) {
+  await ensureDir(runtimePaths.runTracesDir);
 
-  const tracePath = path.join(tracesDir, `${trace.runId}.trace.json`);
+  const tracePath = path.join(runtimePaths.runTracesDir, `${trace.runId}.trace.json`);
 
   await fs.writeFile(tracePath, JSON.stringify(trace, null, 2));
 
   return tracePath;
 }
 
-async function updateHistory(runtimeDir, trace, planFilePath) {
-  const historyDir = path.join(runtimeDir, "history");
+async function updateHistory({
+  runtimeRoot,
+  projectRoot,
+  trace,
+  tracePath,
+  planFilePath,
+}) {
+  const historyDir = path.join(runtimeRoot, "history");
   await ensureDir(historyDir);
 
   const indexPath = path.join(historyDir, "index.json");
@@ -126,7 +135,7 @@ async function updateHistory(runtimeDir, trace, planFilePath) {
     finalStatus: trace.finalStatus,
     attempts: trace.attempts,
     stepCount: Array.isArray(trace.steps) ? trace.steps.length : 0,
-    traceRelPath: path.join("runtime", "traces", `${trace.runId}.trace.json`).replace(/\\/g, "/"),
+    traceRelPath: path.relative(projectRoot, tracePath).replace(/\\/g, "/"),
     outboxRelPath: null,
     planRelPath: path.relative(process.cwd(), path.resolve(planFilePath)).replace(/\\/g, "/")
   });
@@ -157,6 +166,13 @@ async function runPlanFile({
   });
 
   const runId = createRunId();
+  const runtimePaths = buildRuntimePaths({
+    projectRoot: projectCtx.cwd,
+    runId,
+    workspaceDir,
+  });
+
+  ensureRuntimeDirectories(runtimePaths);
 
   const result = await withMutedStdout(async () => {
     return runPlan({
@@ -167,17 +183,20 @@ async function runPlanFile({
     });
   });
 
-  const runtimeDir = path.join(projectCtx.cwd, "runtime");
-  await ensureDir(runtimeDir);
-
   const trace = buildTrace({
     runId,
     plan,
     result
   });
 
-  const tracePath = await writeTrace(runtimeDir, trace);
-  const historyIndexPath = await updateHistory(runtimeDir, trace, absolutePlanPath);
+  const tracePath = await writeTrace(runtimePaths, trace);
+  const historyIndexPath = await updateHistory({
+    runtimeRoot: runtimePaths.runtimeRoot,
+    projectRoot: projectCtx.cwd,
+    trace,
+    tracePath,
+    planFilePath: absolutePlanPath,
+  });
 
   process.stdout.write(`${JSON.stringify(result.outboxPayload, null, 2)}\n`);
 
