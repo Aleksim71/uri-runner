@@ -18,15 +18,6 @@ async function writeFile(p, body) {
   await fsp.writeFile(p, body, "utf8");
 }
 
-async function exists(p) {
-  try {
-    await fsp.access(p, fs.constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function walk(dir) {
   const out = [];
   const entries = await fsp.readdir(dir, { withFileTypes: true });
@@ -65,6 +56,12 @@ function unzipJson(zipPath, entryName) {
   return JSON.parse(raw);
 }
 
+function unzipText(zipPath, entryName) {
+  return execFileSync("unzip", ["-p", zipPath, entryName], {
+    encoding: "utf8",
+  });
+}
+
 function unzipList(zipPath) {
   return execFileSync("unzip", ["-Z1", zipPath], {
     encoding: "utf8",
@@ -75,9 +72,9 @@ function unzipList(zipPath) {
     .sort();
 }
 
-describe("scenario runtime smoke", () => {
-  it("executes scenario command and writes outbox zip with outbox.json", async () => {
-    const root = await fsp.mkdtemp(path.join(os.tmpdir(), "uri-v3-smoke-"));
+describe("scenario runtime outbox contract", () => {
+  it("puts outbox.json and requested provided files into outbox.zip", async () => {
+    const root = await fsp.mkdtemp(path.join(os.tmpdir(), "uri-v3-outbox-"));
 
     const uramRoot = path.join(root, "uram");
     const projectName = "demo";
@@ -107,13 +104,17 @@ describe("scenario runtime smoke", () => {
         "commands:",
         "  roots:",
         "    - system",
-        "    - project",
         "",
         "runtime:",
         "  max_steps: 100",
         "  strict_commands: true",
         "",
       ].join("\n")
+    );
+
+    await writeFile(
+      path.join(projectRoot, "report.txt"),
+      ["alpha", "beta", "gamma", "delta", "epsilon"].join("\n")
     );
 
     const runbookText = [
@@ -123,7 +124,13 @@ describe("scenario runtime smoke", () => {
       "  - id: step_echo_1",
       "    command: system.echo",
       "    args:",
-      '      message: "hello from smoke"',
+      '      message: "hello outbox contract"',
+      "provide:",
+      "  - kind: file",
+      "    path: report.txt",
+      "  - kind: file_fragment",
+      "    path: report.txt",
+      "    lines: [2, 4]",
       "",
     ].join("\n");
 
@@ -155,19 +162,36 @@ describe("scenario runtime smoke", () => {
     const latestOutbox = outboxFiles.sort().at(-1);
     const entries = unzipList(latestOutbox);
 
-    expect(entries).toEqual(["outbox.json"]);
+    expect(entries).toEqual([
+      "outbox.json",
+      "provided/fragments/report.txt_2_4.txt",
+      "provided/report.txt",
+    ]);
 
     const outbox = unzipJson(latestOutbox, "outbox.json");
 
-    expect(outbox).toEqual({
-      status: "success",
-      attempts: 1,
-    });
+    expect(outbox.status).toBe("success");
+    expect(outbox.attempts).toBe(1);
+    expect(outbox.provided).toEqual([
+      {
+        kind: "file",
+        path: "provided/report.txt",
+      },
+      {
+        kind: "file_fragment",
+        path: "provided/fragments/report.txt_2_4.txt",
+        source: "report.txt",
+        lines: [2, 4],
+      },
+    ]);
 
-    const processedInboxFiles = allFiles.filter((p) => p.endsWith(".inbox.zip"));
-    expect(processedInboxFiles.length).toBeGreaterThan(0);
+    const deliveredFile = unzipText(latestOutbox, "provided/report.txt");
+    expect(deliveredFile).toBe(["alpha", "beta", "gamma", "delta", "epsilon"].join("\n"));
 
-    const originalInboxStillExists = await exists(inboxZipPath);
-    expect(originalInboxStillExists).toBe(false);
+    const deliveredFragment = unzipText(
+      latestOutbox,
+      "provided/fragments/report.txt_2_4.txt"
+    );
+    expect(deliveredFragment).toBe(["beta", "gamma", "delta"].join("\n"));
   });
 });
