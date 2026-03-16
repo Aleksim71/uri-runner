@@ -1,32 +1,298 @@
 .
-├── architecture
-│   ├── phase1-overview.md
-│   └── project-structure.md
-├── changelog.md
-├── commands
-│   ├── command-libraries.md
-│   └── command-loading.md
-├── context
-│   ├── context-links.md
-│   ├── context-metadata.md
-│   └── context-reading.md
-├── criteria
-│   └── phase1-completion.md
-├── index.md
-├── notes
-│   └── ideas.md
-├── .obsidian
-│   ├── appearance.json
-│   ├── app.json
-│   ├── core-plugins.json
-│   └── workspace.json
-├── README_COMMAND_LOADER_PACK.md
-├── README_EXECUTABLE_CONTEXT_RUNTIME_PATCH.txt
-├── README_EXECUTION_LOCK_PATCH.md
-├── README_META_PIPELINE_PARITY_PATCH.md
-├── README_RUNTIME_PACK.md
-├── scenario
-│   └── scenario-body-v1.md
-└── URI_TREE.txt
+├── artifacts
+│   ├── inbox
+│   │   └── .gitkeep
+│   └── outbox
+│       └── .gitkeep
+├── bin
+│   └── uri.cjs
+├── config
+│   ├── projects.yaml
+│   └── projects.yaml.example
+├── contexts
+│   ├── cf
+│   │   └── .gitkeep
+│   ├── projects
+│   │   ├── abonasi
+│   │   │   └── .gitkeep
+│   │   ├── freelance
+│   │   │   └── .gitkeep
+│   │   └── tempasi
+│   │       └── .gitkeep
+│   ├── system
+│   │   └── executable.yaml
+│   └── uri-runner
+│       └── .gitkeep
+├── doc
+│   ├── architecture
+│   │   ├── phase1-overview.md
+│   │   └── project-structure.md
+│   ├── changelog.md
+│   ├── commands
+│   │   ├── command-libraries.md
+│   │   ├── command-loader-pack.md
+│   │   └── command-loading.md
+│   ├── context
+│   │   ├── context-links.md
+│   │   ├── context-metadata.md
+│   │   └── context-reading.md
+│   ├── criteria
+│   │   └── phase1-completion.md
+│   ├── index.md
+│   ├── notes
+│   │   └── ideas.md
+│   ├── .obsidian
+│   │   ├── appearance.json
+│   │   ├── app.json
+│   │   ├── core-plugins.json
+│   │   └── workspace.json
+│   ├── runtime
+│   │   ├── artifact-contract.txt
+│   │   ├── baseline-restoration.txt
+│   │   ├── execution-graph.txt
+│   │   ├── execution-lifecycle.txt
+│   │   ├── execution-lock.md
+│   │   ├── execution-model.md
+│   │   ├── history-index-contract.txt
+│   │   ├── inbox-outbox-protocol.txt
+│   │   ├── meta-pipeline.md
+│   │   ├── runtime-architecture.txt
+│   │   ├── runtime-pack.md
+│   │   └── state-domains.txt
+│   ├── scenario
+│   │   └── scenario-body-v1.md
+│   └── system
+│       └── executable-context-runtime.md
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── README_A7_CODE_PACKAGE.txt
+├── README.md
+├── runtime
+│   ├── db
+│   │   ├── create-db-backup.cjs
+│   │   ├── db-client-postgres.cjs
+│   │   └── restore-db-backup.cjs
+│   ├── environment
+│   │   ├── cleanup-runtime-state.cjs
+│   │   ├── reset-environment.cjs
+│   │   ├── run-healthcheck.cjs
+│   │   ├── start-managed-server.cjs
+│   │   └── stop-managed-processes.cjs
+│   ├── git
+│   │   ├── collect-run-file-changes.cjs
+│   │   ├── git-client.cjs
+│   │   └── rollback-to-checkpoint.cjs
+│   ├── history
+│   │   └── index.json
+│   ├── report
+│   │   ├── build-run-report.cjs
+│   │   └── write-outbox-report.cjs
+│   ├── rollback
+│   │   └── run-rollback.cjs
+│   ├── test-plan.json
+│   ├── traces
+│   │   ├── run_20260315202802._5tr2q.trace.json
+│   │   ├── run_20260315203423_67msx.trace.json
+│   │   └── run_20260315203515_xthkf.trace.json
+│   └── validation
+│       ├── checks
+│       │   ├── check-exit-code.cjs
+│       │   ├── check-file-contains.cjs
+│       │   ├── check-file-exists.cjs
+│       │   ├── check-http-ok.cjs
+│       │   ├── check-port-open.cjs
+│       │   └── index.cjs
+│       ├── goal-checks
+│       │   ├── check-command-success.cjs
+│       │   ├── check-file-exists.cjs
+│       │   ├── check-http-ok.cjs
+│       │   └── index.cjs
+│       ├── run-goal-checks.cjs
+│       └── run-step-checks.cjs
+├── src
+│   ├── cli
+│   │   ├── commands
+│   │   │   ├── compile.cjs
+│   │   │   ├── debug-commands.cjs
+│   │   │   ├── debug-plan.cjs
+│   │   │   ├── debug-runbook.cjs
+│   │   │   ├── history.cjs
+│   │   │   ├── last.cjs
+│   │   │   ├── replay.cjs
+│   │   │   ├── run-plan.cjs
+│   │   │   ├── show.cjs
+│   │   │   └── test.cjs
+│   │   └── index.cjs
+│   ├── cli.cjs
+│   ├── commands
+│   │   ├── command-registry.cjs
+│   │   ├── context
+│   │   │   ├── audit.cjs
+│   │   │   ├── runbook.cjs
+│   │   │   └── validate-meta.cjs
+│   │   ├── file
+│   │   │   ├── build-inbox.cjs
+│   │   │   ├── patch.cjs
+│   │   │   └── zip.cjs
+│   │   ├── load-commands.cjs
+│   │   ├── system
+│   │   │   ├── doctor.cjs
+│   │   │   ├── echo.cjs
+│   │   │   ├── exec.cjs
+│   │   │   ├── server.cjs
+│   │   │   └── urls.cjs
+│   │   └── test
+│   │       ├── checks.cjs
+│   │       └── run-vitest.cjs
+│   ├── lib
+│   │   ├── audit.cjs
+│   │   ├── buildInbox.cjs
+│   │   ├── checks.cjs
+│   │   ├── doctor.cjs
+│   │   ├── exec.cjs
+│   │   ├── meta.validate.cjs
+│   │   ├── patch.cjs
+│   │   ├── runbook.cjs
+│   │   ├── server.cjs
+│   │   ├── urls.cjs
+│   │   └── zip.cjs
+│   ├── runtime
+│   │   ├── execution
+│   │   │   ├── build-stable-trace.cjs
+│   │   │   ├── create-deterministic-run-id.cjs
+│   │   │   ├── create-deterministic-step-id.cjs
+│   │   │   ├── execution-error.cjs
+│   │   │   ├── execution-event-bus.cjs
+│   │   │   ├── execution-events.cjs
+│   │   │   ├── replay-trace.cjs
+│   │   │   ├── run-with-trace.cjs
+│   │   │   ├── trace-event-subscriber.cjs
+│   │   │   ├── trace-finalizer.cjs
+│   │   │   └── trace-schema.cjs
+│   │   ├── history
+│   │   │   ├── append-history-entry.cjs
+│   │   │   ├── history-index-schema.cjs
+│   │   │   ├── read-history-index.cjs
+│   │   │   └── write-history-index.cjs
+│   │   ├── list-trace-history.cjs
+│   │   ├── report
+│   │   │   └── terminal-report.cjs
+│   │   ├── run-plan.cjs
+│   │   └── run-with-trace.cjs
+│   └── uram
+│       ├── artifacts
+│       │   ├── baseline-verify-result-artifact.cjs
+│       │   ├── error-utils.cjs
+│       │   ├── result-artifact.cjs
+│       │   ├── rollback-result-artifact.cjs
+│       │   └── run-summary-artifact.cjs
+│       ├── compile-plan.cjs
+│       ├── engines
+│       │   ├── audit-engine.cjs
+│       │   └── scenario-engine.cjs
+│       ├── error-codes.cjs
+│       ├── executable-context.cjs
+│       ├── execution-lock.cjs
+│       ├── finalize-run.cjs
+│       ├── paths.cjs
+│       ├── pipeline.cjs
+│       ├── plan-debug.cjs
+│       ├── plan-io.cjs
+│       ├── plan-paths.cjs
+│       ├── plan-schema.cjs
+│       ├── project-resolver.cjs
+│       ├── provide-output.cjs
+│       ├── runbook.cjs
+│       ├── run.cjs
+│       ├── run-paths.cjs
+│       ├── run-plan.cjs
+│       ├── runtime-context.cjs
+│       ├── runtime-summary.cjs
+│       ├── scenario-executor.cjs
+│       ├── scenario-parser.cjs
+│       ├── state
+│       │   ├── capture-baseline.cjs
+│       │   ├── restore-baseline.cjs
+│       │   ├── state-domains.cjs
+│       │   └── verify-baseline.cjs
+│       └── watch-inbox-once.cjs
+├── TASKLIST_STAGE3.txt
+├── test
+│   ├── audit.smoke.test.mjs
+│   ├── cli
+│   │   ├── cli-compile.test.mjs
+│   │   ├── cli-debug-commands.test.mjs
+│   │   ├── cli-debug-plan.test.mjs
+│   │   ├── cli-debug-runbook.test.mjs
+│   │   ├── cli-replay.test.mjs
+│   │   └── cli-run-plan.test.mjs
+│   ├── fixtures
+│   │   ├── http-server.cjs
+│   │   ├── RUNBOOK_CHECKS.yaml
+│   │   ├── RUNBOOK_SERVER.yaml
+│   │   ├── RUNBOOK_URLS_PUBLIC.yaml
+│   │   └── RUNBOOK.yaml
+│   ├── helpers
+│   │   ├── sandbox.cjs
+│   │   └── zip-create.cjs
+│   ├── sandbox
+│   │   ├── create-sandbox-config.cjs
+│   │   ├── create-sandbox.sh
+│   │   └── write-sandbox-config.cjs
+│   ├── scenarios
+│   │   ├── last-run.created-on-empty-run.test.mjs
+│   │   ├── last-run.exists-after-accepted-inbox.test.mjs
+│   │   ├── last-run.updated-on-second-run.test.mjs
+│   │   ├── processed.accepted-flow-is-deterministic.test.mjs
+│   │   ├── processed.accepted-inbox-is-recorded.test.mjs
+│   │   ├── processed.ignored-files-do-not-create-records.test.mjs
+│   │   ├── sandbox.smoke.test.mjs
+│   │   ├── scenario-runtime.execution-lock.test.mjs
+│   │   ├── scenario-runtime.history-plan-link.test.mjs
+│   │   ├── scenario-runtime.max-steps.test.mjs
+│   │   ├── scenario-runtime.outbox-contract.test.mjs
+│   │   ├── scenario-runtime.plan-artifact.test.mjs
+│   │   ├── scenario-runtime.root-policy.test.mjs
+│   │   ├── scenario-runtime.smoke.test.mjs
+│   │   ├── scenario-runtime.unknown-command.test.mjs
+│   │   ├── watch-inbox.accepts-broken-meta.test.mjs
+│   │   ├── watch-inbox.accepts-valid-meta.test.mjs
+│   │   ├── watch-inbox.strict-intake.test.mjs
+│   │   ├── watch-log.creates-on-empty-run.test.mjs
+│   │   ├── watch-log.logs-accept-and-staging.test.mjs
+│   │   └── watch-log.logs-ignore-reason.test.mjs
+│   └── unit
+│       ├── compile-plan.scenario.test.mjs
+│       ├── plan-schema.test.mjs
+│       ├── result-artifact.test.mjs
+│       ├── run-paths.test.mjs
+│       ├── run-plan.scenario.test.mjs
+│       └── runtime-summary.test.mjs
+├── .tmp-uram-e2e
+│   ├── config
+│   │   └── projects.yaml
+│   ├── inbox
+│   ├── Inbox
+│   │   └── processed
+│   │       ├── 2026-03-11_14-05-03__uri-runner-next__2026-03-11T13-05-03-925Z_b061c1.inbox.zip
+│   │       ├── 2026-03-11_14-30-34__uri-runner-next__2026-03-11T13-30-34-167Z_53a8c0.inbox.zip
+│   │       ├── 2026-03-11_15-08-17__uri-runner-next__2026-03-11T14-08-17-338Z_98bee0.inbox.zip
+│   │       └── uri-runner-next__2026-03-11T13-18-52-224Z_62833d.inbox.zip
+│   ├── locks
+│   ├── outbox
+│   ├── processed
+│   ├── projects
+│   ├── RUNBOOK.yaml
+│   ├── tmp
+│   └── uri-runner-nextBox
+│       ├── history
+│       │   ├── 2026-03-11_14-05-03__scenario__OK__2026-03-11T13-05-03-925Z_b061c1.outbox.zip
+│       │   ├── 2026-03-11_14-30-34__scenario__OK__2026-03-11T13-30-34-167Z_53a8c0.outbox.zip
+│       │   ├── 2026-03-11_15-08-17__scenario__OK__2026-03-11T14-08-17-338Z_98bee0.outbox.zip
+│       │   └── index.jsonl
+│       └── outbox.latest.zip
+├── URI_TREE.txt
+└── vitest.config.mjs
 
-8 directories, 22 files
+71 directories, 225 files
