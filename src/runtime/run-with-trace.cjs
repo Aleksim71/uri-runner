@@ -44,9 +44,10 @@ const {
  * - run execution plan
  * - finalize normalized trace.json
  *
- * Important:
- * - default traceDir resolves from runtimePaths.runTracesDir
- * - explicit context.traceDir still overrides default behavior
+ * Resolution priority for traceDir:
+ * 1 explicit context.traceDir
+ * 2 runtimePaths.runTracesDir
+ * 3 legacy runtime/traces fallback
  */
 
 async function runWithTrace(plan, context = {}) {
