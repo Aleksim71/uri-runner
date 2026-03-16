@@ -12,10 +12,13 @@ bin/
 runtime/traces/*
 runtime/history/index.json
 runtime/test-plan.json
-
 .tmp-uram-e2e/
 artifacts/outbox/*
 artifacts/inbox/*
+# URI runtime artifacts
+runtime/runs/
+runtime/tmp/
+runtime/logs/
 *.zip
 # patchpack artifacts (must never live in repo root)
 APPLY.sh
