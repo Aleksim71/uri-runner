@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("path");
+const fs = require("fs");
 
 function buildRuntimePaths({ projectRoot, runId, workspaceDir }) {
   const runtimeRoot = path.join(projectRoot, "runtime");
@@ -18,6 +19,24 @@ function buildRuntimePaths({ projectRoot, runId, workspaceDir }) {
   };
 }
 
+function ensureRuntimeDirectories(runtimePaths) {
+  const dirs = [
+    runtimePaths.runtimeRoot,
+    runtimePaths.runsDir,
+    runtimePaths.runDir,
+    runtimePaths.tmpDir,
+    runtimePaths.artifactsDir,
+    runtimePaths.tracesDir,
+    runtimePaths.providedDir,
+    runtimePaths.logsDir,
+  ];
+
+  for (const dir of dirs) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
 module.exports = {
   buildRuntimePaths,
+  ensureRuntimeDirectories,
 };

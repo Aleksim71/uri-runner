@@ -3,7 +3,11 @@
 const path = require("path");
 
 const { assertPlanShape } = require("./plan-schema.cjs");
-const { buildRuntimePaths } = require("../runtime/runtime-paths.cjs");
+
+const {
+  buildRuntimePaths,
+  ensureRuntimeDirectories,
+} = require("../runtime/runtime-paths.cjs");
 
 const { loadPlanCommands } = require("./load-plan-commands.cjs");
 const { executePlanStep } = require("./execute-plan-step.cjs");
@@ -49,6 +53,9 @@ async function runPlan(params) {
     runId,
     workspaceDir,
   });
+
+  // A9.1 runtime sandbox bootstrap
+  ensureRuntimeDirectories(runtimePaths);
 
   const executionContext = {
     runId,
