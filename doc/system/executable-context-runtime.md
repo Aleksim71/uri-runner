@@ -1,47 +1,42 @@
 Executable Context Runtime Patch
 URI Runner Next
 
-------------------------------------------------
-Идея
-------------------------------------------------
 
-Добавляется новый механизм исполнения:
+------------------------------------------------
+Idea
+------------------------------------------------
 
 contexts/system/executable.yaml
 
-Это единственный исполняемый контекст
-для проекта.
+is the executable context describing
+how the project should run.
 
-AI может переписывать этот файл.
-
-URI читает его
-и выполняет.
 
 ------------------------------------------------
-Зачем это нужно
+Why this exists
 ------------------------------------------------
 
-RUNBOOK.yaml из inbox.zip
-не хранит историю задачи.
+RUNBOOK.yaml from inbox.zip does not store task history.
 
-Git хранит историю изменения
-executable.yaml.
+Git stores the history of executable.yaml.
 
-Поэтому:
+Therefore:
 
-контекст + команда
-хранятся вместе.
+context + command history
+are preserved in git.
+
 
 ------------------------------------------------
-Структура
+Structure
 ------------------------------------------------
 
 contexts/
   system/
     executable.yaml
 
+
 ------------------------------------------------
-Пример executable.yaml
+Example executable.yaml
 ------------------------------------------------
 
 version: 1
@@ -52,10 +47,25 @@ meta:
   project: uri-runner-next
   status: active
 
+runtime:
+
+  environment:
+    reset_before_run: true
+
+    startup:
+      command: "npm run start"
+
+      healthcheck:
+        type: http_ok
+        url: "http://localhost:3000/health"
+        timeoutSec: 10
+
+
 scenario:
   start: step1
 
 steps:
+
   - id: step1
     command: system.echo
     args:
@@ -68,20 +78,25 @@ steps:
       message: done
     stop: true
 
+
 ------------------------------------------------
-Lifecycle
+Execution Lifecycle
 ------------------------------------------------
 
-AI пишет executable.yaml
+AI writes executable.yaml
 
 URI:
 
-1 читает
-2 исполняет
-3 очищает тело
+1 reads executable.yaml
+2 compiles scenario plan
+3 resets runtime environment if configured
+4 executes scenario
+5 records execution trace
+6 produces outbox artifact
+
 
 ------------------------------------------------
-После исполнения
+After execution
 ------------------------------------------------
 
 version: 1
@@ -94,54 +109,38 @@ meta:
   last_run_ok: true
   last_engine: scenario
 
-------------------------------------------------
-Почему только один файл
-------------------------------------------------
-
-если каждый запуск создавать новый
-контекстный файл
-
-папка contexts разрастётся
-до миллионов файлов.
-
-поэтому:
-
-1 executable файл
-+ git history.
 
 ------------------------------------------------
-Безопасность
+Security
 ------------------------------------------------
 
-AI не имеет доступа
-к файловой системе.
+AI does not have direct filesystem access.
 
-URI:
-
-сам определяет
+URI controls:
 
 cwd
 paths
 workspace
+runtime directories
+
 
 ------------------------------------------------
-Следующий шаг
+Future direction
 ------------------------------------------------
 
-URI сможет запускать
-executable.yaml
+URI will be able to execute executable.yaml
+even without inbox.zip.
 
-даже если inbox.zip отсутствует.
-
-команда:
+Command:
 
 uri run
 
-будет проверять:
+will check:
 
 contexts/system/executable.yaml
 
-и выполнять его напрямую.
+and execute it directly.
+
 
 ------------------------------------------------
 END

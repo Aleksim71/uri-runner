@@ -1,25 +1,178 @@
 # URI Runner Documentation Index
 
-## Core Documents
 
-runtime/runtime-pack.txt
-runtime/execution-lifecycle.txt
-runtime/artifact-contract.txt
-runtime/inbox-outbox-protocol.txt
-runtime/history-index-contract.txt
-runtime/finalize-contract.txt
+------------------------------------------------
+Overview
+------------------------------------------------
 
-## Additional Documents
+URI Runner documentation is organized into several logical layers:
 
-runtime/state-domains.txt
-runtime/baseline-restoration.txt
-runtime/execution-graph.txt
+1 Runtime architecture
+2 Execution lifecycle
+3 Runtime modules
+4 System contexts
+5 Artifact protocols
+6 CLI interface
+7 Change history
 
-## System Documents
 
-system/executable-context-runtime.txt
+------------------------------------------------
+Core Architecture
+------------------------------------------------
 
-## Change Log
+Runtime Pack
 
-changelog.txt
+doc/runtime/runtime-pack.md
 
+Describes core runtime modules and execution pipeline.
+
+
+Execution Lifecycle
+
+doc/runtime/execution-lifecycle.txt
+
+Defines canonical execution phases of URI.
+
+
+Environment Reset System
+
+doc/runtime/environment-reset.md
+
+Describes environment reset pipeline executed before scenario execution.
+
+Modules:
+
+stop-managed-processes  
+cleanup-runtime-state  
+start-managed-server  
+run-healthcheck  
+reset-environment
+
+
+------------------------------------------------
+Executable Context System
+------------------------------------------------
+
+Executable Context Runtime
+
+doc/system/executable-context-runtime.md
+
+Describes the executable.yaml mechanism used to define
+project execution scenarios.
+
+
+------------------------------------------------
+Execution Artifacts
+------------------------------------------------
+
+Trace System
+
+runtime/traces
+
+Execution trace artifacts.
+
+
+History System
+
+runtime/history/index.json
+
+History index used by CLI commands:
+
+uri history  
+uri last  
+uri show <runId>
+
+
+Outbox Protocol
+
+Execution result package.
+
+Artifact:
+
+outbox.zip
+
+
+------------------------------------------------
+Runtime Execution Pipeline
+------------------------------------------------
+
+Canonical pipeline:
+
+RUNBOOK / executable.yaml
+        ↓
+compilePlan
+        ↓
+plan validation
+        ↓
+environment reset
+        ↓
+scenario execution
+        ↓
+execution events
+        ↓
+trace recording
+        ↓
+outbox packaging
+        ↓
+history persistence
+
+
+------------------------------------------------
+CLI Commands
+------------------------------------------------
+
+Core commands:
+
+uri run
+uri history
+uri last
+uri show <runId>
+uri replay trace.json
+
+
+------------------------------------------------
+Documentation Change History
+------------------------------------------------
+
+doc/changelog.md
+
+
+------------------------------------------------
+Documentation Structure
+------------------------------------------------
+
+doc/
+
+  index.md
+
+  changelog.md
+
+  runtime/
+
+      execution-lifecycle.txt
+      runtime-pack.md
+      environment-reset.md
+
+  system/
+
+      executable-context-runtime.md
+
+
+------------------------------------------------
+Documentation Rules
+------------------------------------------------
+
+Documentation files must follow these principles:
+
+1 deterministic structure  
+2 minimal redundancy  
+3 architecture first  
+4 implementation details second  
+
+The documentation index must remain the primary entry point
+for both developers and AI agents.
+
+
+------------------------------------------------
+END
+------------------------------------------------

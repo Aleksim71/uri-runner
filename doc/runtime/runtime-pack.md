@@ -15,11 +15,26 @@ execution event bus
 trace system
 
 
+Runtime Environment System
+
+Environment reset modules ensure that scenario execution
+starts in a deterministic runtime state.
+
+Modules:
+
+stop-managed-processes
+cleanup-runtime-state
+start-managed-server
+run-healthcheck
+reset-environment
+
+
 Execution Path
 
 RUNBOOK
 → compilePlan
 → runPlan
+→ environment reset
 → execution events
 → event bus
 → trace recording

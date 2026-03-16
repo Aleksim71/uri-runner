@@ -81,16 +81,16 @@ History artifact contract finalized.
 
 Each run produces:
 
-history/<runId>__<engine>**OK.outbox.zip
-history/<runId>**<engine>__ERR.outbox.zip
+history/<runId>__<engine>__OK.outbox.zip  
+history/<runId>__<engine>__ERR.outbox.zip
 
 History index compatibility layer added.
 
 Structured format:
 
 {
-"version": 1,
-"runs": [...]
+  "version": 1,
+  "runs": [...]
 }
 
 Legacy array format preserved for error-path compatibility.
@@ -99,13 +99,27 @@ Scenario runtime tests fully stabilized.
 
 Test status:
 
-34 test files passed
-56 tests passed
+40 test files passed  
+84 tests passed
 
-CLI layer
-Scenario runtime
-Finalize pipeline
-History index system
+CLI layer  
+Scenario runtime  
+Finalize pipeline  
+History index system  
 
 are now fully green.
 
+Additional runtime system introduced:
+
+Environment Reset Pipeline.
+
+Environment reset executes automatically before scenario execution
+when runtime.environment.reset_before_run = true.
+
+Runtime modules added:
+
+stop-managed-processes  
+cleanup-runtime-state  
+start-managed-server  
+run-healthcheck  
+reset-environment

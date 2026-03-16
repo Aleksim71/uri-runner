@@ -9,15 +9,16 @@ URI execution consists of sequential phases.
 
 Canonical Lifecycle
 
-1. Inbox Intake
-2. Scenario Decode
-3. Plan Compile
-4. Baseline Capture
-5. Execution
-6. Restore / Rollback
-7. Baseline Verification
-8. Outbox Packaging
-9. History Persistence
+1 Inbox Intake
+2 Scenario Decode
+3 Plan Compile
+4 Baseline Capture
+5 Environment Reset
+6 Execution
+7 Restore / Rollback
+8 Baseline Verification
+9 Outbox Packaging
+10 History Persistence
 
 
 Phase Details
@@ -41,6 +42,28 @@ RUNBOOK is compiled into internal execution plan.
 Baseline Capture
 
 Initial system state is captured.
+
+
+Environment Reset
+
+Optional environment preparation phase executed
+before the first scenario step.
+
+Triggered when:
+
+runtime.environment.reset_before_run = true
+
+Reset pipeline:
+
+1 stop managed processes
+2 cleanup runtime state
+3 start managed server
+4 run healthcheck
+
+Purpose:
+
+ensure deterministic execution environment
+prevent state contamination between runs
 
 
 Execution

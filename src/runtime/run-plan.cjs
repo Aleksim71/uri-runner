@@ -1,172 +1,133 @@
-'use strict';
+"use strict";
 
-/**
- * URI Runner
- * run-plan
- *
- * Executes compiled PLAN using executionEvents interface.
- *
- * executionEvents responsibilities:
- * - terminal reporting
- * - event bus emission
- * - step lifecycle management
- */
+const path = require("path");
 
-async function runPlan(plan, context = {}) {
+const { assertPlanShape } = require("./plan-schema.cjs");
+const { buildRuntimePaths } = require("../runtime/runtime-paths.cjs");
 
-  if (!plan || typeof plan !== 'object') {
-    throw new Error('run-plan: plan must be an object');
-  }
+const { loadPlanCommands } = require("./load-plan-commands.cjs");
+const { executePlanStep } = require("./execute-plan-step.cjs");
 
-  const events = context.executionEvents;
+const { resetEnvironment } = require("../runtime/environment/reset-environment.cjs");
 
-  if (!events) {
-    throw new Error('run-plan: executionEvents is required in context');
-  }
+class PlanRunError extends Error {
+  constructor(code, message, details = undefined) {
+    super(message);
+    this.name = "PlanRunError";
+    this.code = code;
 
-  const goal = typeof context.goal === 'string'
-    ? context.goal
-    : 'Execute plan';
-
-  let attempts = 1;
-
-  try {
-
-    // ----------------------------
-    // SCENARIO
-    // ----------------------------
-
-    if (Array.isArray(plan.execute)) {
-
-      for (const step of plan.execute) {
-
-        const stepId = events.startStep({
-          phase: 'scenario',
-          command: step.command,
-          message: step.message || step.command
-        });
-
-        try {
-
-          await executeCommand(step, context);
-
-          events.finishStep(stepId, {
-            result: 'success',
-            details: 'Command completed'
-          });
-
-        } catch (error) {
-
-          events.finishStep(stepId, {
-            result: 'error',
-            details: error.message
-          });
-
-          throw error;
-
-        }
-
-      }
-
+    if (details && typeof details === "object") {
+      this.details = details;
     }
-
-    // ----------------------------
-    // VERIFICATION
-    // ----------------------------
-
-    if (Array.isArray(plan.verify)) {
-
-      for (const step of plan.verify) {
-
-        const stepId = events.startStep({
-          phase: 'verification',
-          command: step.command,
-          message: step.message || step.command
-        });
-
-        try {
-
-          await verifyCommand(step, context);
-
-          events.finishStep(stepId, {
-            result: 'success',
-            details: 'Verification passed'
-          });
-
-        } catch (error) {
-
-          events.finishStep(stepId, {
-            result: 'error',
-            details: error.message
-          });
-
-          throw error;
-
-        }
-
-      }
-
-    }
-
-    return {
-      status: 'success',
-      attempts
-    };
-
-  } catch (error) {
-
-    return {
-      status: 'error',
-      attempts,
-      error: error.message
-    };
-
   }
-
 }
 
-/**
- * Executes scenario command
- */
-async function executeCommand(step, context) {
-
-  if (!step || typeof step !== 'object') {
-    throw new Error('executeCommand: invalid step');
-  }
-
-  if (typeof step.command !== 'string') {
-    throw new Error('executeCommand: command must be string');
-  }
-
-  if (typeof context.commandExecutor !== 'function') {
-    throw new Error('executeCommand: context.commandExecutor required');
-  }
-
-  return context.commandExecutor(step, context);
-
+function createPlanRunError(code, message, details = undefined) {
+  return new PlanRunError(code, message, details);
 }
 
-/**
- * Executes verification command
- */
-async function verifyCommand(step, context) {
+async function runPlan(params) {
+  const {
+    plan,
+    projectRoot,
+    runId,
+    workspaceDir,
+  } = params || {};
 
-  if (!step || typeof step !== 'object') {
-    throw new Error('verifyCommand: invalid step');
+  const normalizedPlan = assertPlanShape(plan);
+
+  const loadedCommands = [];
+
+  const commands = await loadPlanCommands({
+    projectRoot,
+    roots: normalizedPlan.executableCtxSnapshot.commands.roots || [],
+    loadedCommands,
+  });
+
+  const runtimePaths = buildRuntimePaths({
+    projectRoot,
+    runId,
+    workspaceDir,
+  });
+
+  const executionContext = {
+    runId,
+    workspaceDir,
+    projectRoot,
+    runtimePaths,
+    commands,
+    loadedCommands,
+    plan: normalizedPlan,
+    results: [],
+  };
+
+  const environmentPolicy =
+    normalizedPlan.runtime && normalizedPlan.runtime.environment
+      ? normalizedPlan.runtime.environment
+      : null;
+
+  if (environmentPolicy && environmentPolicy.reset_before_run === true) {
+    const environmentReset = await resetEnvironment({
+      projectRoot,
+      workspaceDir,
+      policy: environmentPolicy,
+    });
+
+    executionContext.environmentReset = environmentReset;
   }
 
-  if (typeof step.command !== 'string') {
-    throw new Error('verifyCommand: command must be string');
+  let stepsCompleted = 0;
+
+  for (const step of normalizedPlan.steps) {
+    const result = await executePlanStep({
+      step,
+      context: executionContext,
+    });
+
+    executionContext.results.push(result);
+
+    if (!result.ok) {
+      return {
+        exitCode: 1,
+        ok: false,
+        meta: {
+          loadedCommands,
+          planRun: {
+            executionStatus: "failed",
+            stepsCompleted,
+          },
+        },
+        outboxPayload: {
+          result: {
+            results: executionContext.results,
+          },
+        },
+      };
+    }
+
+    stepsCompleted += 1;
   }
 
-  if (typeof context.verificationExecutor !== 'function') {
-    throw new Error('verifyCommand: context.verificationExecutor required');
-  }
-
-  return context.verificationExecutor(step, context);
-
+  return {
+    exitCode: 0,
+    ok: true,
+    meta: {
+      loadedCommands,
+      planRun: {
+        executionStatus: "success",
+        stepsCompleted,
+      },
+    },
+    outboxPayload: {
+      result: {
+        results: executionContext.results,
+      },
+    },
+  };
 }
 
 module.exports = {
-  runPlan
+  runPlan,
+  PlanRunError,
+  createPlanRunError,
 };
