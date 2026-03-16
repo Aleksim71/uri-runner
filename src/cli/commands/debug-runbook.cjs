@@ -80,7 +80,23 @@ function formatComparison(runbook, plan) {
   return lines.join("\n");
 }
 
-async function debugRunbook({ uramRoot, inboxZipPath }) {
+function normalizeArgs(input) {
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    return {
+      uramRoot: input.uramRoot || process.cwd(),
+      inboxZipPath: input.inboxZipPath,
+    };
+  }
+
+  return {
+    uramRoot: process.cwd(),
+    inboxZipPath: input,
+  };
+}
+
+async function debugRunbook(input) {
+  const { uramRoot, inboxZipPath } = normalizeArgs(input);
+
   const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
   const project = runbook?.project;

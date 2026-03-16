@@ -15,10 +15,8 @@ function getSystemCommandDirs(projectRoot) {
     path.join(projectRoot, "contexts", "system", "commands"),
     path.join(__dirname, "..", "..", "uram", "commands", "system"),
     path.join(__dirname, "..", "..", "commands", "system"),
-    path.join(__dirname, "..", "..", "cli", "commands"),
     path.join(process.cwd(), "src", "uram", "commands", "system"),
     path.join(process.cwd(), "src", "commands", "system"),
-    path.join(process.cwd(), "src", "cli", "commands"),
   ]);
 }
 
@@ -41,13 +39,8 @@ async function scanCommandDir(dirPath, namespace) {
   const commands = [];
 
   for (const entry of entries) {
-    if (!entry.isFile()) {
-      continue;
-    }
-
-    if (!entry.name.endsWith(".cjs")) {
-      continue;
-    }
+    if (!entry.isFile()) continue;
+    if (!entry.name.endsWith(".cjs")) continue;
 
     const absolutePath = path.join(dirPath, entry.name);
     const commandBaseName = entry.name.replace(/\.cjs$/, "");
@@ -77,9 +70,7 @@ async function collectCommands({ projectRoot, executableCtx }) {
     if (root === "system") {
       for (const dirPath of getSystemCommandDirs(projectRoot)) {
         const items = await scanCommandDir(dirPath, "system");
-        for (const item of items) {
-          all.push(item);
-        }
+        for (const item of items) all.push(item);
       }
       continue;
     }
@@ -87,9 +78,7 @@ async function collectCommands({ projectRoot, executableCtx }) {
     if (root === "project") {
       for (const dirPath of getProjectCommandDirs(projectRoot)) {
         const items = await scanCommandDir(dirPath, "project");
-        for (const item of items) {
-          all.push(item);
-        }
+        for (const item of items) all.push(item);
       }
     }
   }
@@ -151,7 +140,25 @@ function formatCommandsReport({ project, executableCtx, commands }) {
   return lines.join("\n");
 }
 
-async function debugCommands({ uramRoot, inboxZipPath }) {
+function normalizeArgs(input) {
+  const defaultUramRoot = process.env.URI_URAM || process.cwd();
+
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    return {
+      uramRoot: input.uramRoot || defaultUramRoot,
+      inboxZipPath: input.inboxZipPath,
+    };
+  }
+
+  return {
+    uramRoot: defaultUramRoot,
+    inboxZipPath: input,
+  };
+}
+
+async function debugCommands(input) {
+  const { uramRoot, inboxZipPath } = normalizeArgs(input);
+
   const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
   const project = runbook?.project;

@@ -9,7 +9,9 @@ const { loadExecutableContext } = require("../../uram/executable-context.cjs");
 const { compilePlan } = require("../../uram/compile-plan.cjs");
 const { printPlan } = require("../../uram/plan-debug.cjs");
 
-async function debugPlan({ uramRoot, inboxZipPath }) {
+async function debugPlan(inboxZipPath) {
+  const uramRoot = process.cwd();
+
   const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
   const project = runbook.project;

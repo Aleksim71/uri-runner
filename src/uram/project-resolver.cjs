@@ -4,24 +4,33 @@ const fs = require("fs/promises");
 const path = require("path");
 const YAML = require("yaml");
 
-async function loadProjectsConfig(uramRoot) {
-  const cfgPath = path.join(uramRoot, "config", "projects.yaml");
-
-  let txt;
+async function readYamlIfExists(filePath) {
   try {
-    txt = await fs.readFile(cfgPath, "utf8");
+    const txt = await fs.readFile(filePath, "utf8");
+    return YAML.parse(txt);
   } catch {
-    throw new Error(`[uri] projects.yaml not found: ${cfgPath}`);
+    return null;
+  }
+}
+
+async function loadProjectsConfig(uramRoot) {
+  const primaryPath = path.join(uramRoot, "config", "projects.yaml");
+  const fallbackPath = path.join(uramRoot, "config", "projects.yaml.example");
+
+  const doc =
+    (await readYamlIfExists(primaryPath)) ||
+    (await readYamlIfExists(fallbackPath));
+
+  if (!doc) {
+    throw new Error(`[uri] projects config not found: ${primaryPath}`);
   }
 
-  const doc = YAML.parse(txt);
-
-  if (!doc || doc.version !== 1) {
-    throw new Error("[uri] projects.yaml: version must be 1");
+  if (doc.version !== 1) {
+    throw new Error("[uri] projects config: version must be 1");
   }
 
   if (!doc.projects || typeof doc.projects !== "object") {
-    throw new Error("[uri] projects.yaml: projects section missing");
+    throw new Error("[uri] projects config: projects section missing");
   }
 
   return doc.projects;
@@ -40,6 +49,12 @@ async function resolveProjectContext({ uramRoot, project }) {
   const entry = projects[project];
 
   if (!entry) {
+    if (project === "demo") {
+      return {
+        project,
+        cwd: uramRoot,
+      };
+    }
     throw new Error(`[uri] project not registered: ${project}`);
   }
 
@@ -47,9 +62,13 @@ async function resolveProjectContext({ uramRoot, project }) {
     throw new Error(`[uri] project ${project} has no cwd`);
   }
 
+  const cwd = path.isAbsolute(entry.cwd)
+    ? entry.cwd
+    : path.resolve(uramRoot, entry.cwd);
+
   return {
     project,
-    cwd: path.resolve(entry.cwd),
+    cwd,
   };
 }
 

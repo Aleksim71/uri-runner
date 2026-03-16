@@ -188,12 +188,14 @@ function buildOutboxTrace(err) {
 
   return [
     {
-      step: typeof details.stepId === "string" && details.stepId.trim()
-        ? details.stepId
-        : "runtime",
-      command: typeof details.command === "string" && details.command.trim()
-        ? details.command
-        : null,
+      step:
+        typeof details.stepId === "string" && details.stepId.trim()
+          ? details.stepId
+          : "runtime",
+      command:
+        typeof details.command === "string" && details.command.trim()
+          ? details.command
+          : null,
       error: message,
     },
   ];
@@ -230,6 +232,56 @@ function normalizeEngineError(err, fallbackEngine) {
         err && typeof err.tmpProvidedDir === "string" ? err.tmpProvidedDir : null,
     },
   };
+}
+
+function buildCanonicalRuntimeOutbox({
+  runId,
+  project,
+  executionKind,
+  exitCode,
+  executableCtx,
+  meta,
+  outboxPayload,
+}) {
+  const payload =
+    outboxPayload && typeof outboxPayload === "object"
+      ? { ...outboxPayload }
+      : {};
+
+  const finalPayload = {
+    runId,
+    project,
+    engine: executionKind,
+    exitCode,
+    ok: exitCode === 0,
+    executableCtx: executableCtx || null,
+    loadedCommands: Array.isArray(meta?.loadedCommands) ? meta.loadedCommands : [],
+    ...payload,
+  };
+
+  if (!("status" in finalPayload)) {
+    finalPayload.status = finalPayload.ok ? "success" : "error";
+  }
+
+  if (!("attempts" in finalPayload)) {
+    finalPayload.attempts = 1;
+  }
+
+  if (meta?.error) {
+    finalPayload.error = meta.error;
+  }
+
+  if (meta?.plan?.path) {
+    finalPayload.plan = {
+      path: meta.plan.path,
+    };
+  }
+
+  if (typeof meta?.tmpProvidedDir === "string" || meta?.tmpProvidedDir === null) {
+    finalPayload.tmpProvidedDir = meta.tmpProvidedDir ?? null;
+  }
+
+  return finalPayload;
 }
 
 async function persistPlanArtifacts({
@@ -305,12 +357,14 @@ function extractScenarioPlanRunMeta(engineResult) {
   }
 
   return {
-    startedAt: typeof planRun.startedAt === "string" && planRun.startedAt.trim()
-      ? planRun.startedAt
-      : null,
-    finishedAt: typeof planRun.finishedAt === "string" && planRun.finishedAt.trim()
-      ? planRun.finishedAt
-      : null,
+    startedAt:
+      typeof planRun.startedAt === "string" && planRun.startedAt.trim()
+        ? planRun.startedAt
+        : null,
+    finishedAt:
+      typeof planRun.finishedAt === "string" && planRun.finishedAt.trim()
+        ? planRun.finishedAt
+        : null,
     executionStatus:
       typeof planRun.executionStatus === "string" && planRun.executionStatus.trim()
         ? planRun.executionStatus
@@ -629,13 +683,21 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
       }
     );
 
-    if (engineResult.outboxPayload) {
-      await fsp.writeFile(
-        tmpOutboxPath,
-        JSON.stringify(engineResult.outboxPayload, null, 2),
-        "utf-8"
-      );
-    }
+    const finalOutboxPayload = buildCanonicalRuntimeOutbox({
+      runId,
+      project,
+      executionKind,
+      exitCode: engineResult.exitCode,
+      executableCtx,
+      meta: engineResult.meta || {},
+      outboxPayload: engineResult.outboxPayload || {},
+    });
+
+    await fsp.writeFile(
+      tmpOutboxPath,
+      JSON.stringify(finalOutboxPayload, null, 2),
+      "utf-8"
+    );
 
     await finalizeRun({
       tmpOutboxPath,
@@ -683,9 +745,19 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
         tmpOutboxPath =
           tmpOutboxPath || path.join(projectBoxDir, `.tmp.outbox.${runId}.json`);
 
+        const finalOutboxPayload = buildCanonicalRuntimeOutbox({
+          runId,
+          project,
+          executionKind,
+          exitCode: normalizedResult.exitCode,
+          executableCtx,
+          meta: normalizedResult.meta || {},
+          outboxPayload: normalizedResult.outboxPayload || {},
+        });
+
         await fsp.writeFile(
           tmpOutboxPath,
-          JSON.stringify(normalizedResult.outboxPayload, null, 2),
+          JSON.stringify(finalOutboxPayload, null, 2),
           "utf-8"
         );
 

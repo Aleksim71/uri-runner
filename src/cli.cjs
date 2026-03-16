@@ -1,17 +1,14 @@
-if (cmd === "replay") {
-  const runId = process.argv[3];
+"use strict";
 
-  if (!runId) {
-    console.error("usage: uri replay <runId>");
-    process.exit(1);
+const { main } = require("./cli/index.cjs");
+
+(async () => {
+  try {
+    await main(process.argv.slice(2));
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    const code = error && error.code ? `${error.code}: ` : "";
+    process.stderr.write(`[uri] fatal error: ${code}${message}\n`);
+    process.exitCode = 1;
   }
-
-  const result = await replayRun({
-    uramRoot,
-    project: process.argv[4],
-    runId,
-    workspaceDir: null,
-  });
-
-  console.log(JSON.stringify(result.outboxPayload, null, 2));
-}
+})();

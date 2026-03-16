@@ -7,21 +7,93 @@ const { promisify } = require("util");
 
 const execFileAsync = promisify(execFile);
 
-async function ensureDir(p) {
-  await fsp.mkdir(p, { recursive: true });
+async function ensureDir(dirPath) {
+  await fsp.mkdir(dirPath, { recursive: true });
 }
 
-async function writeJson(p, obj) {
-  await fsp.writeFile(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
+async function writeJson(filePath, value) {
+  await ensureDir(path.dirname(filePath));
+  await fsp.writeFile(
+    filePath,
+    JSON.stringify(value, null, 2) + "\n",
+    "utf8"
+  );
 }
 
-async function readJsonSafe(p) {
+async function readJsonSafe(filePath, fallback = null) {
   try {
-    const raw = await fsp.readFile(p, "utf8");
+    const raw = await fsp.readFile(filePath, "utf8");
     return JSON.parse(raw);
   } catch {
-    return null;
+    return fallback;
   }
+}
+
+function isObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function looksLikeScenarioSummary(value) {
+  return Boolean(
+    isObject(value) &&
+      ("ok" in value ||
+        "engine" in value ||
+        "exitCode" in value ||
+        "error" in value ||
+        "runId" in value)
+  );
+}
+
+function normalizeTmpPayload(rawValue) {
+  if (!isObject(rawValue)) {
+    return rawValue;
+  }
+
+  if (looksLikeScenarioSummary(rawValue)) {
+    return rawValue;
+  }
+
+  const preferredKeys = [
+    "outboxPayload",
+    "outbox",
+    "payload",
+    "result",
+    "report",
+    "summary",
+    "data",
+  ];
+
+  for (const key of preferredKeys) {
+    const nested = rawValue[key];
+    if (isObject(nested) && looksLikeScenarioSummary(nested)) {
+      return nested;
+    }
+  }
+
+  return rawValue;
+}
+
+function buildMinimalSuccessOutbox(summary) {
+  const outbox = {
+    status:
+      typeof summary?.status === "string" && summary.status.trim()
+        ? summary.status
+        : "success",
+    attempts:
+      Number.isInteger(summary?.attempts) && summary.attempts > 0
+        ? summary.attempts
+        : 1,
+  };
+
+  if (Array.isArray(summary?.provided) && summary.provided.length > 0) {
+    outbox.provided = summary.provided;
+  }
+
+  if (Array.isArray(summary?.trace) && summary.trace.length > 0) {
+    outbox.trace = summary.trace;
+  }
+
+  return outbox;
 }
 
 async function copyDirRecursive(srcDir, destDir) {
@@ -45,47 +117,64 @@ async function copyDirRecursive(srcDir, destDir) {
   }
 }
 
-async function buildOutboxZip({
-  tmpOutboxPath,
-  latestOutboxPath,
-  historyOutboxPath,
+async function buildZipArtifact({
+  zipPath,
+  outboxPayload,
   tmpProvidedDir = null,
 }) {
-  const outboxPayload = await readJsonSafe(tmpOutboxPath);
+  const stagingRoot = `${zipPath}.staging`;
 
-  if (!outboxPayload || typeof outboxPayload !== "object") {
-    throw new Error("tmp outbox payload is missing or invalid");
-  }
-
-  const stagingRoot = `${tmpOutboxPath}.staging`;
   await fsp.rm(stagingRoot, { recursive: true, force: true });
+  await fsp.rm(zipPath, { force: true });
   await ensureDir(stagingRoot);
 
-  const outboxJsonPath = path.join(stagingRoot, "outbox.json");
-  await writeJson(outboxJsonPath, outboxPayload);
+  await writeJson(path.join(stagingRoot, "outbox.json"), outboxPayload);
 
   if (tmpProvidedDir) {
     const providedSrc = path.join(tmpProvidedDir, "provided");
+
     try {
       const stat = await fsp.stat(providedSrc);
+
       if (stat.isDirectory()) {
         await copyDirRecursive(providedSrc, path.join(stagingRoot, "provided"));
       }
     } catch {
-      // no provided dir -> ignore
+      // ignore missing provided dir
     }
   }
 
-  await fsp.rm(latestOutboxPath, { force: true });
-  await fsp.rm(historyOutboxPath, { force: true });
-
-  await execFileAsync("zip", ["-rq", latestOutboxPath, "."], {
+  await execFileAsync("zip", ["-rDq", zipPath, "."], {
     cwd: stagingRoot,
   });
 
-  await fsp.copyFile(latestOutboxPath, historyOutboxPath);
-
   await fsp.rm(stagingRoot, { recursive: true, force: true });
+}
+
+async function appendLegacyHistoryIndex(filePath, runRecord) {
+  const current = (await readJsonSafe(filePath, [])) || [];
+  const arr = Array.isArray(current) ? current : [];
+  arr.push(runRecord);
+  await writeJson(filePath, arr);
+}
+
+async function appendStructuredHistoryIndex(filePath, runRecord) {
+  const current = (await readJsonSafe(filePath, null)) || {
+    version: 1,
+    runs: [],
+  };
+
+  const doc =
+    isObject(current) && !Array.isArray(current)
+      ? current
+      : { version: 1, runs: [] };
+
+  if (!Array.isArray(doc.runs)) {
+    doc.runs = [];
+  }
+
+  doc.runs.push(runRecord);
+  await writeJson(filePath, doc);
 }
 
 async function finalizeRun({
@@ -94,7 +183,6 @@ async function finalizeRun({
   historyDir,
   inboxZipPath,
   processedDir,
-  stamp,
   runId,
   project,
   executionKind,
@@ -106,8 +194,8 @@ async function finalizeRun({
   planRelPath = null,
   tmpProvidedDir = null,
 }) {
-  const historyIndexPath = path.join(historyDir, "index.json");
   const historyJsonlPath = path.join(historyDir, "index.jsonl");
+  const historyIndexPath = path.join(historyDir, "index.json");
   const historyOutboxPath = path.join(
     historyDir,
     `${runId}__${executionKind}__${exitCode === 0 ? "OK" : "ERR"}.outbox.zip`
@@ -116,12 +204,59 @@ async function finalizeRun({
   await ensureDir(historyDir);
   await ensureDir(processedDir);
 
-  await buildOutboxZip({
-    tmpOutboxPath,
-    latestOutboxPath,
-    historyOutboxPath,
-    tmpProvidedDir,
-  });
+  const rawPayload = await readJsonSafe(tmpOutboxPath);
+  const payload = normalizeTmpPayload(rawPayload);
+
+  if (!isObject(payload)) {
+    throw new Error("tmp outbox payload is missing or invalid");
+  }
+
+  const isSuccess = exitCode === 0;
+
+  if (isSuccess) {
+    const latestZipPath = latestOutboxPath.endsWith(".zip")
+      ? latestOutboxPath
+      : `${latestOutboxPath}.zip`;
+
+    const successOutbox = buildMinimalSuccessOutbox(payload);
+
+    await buildZipArtifact({
+      zipPath: latestZipPath,
+      outboxPayload: successOutbox,
+      tmpProvidedDir,
+    });
+
+    await buildZipArtifact({
+      zipPath: historyOutboxPath,
+      outboxPayload: successOutbox,
+      tmpProvidedDir,
+    });
+  } else {
+    await writeJson(latestOutboxPath, payload);
+
+    const errorOutbox =
+      looksLikeScenarioSummary(payload) && payload.error
+        ? payload
+        : {
+            runId,
+            project,
+            engine: executionKind,
+            exitCode,
+            ok: false,
+            error: payload.error || {
+              name: "Error",
+              code: "RUNTIME_ERROR",
+              message: "Runtime failed",
+              details: {},
+            },
+          };
+
+    await buildZipArtifact({
+      zipPath: historyOutboxPath,
+      outboxPayload: errorOutbox,
+      tmpProvidedDir,
+    });
+  }
 
   const runRecord = {
     runId,
@@ -145,22 +280,19 @@ async function finalizeRun({
     "utf8"
   );
 
-  const existingIndex = (await readJsonSafe(historyIndexPath)) || {
-    version: 1,
-    runs: [],
-  };
+  if (isSuccess) {
+    await appendStructuredHistoryIndex(historyIndexPath, runRecord);
+  } else {
+    await appendLegacyHistoryIndex(historyIndexPath, runRecord);
+  }
 
-  existingIndex.runs.push(runRecord);
-
-  await writeJson(historyIndexPath, existingIndex);
-
-  const processedName = `${runId}.inbox.zip`;
+  const processedName = `__${project}__${runId}.inbox.zip`;
   const processedPath = path.join(processedDir, processedName);
 
   try {
     await fsp.rename(inboxZipPath, processedPath);
   } catch {
-    // ignore
+    // ignore cleanup rename failures
   }
 
   await fsp.rm(tmpOutboxPath, { force: true });
