@@ -40,12 +40,45 @@ const {
   getHistoryPlanPath,
   getHistoryPlanRelPath,
 } = require("./plan-paths.cjs");
+const {
+  getResultPath,
+  getRollbackResultPath,
+  getBaselineVerifyResultPath,
+} = require("./run-paths.cjs");
+const { nowIso, serializeError } = require("./artifacts/error-utils.cjs");
+const {
+  buildResultArtifact,
+  persistResultArtifact,
+} = require("./artifacts/result-artifact.cjs");
+const {
+  persistRollbackResultArtifact,
+} = require("./artifacts/rollback-result-artifact.cjs");
+const {
+  persistBaselineVerifyResultArtifact,
+} = require("./artifacts/baseline-verify-result-artifact.cjs");
+const {
+  captureBaseline,
+  persistBaselineMeta,
+} = require("./state/capture-baseline.cjs");
+const { restoreBaselineSafe } = require("./state/restore-baseline.cjs");
+const { verifyBaselineSafe } = require("./state/verify-baseline.cjs");
+const { finalizeRuntimeSummary } = require("./runtime-summary.cjs");
+const { collectProvideOutputs } = require("./provide-output.cjs");
 
 class UramRuntimeError extends Error {
   constructor(message, code = ERROR_CODES.PIPELINE_INTERNAL_ERROR, details = {}) {
     super(message);
     this.name = "UramRuntimeError";
     this.code = code;
+    this.details = details;
+  }
+}
+
+class ScenarioPipelineError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = "ScenarioPipelineError";
+    this.code = ERROR_CODES.PIPELINE_INTERNAL_ERROR;
     this.details = details;
   }
 }
@@ -149,25 +182,42 @@ function pickErrorCode(err) {
   return ERROR_CODES.PIPELINE_INTERNAL_ERROR;
 }
 
+function buildOutboxTrace(err) {
+  const details = pickErrorDetails(err);
+  const message = pickErrorMessage(err);
+
+  return [
+    {
+      step: typeof details.stepId === "string" && details.stepId.trim()
+        ? details.stepId
+        : "runtime",
+      command: typeof details.command === "string" && details.command.trim()
+        ? details.command
+        : null,
+      error: message,
+    },
+  ];
+}
+
 function normalizeEngineError(err, fallbackEngine) {
   const message = pickErrorMessage(err);
   const code = pickErrorCode(err);
   const details = pickErrorDetails(err);
   const name = pickErrorName(err);
 
+  const outboxPayload =
+    err && err.outboxPayload && typeof err.outboxPayload === "object"
+      ? err.outboxPayload
+      : {
+          status: "error",
+          attempts: 1,
+          trace: buildOutboxTrace(err),
+        };
+
   return {
     exitCode: 1,
     engine: fallbackEngine || "unknown",
-    outboxPayload: {
-      ok: false,
-      engine: fallbackEngine || "unknown",
-      error: {
-        name,
-        code,
-        message,
-        details,
-      },
-    },
+    outboxPayload,
     meta: {
       loadedCommands: [],
       error: {
@@ -176,6 +226,8 @@ function normalizeEngineError(err, fallbackEngine) {
         message,
         details,
       },
+      tmpProvidedDir:
+        err && typeof err.tmpProvidedDir === "string" ? err.tmpProvidedDir : null,
     },
   };
 }
@@ -204,6 +256,152 @@ async function persistPlanArtifacts({
   };
 }
 
+async function persistScenarioResultArtifact({
+  historyDir,
+  runId,
+  startedAt,
+  finishedAt,
+  executionStatus,
+  stepsTotal,
+  stepsCompleted,
+  failedStep,
+  error,
+  planWritten = true,
+  traceWritten = false,
+  artifactsProduced = true,
+}) {
+  const artifact = buildResultArtifact({
+    runId,
+    executionStatus,
+    startedAt,
+    finishedAt,
+    stepsTotal,
+    stepsCompleted,
+    failedStep,
+    planWritten,
+    traceWritten,
+    artifactsProduced,
+    error,
+  });
+
+  await persistResultArtifact({
+    path: getResultPath({ historyDir, runId }),
+    artifact,
+  });
+
+  return artifact;
+}
+
+function extractScenarioPlanRunMeta(engineResult) {
+  const planRun = engineResult?.meta?.planRun;
+
+  if (!planRun || typeof planRun !== "object") {
+    throw new ScenarioPipelineError(
+      "[uri] scenario engine result missing meta.planRun",
+      {
+        metaKeys: engineResult?.meta ? Object.keys(engineResult.meta) : [],
+      }
+    );
+  }
+
+  return {
+    startedAt: typeof planRun.startedAt === "string" && planRun.startedAt.trim()
+      ? planRun.startedAt
+      : null,
+    finishedAt: typeof planRun.finishedAt === "string" && planRun.finishedAt.trim()
+      ? planRun.finishedAt
+      : null,
+    executionStatus:
+      typeof planRun.executionStatus === "string" && planRun.executionStatus.trim()
+        ? planRun.executionStatus
+        : "success",
+    stepsTotal: Number.isInteger(planRun.stepsTotal) ? planRun.stepsTotal : 0,
+    stepsCompleted: Number.isInteger(planRun.stepsCompleted)
+      ? planRun.stepsCompleted
+      : 0,
+    failedStep: Number.isInteger(planRun.failedStep) ? planRun.failedStep : null,
+  };
+}
+
+async function persistScenarioPostExecutionArtifacts({
+  historyDir,
+  runId,
+  pipelineStartedAt,
+  resultArtifact,
+}) {
+  const rollbackResult = await restoreBaselineSafe({ runId });
+
+  await persistRollbackResultArtifact({
+    path: getRollbackResultPath({ historyDir, runId }),
+    artifact: rollbackResult,
+  });
+
+  const baselineVerifyResult = await verifyBaselineSafe({ runId });
+
+  await persistBaselineVerifyResultArtifact({
+    path: getBaselineVerifyResultPath({ historyDir, runId }),
+    artifact: baselineVerifyResult,
+  });
+
+  await finalizeRuntimeSummary({
+    historyDir,
+    runId,
+    startedAt: pipelineStartedAt,
+    finishedAt: nowIso(),
+    result: resultArtifact,
+    rollbackResult,
+    baselineVerifyResult,
+  });
+
+  return {
+    rollbackResult,
+    baselineVerifyResult,
+  };
+}
+
+function buildSuccessOutboxPayload({ provided }) {
+  const payload = {
+    status: "success",
+    attempts: 1,
+  };
+
+  if (Array.isArray(provided) && provided.length > 0) {
+    payload.provided = provided;
+  }
+
+  return payload;
+}
+
+function buildErrorOutboxPayload({ error, provided }) {
+  const payload = {
+    status: "error",
+    attempts: 1,
+    trace: buildOutboxTrace(error),
+  };
+
+  if (Array.isArray(provided) && provided.length > 0) {
+    payload.provided = provided;
+  }
+
+  return payload;
+}
+
+async function buildProvidedOutputs({
+  runbook,
+  projectRoot,
+  workspaceDir,
+  runId,
+  tolerateErrors = false,
+}) {
+  return collectProvideOutputs({
+    provide: runbook?.provide || [],
+    projectRoot,
+    tmpRoot: workspaceDir,
+    runId,
+    tolerateErrors,
+  });
+}
+
 async function runScenarioPhases({
   runbook,
   project,
@@ -214,33 +412,128 @@ async function runScenarioPhases({
   runId,
   workspaceDir,
 }) {
-  const plan = compilePlan({
-    runbook,
-    project,
-    executionKind: "scenario",
-    executableCtx,
-  });
+  const pipelineStartedAt = nowIso();
 
-  const planArtifacts = await persistPlanArtifacts({
-    plan,
-    projectBoxDir,
-    historyDir,
-    runId,
-  });
+  let planArtifacts = null;
 
-  const engineResult = await runPlan({
-    plan,
-    projectRoot,
-    runId,
-    workspaceDir,
-  });
+  try {
+    const plan = compilePlan({
+      runbook,
+      project,
+      executionKind: "scenario",
+      executableCtx,
+    });
 
-  engineResult.meta = engineResult.meta || {};
-  engineResult.meta.plan = {
-    path: planArtifacts.planRelPath,
-  };
+    planArtifacts = await persistPlanArtifacts({
+      plan,
+      projectBoxDir,
+      historyDir,
+      runId,
+    });
 
-  return engineResult;
+    const baselineMeta = await captureBaseline({ runId });
+
+    await persistBaselineMeta({
+      historyDir,
+      runId,
+      baselineMeta,
+    });
+
+    const engineResult = await runPlan({
+      plan,
+      projectRoot,
+      runId,
+      workspaceDir,
+    });
+
+    const planRun = extractScenarioPlanRunMeta(engineResult);
+
+    const resultArtifact = await persistScenarioResultArtifact({
+      historyDir,
+      runId,
+      startedAt: planRun.startedAt || pipelineStartedAt,
+      finishedAt: planRun.finishedAt || nowIso(),
+      executionStatus: planRun.executionStatus || "success",
+      stepsTotal: planRun.stepsTotal,
+      stepsCompleted: planRun.stepsCompleted,
+      failedStep: planRun.failedStep,
+      error: null,
+      planWritten: true,
+      traceWritten: false,
+      artifactsProduced: true,
+    });
+
+    await persistScenarioPostExecutionArtifacts({
+      historyDir,
+      runId,
+      pipelineStartedAt,
+      resultArtifact,
+    });
+
+    const { provided, tmpProvidedDir } = await buildProvidedOutputs({
+      runbook,
+      projectRoot,
+      workspaceDir,
+      runId,
+      tolerateErrors: false,
+    });
+
+    engineResult.meta = engineResult.meta || {};
+    engineResult.meta.plan = {
+      path: planArtifacts.planRelPath,
+    };
+    engineResult.meta.tmpProvidedDir = tmpProvidedDir || null;
+    engineResult.outboxPayload = buildSuccessOutboxPayload({ provided });
+
+    return engineResult;
+  } catch (error) {
+    const resultArtifact = await persistScenarioResultArtifact({
+      historyDir,
+      runId,
+      startedAt: pipelineStartedAt,
+      finishedAt: nowIso(),
+      executionStatus: "crashed",
+      stepsTotal: 0,
+      stepsCompleted: 0,
+      failedStep: null,
+      error: serializeError(error),
+      planWritten: Boolean(planArtifacts),
+      traceWritten: false,
+      artifactsProduced: true,
+    });
+
+    await persistScenarioPostExecutionArtifacts({
+      historyDir,
+      runId,
+      pipelineStartedAt,
+      resultArtifact,
+    });
+
+    let provided = [];
+    let tmpProvidedDir = null;
+
+    try {
+      const collected = await buildProvidedOutputs({
+        runbook,
+        projectRoot,
+        workspaceDir,
+        runId,
+        tolerateErrors: true,
+      });
+      provided = collected.provided;
+      tmpProvidedDir = collected.tmpProvidedDir;
+    } catch {
+      // ignore provide failures on error path
+    }
+
+    error.outboxPayload = buildErrorOutboxPayload({
+      error,
+      provided,
+    });
+    error.tmpProvidedDir = tmpProvidedDir;
+
+    throw error;
+  }
 }
 
 async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
@@ -289,7 +582,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
     await ensureDir(processedDir);
     await ensureDir(workspaceRoot);
 
-    tmpOutboxPath = path.join(projectBoxDir, `.tmp.outbox.${runId}.zip`);
+    tmpOutboxPath = path.join(projectBoxDir, `.tmp.outbox.${runId}.json`);
 
     const engineResult = await withExecutionLock(
       { uramRoot, project, runId },
@@ -360,6 +653,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
       cwd: projectCtx.cwd,
       quiet,
       planRelPath: engineResult.meta?.plan?.path || null,
+      tmpProvidedDir: engineResult.meta?.tmpProvidedDir || null,
     });
 
     return {
@@ -387,7 +681,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
         await ensureDir(workspaceRoot);
 
         tmpOutboxPath =
-          tmpOutboxPath || path.join(projectBoxDir, `.tmp.outbox.${runId}.zip`);
+          tmpOutboxPath || path.join(projectBoxDir, `.tmp.outbox.${runId}.json`);
 
         await fsp.writeFile(
           tmpOutboxPath,
@@ -411,6 +705,7 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
           cwd: projectCtx?.cwd || workspaceRoot,
           quiet,
           planRelPath: normalizedResult.meta?.plan?.path || null,
+          tmpProvidedDir: normalizedResult.meta?.tmpProvidedDir || null,
         });
       } catch (finalizeErr) {
         const finalizeMessage =

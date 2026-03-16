@@ -37,10 +37,8 @@ function getSystemCommandDirs(projectRoot) {
     path.join(projectRoot, "contexts", "system", "commands"),
     path.join(__dirname, "commands", "system"),
     path.join(__dirname, "..", "commands", "system"),
-    path.join(__dirname, "..", "cli", "commands"),
     path.join(process.cwd(), "src", "uram", "commands", "system"),
     path.join(process.cwd(), "src", "commands", "system"),
-    path.join(process.cwd(), "src", "cli", "commands"),
   ]);
 }
 
@@ -182,6 +180,8 @@ async function runPlan(params) {
   const loadedCommands = normalizeLoadedCommands(commands);
   const strictCommands = normalizedPlan.runtime.strictCommands === true;
 
+  const startedAt = new Date().toISOString();
+
   const executionContext = {
     runId,
     workspaceDir,
@@ -205,6 +205,10 @@ async function runPlan(params) {
     });
   }
 
+  const finishedAt = new Date().toISOString();
+  const stepsTotal = normalizedPlan.steps.length;
+  const stepsCompleted = executionContext.results.length;
+
   return {
     exitCode: 0,
     outboxPayload: {
@@ -218,6 +222,14 @@ async function runPlan(params) {
     },
     meta: {
       loadedCommands,
+      planRun: {
+        startedAt,
+        finishedAt,
+        executionStatus: "success",
+        stepsTotal,
+        stepsCompleted,
+        failedStep: null,
+      },
     },
   };
 }
