@@ -9,6 +9,7 @@ async function resetEnvironment({
   environment = {},
   cwd,
   workspaceDir = null,
+  runtimePaths = null,
   stopManagedProcessesFn = stopManagedProcesses,
   cleanupRuntimeStateFn = cleanupRuntimeState,
   startManagedServerFn = startManagedServer,
@@ -39,12 +40,24 @@ async function resetEnvironment({
     (value) => typeof value === "string" && value.trim().length > 0
   );
 
+  const cleanupExactPaths = [];
+
+  if (
+    runtimePaths &&
+    typeof runtimePaths === "object" &&
+    typeof runtimePaths.runTmpDir === "string" &&
+    runtimePaths.runTmpDir.trim().length > 0
+  ) {
+    cleanupExactPaths.push(runtimePaths.runTmpDir);
+  }
+
   const stopSummary = await stopManagedProcessesFn({
     managedProcesses,
   });
 
   const cleanupSummary = await cleanupRuntimeStateFn({
     scopePaths: cleanupScopePaths,
+    exactPaths: cleanupExactPaths,
   });
 
   const startupSummary = await startManagedServerFn({

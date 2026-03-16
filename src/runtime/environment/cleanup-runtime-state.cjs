@@ -28,6 +28,18 @@ function normalizeScopePaths(scopePaths) {
   )];
 }
 
+function normalizeExactPaths(exactPaths) {
+  if (!Array.isArray(exactPaths)) {
+    return [];
+  }
+
+  return [...new Set(
+    exactPaths
+      .filter((value) => typeof value === "string" && value.trim().length > 0)
+      .map((value) => path.resolve(value))
+  )];
+}
+
 function isInsideScope(targetPath, scopeRoots) {
   const resolvedTarget = path.resolve(targetPath);
 
@@ -83,6 +95,34 @@ async function removeDir(targetPath, removed, failed) {
   }
 }
 
+async function removeExactTargets(exactPaths, removed, failed) {
+  for (const targetPath of exactPaths) {
+    if (!(await pathExists(targetPath))) {
+      continue;
+    }
+
+    let stat;
+    try {
+      stat = await fsp.stat(targetPath);
+    } catch (error) {
+      failed.push({
+        path: targetPath,
+        reason: error?.message || "failed to stat exact path",
+      });
+      continue;
+    }
+
+    if (stat.isDirectory()) {
+      await removeDir(targetPath, removed, failed);
+      continue;
+    }
+
+    if (stat.isFile()) {
+      await removeFile(targetPath, removed, failed);
+    }
+  }
+}
+
 async function scanAndCleanupDir(dirPath, scopeRoots, removed, failed) {
   let entries = [];
 
@@ -123,10 +163,12 @@ async function scanAndCleanupDir(dirPath, scopeRoots, removed, failed) {
 
 async function cleanupRuntimeState({
   scopePaths = [],
+  exactPaths = [],
 } = {}) {
   const normalizedScopePaths = normalizeScopePaths(scopePaths);
+  const normalizedExactPaths = normalizeExactPaths(exactPaths);
 
-  if (normalizedScopePaths.length === 0) {
+  if (normalizedScopePaths.length === 0 && normalizedExactPaths.length === 0) {
     return {
       attempted: false,
       scopePaths: [],
@@ -137,6 +179,10 @@ async function cleanupRuntimeState({
 
   const removed = [];
   const failed = [];
+
+  if (normalizedExactPaths.length > 0) {
+    await removeExactTargets(normalizedExactPaths, removed, failed);
+  }
 
   for (const scopePath of normalizedScopePaths) {
     if (!(await pathExists(scopePath))) {
@@ -164,17 +210,24 @@ async function cleanupRuntimeState({
     }
   }
 
-  return {
+  const result = {
     attempted: true,
     scopePaths: normalizedScopePaths,
     removed,
     failed,
   };
+
+  if (normalizedExactPaths.length > 0) {
+    result.exactPaths = normalizedExactPaths;
+  }
+
+  return result;
 }
 
 module.exports = {
   cleanupRuntimeState,
   normalizeScopePaths,
+  normalizeExactPaths,
   isInsideScope,
   shouldRemoveFile,
   shouldRemoveDirectory,
