@@ -1,54 +1,79 @@
 URI Runner
-Execution Lifecycle
+Жизненный цикл выполнения
 
 
-Overview
+Обзор
 
-URI execution consists of sequential phases.
-
-
-Canonical Lifecycle
-
-1 Inbox Intake
-2 Scenario Decode
-3 Plan Compile
-4 Run Sandbox Initialization
-5 Baseline Capture
-6 Environment Reset
-7 Execution
-8 Restore / Rollback
-9 Baseline Verification
-10 Outbox Packaging
-11 History Persistence
+Выполнение URI состоит из последовательных фаз.
 
 
-Phase Details
+Канонический жизненный цикл
+
+1 Intake Gate
+2 Inbox Intake
+3 Scenario Decode
+4 Plan Compile
+5 Run Sandbox Initialization
+6 Baseline Capture
+7 Environment Reset
+8 Execution
+9 Restore / Rollback
+10 Baseline Verification
+11 Outbox Packaging
+12 History Persistence
+
+
+Детали фаз
+
+
+Intake Gate
+
+URI отслеживает папку загрузки (download / intake folder)
+и обнаруживает входящие пакеты (например inbox.zip).
+
+Перед переносом пакета в Inbox URI выполняет intake-проверку:
+
+1. Открывает пакет без полного распаковывания
+2. Извлекает RUNBOOK.yaml (или metadata YAML)
+3. Читает поле receiver
+
+Правила:
+
+- если receiver == uri → пакет принимается и переносится в Inbox
+- если receiver != uri → пакет игнорируется
+- если metadata отсутствует или некорректна → пакет отклоняется
+
+Важно:
+
+Пакеты, не адресованные URI, не попадают в Inbox и не запускают выполнение.
+
+Сценарий выполнения начинается только после успешного прохождения intake-проверки.
 
 
 Inbox Intake
 
-URI detects inbox.zip in Inbox directory.
+URI принимает пакет, прошедший intake gate, и размещает его в Inbox.
 
 
 Scenario Decode
 
-RUNBOOK.yaml is extracted and validated.
+RUNBOOK.yaml извлекается и валидируется.
 
 
 Plan Compile
 
-RUNBOOK is compiled into internal execution plan.
+RUNBOOK компилируется во внутренний execution plan.
 
 
 Run Sandbox Initialization
 
-A dedicated runtime sandbox is created for the run.
+Для run создаётся отдельная runtime-песочница.
 
-Structure:
+Структура:
 
 runtime/runs/<runId>/
 
-Subdirectories created:
+Создаваемые подкаталоги:
 
 traces
 artifacts
@@ -56,91 +81,91 @@ provided
 logs
 tmp
 
-Purpose:
+Назначение:
 
-isolate execution artifacts
-prevent cross-run contamination
-enable deterministic trace storage.
+изолировать execution-артефакты
+предотвратить загрязнение между run
+обеспечить детерминированное хранение trace-данных
 
 
 Baseline Capture
 
-Initial system state is captured.
+Фиксируется начальное состояние системы.
 
 
 Environment Reset
 
-Optional environment preparation phase executed
-before the first scenario step.
+Необязательная фаза подготовки окружения, выполняемая
+перед первым шагом сценария.
 
-Triggered when:
+Срабатывает, когда:
 
 runtime.environment.reset_before_run = true
 
-Reset pipeline:
+Pipeline сброса:
 
 1 stop managed processes
 2 cleanup runtime state
 3 start managed server
 4 run healthcheck
 
-Purpose:
+Назначение:
 
-ensure deterministic execution environment
-prevent state contamination between runs
+обеспечить детерминированное окружение выполнения
+предотвратить загрязнение состояния между запусками
 
 
 Execution
 
-Steps defined in RUNBOOK execute section are performed.
+Выполняются шаги, определённые в секции execute RUNBOOK.
 
 
 Restore / Rollback
 
-System state is restored if needed.
+При необходимости состояние системы восстанавливается.
 
 
 Baseline Verification
 
-Verification checks confirm environment stability.
+Проверки подтверждают стабильность окружения.
 
 
 Outbox Packaging
 
-URI creates execution result package.
+URI создаёт пакет результата выполнения.
 
 outbox.zip
 
-Contents:
+Содержимое:
 
 outbox.json
-optional provided files
+опциональные provided files
 
 
 History Persistence
 
-Execution artifacts and metadata are stored in runtime history.
+Execution-артефакты и метаданные сохраняются в runtime history.
 
-Artifacts written during this phase:
+Артефакты, записываемые на этой фазе:
 
 trace.json
-execution trace produced from execution events
+execution-trace, сформированный из execution events
 
 outbox.zip
-execution result package
+пакет результата выполнения
 
 history index
 
 runtime/history/index.json
 
-The history index provides fast lookup for completed runs and
-supports CLI commands:
+Индекс истории обеспечивает быстрый доступ к завершённым run
+и поддерживает CLI-команды:
 
 uri history
 uri last
 uri show <runId>
 
 
-Trace files remain the canonical source of truth for each run.
+Trace-файлы остаются каноническим источником истины для каждого run.
 
-The history index is a compact registry pointing to trace artifacts.
+History index — это компактный реестр, указывающий на trace-артефакты.

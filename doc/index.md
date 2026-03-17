@@ -1,46 +1,53 @@
-# URI Runner Documentation Index
+# Индекс документации URI Runner
 
 
 ------------------------------------------------
-Overview
+Обзор
 ------------------------------------------------
 
-URI Runner documentation is organized into several logical layers:
+Документация URI Runner организована по нескольким логическим слоям:
 
-1 Runtime architecture
-2 Execution lifecycle
-3 Runtime modules
-4 System contexts
-5 Artifact protocols
-6 CLI interface
-7 Change history
+1 Архитектура runtime
+2 Жизненный цикл выполнения
+3 Модули runtime
+4 Системные контексты
+5 Протоколы артефактов
+6 CLI-интерфейс
+7 История изменений
 
 
 ------------------------------------------------
-Core Architecture
+Базовая архитектура
 ------------------------------------------------
 
 Runtime Pack
 
 doc/runtime/runtime-pack.md
 
-Describes core runtime modules and execution pipeline.
+Описывает основные runtime-модули и pipeline выполнения.
 
 
 Execution Lifecycle
 
 doc/runtime/execution-lifecycle.txt
 
-Defines canonical execution phases of URI.
+Определяет канонические фазы выполнения URI.
+
+
+Intake Gate
+
+doc/runtime/intake-gate-v1.txt
+
+Описывает intake-фильтрацию входящих пакетов и маршрутизацию по полю receiver.
 
 
 Environment Reset System
 
 doc/runtime/environment-reset.md
 
-Describes environment reset pipeline executed before scenario execution.
+Описывает pipeline сброса окружения, выполняемый перед запуском сценария.
 
-Modules:
+Модули:
 
 stop-managed-processes  
 cleanup-runtime-state  
@@ -50,30 +57,30 @@ reset-environment
 
 
 ------------------------------------------------
-Executable Context System
+Система исполняемого контекста
 ------------------------------------------------
 
 Executable Context Runtime
 
 doc/system/executable-context-runtime.md
 
-Describes the executable.yaml mechanism used to define
-project execution scenarios.
+Описывает механизм executable.yaml, используемый для определения
+исполняемых сценариев проекта.
 
 
 ------------------------------------------------
-Execution Artifacts
+Артефакты выполнения
 ------------------------------------------------
 
 Run Sandbox System
 
-Each execution run is isolated inside its own runtime sandbox.
+Каждое выполнение изолируется внутри собственной runtime-песочницы.
 
-Structure:
+Структура:
 
 runtime/runs/<runId>/
 
-Contained artifacts:
+Содержимое:
 
 traces  
 artifacts  
@@ -84,7 +91,7 @@ tmp
 
 Trace System
 
-Execution traces are stored inside run sandbox:
+Трейсы выполнения хранятся внутри runtime-песочницы:
 
 runtime/runs/<runId>/traces
 
@@ -93,7 +100,7 @@ History System
 
 runtime/history/index.json
 
-History index used by CLI commands:
+Индекс истории используется CLI-командами:
 
 uri history  
 uri last  
@@ -102,20 +109,24 @@ uri show <runId>
 
 Outbox Protocol
 
-Execution result package.
+Пакет результата выполнения.
 
-Artifact:
+Артефакт:
 
 outbox.zip
 
 
 ------------------------------------------------
-Runtime Execution Pipeline
+Pipeline выполнения runtime
 ------------------------------------------------
 
-Canonical pipeline:
+Канонический pipeline:
 
 RUNBOOK / executable.yaml
+        ↓
+intake gate
+        ↓
+inbox intake
         ↓
 compilePlan
         ↓
@@ -137,10 +148,10 @@ history persistence
 
 
 ------------------------------------------------
-CLI Commands
+CLI-команды
 ------------------------------------------------
 
-Core commands:
+Основные команды:
 
 uri run
 uri history
@@ -150,14 +161,14 @@ uri replay trace.json
 
 
 ------------------------------------------------
-Documentation Change History
+История изменений документации
 ------------------------------------------------
 
 doc/changelog.md
 
 
 ------------------------------------------------
-Documentation Structure
+Структура документации
 ------------------------------------------------
 
 doc/
@@ -169,6 +180,7 @@ doc/
   runtime/
 
       execution-lifecycle.txt
+      intake-gate-v1.txt
       runtime-pack.md
       environment-reset.md
 
@@ -178,20 +190,20 @@ doc/
 
 
 ------------------------------------------------
-Documentation Rules
+Правила документации
 ------------------------------------------------
 
-Documentation files must follow these principles:
+Файлы документации должны следовать таким принципам:
 
-1 deterministic structure  
-2 minimal redundancy  
-3 architecture first  
-4 implementation details second  
+1 детерминированная структура  
+2 минимальная избыточность  
+3 сначала архитектура  
+4 затем детали реализации  
 
-The documentation index must remain the primary entry point
-for both developers and AI agents.
+Индекс документации должен оставаться основной точкой входа
+как для разработчиков, так и для AI-агентов.
 
 
 ------------------------------------------------
-END
+КОНЕЦ
 ------------------------------------------------

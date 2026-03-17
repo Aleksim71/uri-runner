@@ -21,32 +21,34 @@ afterEach(() => {
   }
 })
 
-describe('watch-inbox accepts valid META', () => {
-  it('stages inbox.zip when META.json exists and is valid', async () => {
+describe('watch-inbox accepts runbook for uri', () => {
+  it('stages inbox.zip when RUNBOOK.yaml contains receiver uri', async () => {
     const sb = await createSandbox()
     sandboxes.push(sb)
 
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'uri-meta-valid-'))
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'uri-runbook-valid-'))
 
     try {
-      const validMetaPath = path.join(tmpDir, 'META.json')
+      const runbookPath = path.join(tmpDir, 'RUNBOOK.yaml')
       writeFile(
-        validMetaPath,
-        JSON.stringify(
-          {
-            version: 1,
-            project: 'uri-runner',
-            kind: 'patch'
-          },
-          null,
-          2
-        ) + '\n'
+        runbookPath,
+        [
+          'receiver: uri',
+          'version: 1',
+          'project: uri-runner-next',
+          'goal: test intake',
+          'goal_checks: []',
+          'max_attempts: 1',
+          'provide: []',
+          'modify: []',
+          ''
+        ].join('\n')
       )
 
       const inboxZipPath = path.join(sb.downloads, 'inbox.zip')
 
       await zipFiles(inboxZipPath, {
-        'META.json': validMetaPath
+        'RUNBOOK.yaml': runbookPath
       })
 
       let result

@@ -1,10 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const unzipper = require('unzipper')
-
-function now() {
-  return new Date().toISOString().replace(/\.\d+Z$/, '')
-}
+const YAML = require('yaml')
 
 function loadConfig() {
   const configPath = process.env.URI_CONFIG
@@ -51,14 +48,6 @@ function resolvePaths(config, rootDir) {
     path.join(rootDir, 'processed')
   )
 
-  const watchLog = pickFirst(
-    config.watchLog,
-    config.watch_log,
-    config.paths && config.paths.watchLog,
-    config.paths && config.paths.watch_log,
-    path.join(rootDir, 'watch.log')
-  )
-
   const lastRun = pickFirst(
     config.lastRun,
     config.last_run,
@@ -71,19 +60,12 @@ function resolvePaths(config, rootDir) {
     downloadsDir,
     inboxDir,
     processedDir,
-    watchLog,
     lastRun
   }
 }
 
 function ensureParentDir(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
-}
-
-function logLine(logPath, message) {
-  ensureParentDir(logPath)
-  const line = `[${now()}] ${message}\n`
-  fs.appendFileSync(logPath, line, 'utf8')
 }
 
 function safeWriteLastRun(filePath) {
@@ -101,13 +83,49 @@ function writeProcessedMarker(processedDir) {
   fs.writeFileSync(markerPath, 'accepted inbox.zip\n', 'utf8')
 }
 
-async function zipContainsMeta(zipPath) {
-  const directory = await unzipper.Open.file(zipPath)
-  return directory.files.some((entry) => {
+function findRunbookEntry(directory) {
+  return directory.files.find((entry) => {
     const normalized = entry.path.replace(/\\/g, '/')
     const base = normalized.split('/').pop()
-    return base === 'META.json'
+    return base === 'RUNBOOK.yaml'
   })
+}
+
+async function readRunbookReceiver(zipPath) {
+  const directory = await unzipper.Open.file(zipPath)
+  const entry = findRunbookEntry(directory)
+
+  if (!entry) {
+    return { ok: false, reason: 'missing_runbook' }
+  }
+
+  let text
+  try {
+    const buffer = await entry.buffer()
+    text = buffer.toString('utf8')
+  } catch {
+    return { ok: false, reason: 'unreadable_runbook' }
+  }
+
+  let parsed
+  try {
+    parsed = YAML.parse(text)
+  } catch {
+    return { ok: false, reason: 'invalid_yaml' }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { ok: false, reason: 'invalid_runbook_shape' }
+  }
+
+  if (typeof parsed.receiver !== 'string' || !parsed.receiver.trim()) {
+    return { ok: false, reason: 'missing_receiver' }
+  }
+
+  return {
+    ok: true,
+    receiver: parsed.receiver.trim()
+  }
 }
 
 async function main() {
@@ -116,7 +134,6 @@ async function main() {
     downloadsDir,
     inboxDir,
     processedDir,
-    watchLog,
     lastRun
   } = resolvePaths(config, rootDir)
 
@@ -125,8 +142,6 @@ async function main() {
   fs.mkdirSync(processedDir, { recursive: true })
 
   try {
-    logLine(watchLog, `Scanning: ${downloadsDir}`)
-
     const files = fs.readdirSync(downloadsDir).sort()
 
     for (const name of files) {
@@ -137,53 +152,37 @@ async function main() {
       }
 
       if (!name.endsWith('.zip')) {
-        logLine(watchLog, `ignore non-zip: ${name}`)
         continue
       }
 
       if (name !== 'inbox.zip') {
-        logLine(watchLog, `ignore zip != inbox.zip: ${name}`)
         continue
       }
 
-      let hasMeta = false
+      let inspection
       try {
-        hasMeta = await zipContainsMeta(fullPath)
-      } catch (err) {
-        logLine(watchLog, `ERROR read zip: ${name}: ${err.message}`)
+        inspection = await readRunbookReceiver(fullPath)
+      } catch {
         continue
       }
 
-      if (!hasMeta) {
-        logLine(watchLog, 'ignore inbox.zip missing META.json')
+      if (!inspection.ok) {
+        continue
+      }
+
+      if (inspection.receiver !== 'uri') {
         continue
       }
 
       const target = path.join(inboxDir, 'inbox.zip')
-
-      try {
-        fs.copyFileSync(fullPath, target)
-        writeProcessedMarker(processedDir)
-        logLine(watchLog, 'accepted inbox.zip with META.json')
-        logLine(watchLog, `staged inbox.zip -> ${target}`)
-      } catch (err) {
-        logLine(watchLog, `ERROR staging inbox.zip: ${err.message}`)
-      }
+      fs.copyFileSync(fullPath, target)
+      writeProcessedMarker(processedDir)
     }
   } finally {
     safeWriteLastRun(lastRun)
   }
 }
 
-main().catch((err) => {
-  try {
-    const { config, rootDir } = loadConfig()
-    const { watchLog, lastRun } = resolvePaths(config, rootDir)
-    logLine(watchLog, `ERROR fatal: ${err.message}`)
-    safeWriteLastRun(lastRun)
-  } catch {
-    // ignore secondary failures
-  }
-
+main().catch(() => {
   process.exitCode = 1
 })

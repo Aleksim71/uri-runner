@@ -18,7 +18,7 @@ afterEach(() => {
 })
 
 describe('watch-inbox strict intake', () => {
-  it('ignores noise files and inbox.zip without META.json', async () => {
+  it('ignores noise files and inbox.zip without RUNBOOK.yaml', async () => {
     const sb = await createSandbox()
     sandboxes.push(sb)
 
@@ -27,7 +27,7 @@ describe('watch-inbox strict intake', () => {
     writeFile(path.join(sb.downloads, 'data.json'), '{"ok":true}\n')
     writeFile(path.join(sb.downloads, 'image.png'), 'fake-png\n')
     writeFile(path.join(sb.downloads, 'archive.zip'), 'fake-zip\n')
-    writeFile(path.join(sb.downloads, 'inbox.zip'), 'fake-inbox-without-meta\n')
+    writeFile(path.join(sb.downloads, 'inbox.zip'), 'fake-inbox-without-runbook\n')
 
     let result
     let error = null

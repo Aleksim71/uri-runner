@@ -1,33 +1,65 @@
-Execution Outputs
+Протокол Inbox–Outbox
 
 
-URI produces two categories of outputs.
+Выходы URI делятся на две категории.
 
 
-External Output (AI facing)
+Внешний выход (для AI)
 
 outbox.zip
 
-Contains:
+Содержимое:
 
 outbox.json
-provided data
+предоставленные данные
 
 
-Internal Output (runtime history)
+Внутренний выход (runtime history)
 
 trace.json
 events.jsonl
 
 
-Important Rule
+Важное правило
 
-External AI receives only outbox.zip.
+Внешний AI получает только outbox.zip.
 
-Internal execution traces remain inside runtime history.
+Внутренние execution-traces остаются внутри runtime history.
 
 
-Purpose
+Назначение
 
-outbox.json → communication with AI
-trace.json → debugging and replay
+outbox.json → коммуникация с AI
+trace.json → отладка и replay
+
+
+Получатель (receiver)
+
+Каждый входящий пакет должен содержать поле:
+
+receiver
+
+Пример:
+
+receiver: uri
+
+Назначение поля receiver:
+
+определяет, какому агенту адресован входящий пакет.
+
+Правило:
+
+URI обрабатывает только пакеты, где:
+
+receiver == uri
+
+Пакеты с другим receiver:
+- игнорируются
+- не попадают в inbox
+- не создают outbox
+- не считаются ошибкой
+
+Важно:
+
+Внешний AI (Макс) не получает информацию
+о проигнорированных пакетах.

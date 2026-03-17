@@ -1,17 +1,17 @@
 URI Runner
-Runtime Architecture
+Архитектура Runtime
 
-Version: 1
+Версия: 1
 
 
-Overview
+Обзор
 
-Runtime Architecture описывает execution ядро URI Runner.
+Архитектура Runtime описывает execution-ядро URI Runner.
 
 URI — artifact-driven execution engine.
 
 
-Execution Goals
+Цели выполнения
 
 deterministic execution
 artifact-driven pipeline
@@ -19,8 +19,9 @@ baseline restoration
 AI-compatible reporting
 
 
-Execution Pipeline
+Pipeline выполнения
 
+0 Intake Gate
 1 Inbox Intake
 2 Scenario Decode
 3 Plan Compile
@@ -31,9 +32,31 @@ Execution Pipeline
 8 Outbox Packaging
 
 
-Artifact System
+Intake Gate
 
-Основные execution artifacts:
+Перед фазой Inbox Intake URI выполняет фильтрацию входящих пакетов.
+
+Назначение:
+
+принимать только пакеты, адресованные URI.
+
+Правило:
+
+receiver == uri → ACCEPT  
+receiver != uri → IGNORE  
+receiver отсутствует → REJECT
+
+Intake Gate не создаёт:
+- trace
+- outbox
+- execution events
+
+Это чистый фильтр входящих данных.
+
+
+Система артефактов
+
+Основные execution-артефакты:
 
 PLAN
 TRACE
@@ -44,7 +67,7 @@ BASELINE_VERIFY_RESULT
 META
 
 
-State Domains
+Домены состояния
 
 files
 database
@@ -54,16 +77,16 @@ processes
 temp workspace
 
 
-Baseline Principle
+Принцип baseline
 
-После каждого run система должна возвращаться к baseline состоянию.
+После каждого run система должна возвращаться к baseline-состоянию.
 
 
-Execution Graph
+Граф выполнения
 
 Runtime поддерживает graph-based execution.
 
-Nodes:
+Узлы:
 
 command
 group
@@ -73,7 +96,7 @@ verify
 finalize
 
 
-Edges:
+Связи:
 
 depends-on
 on-success
@@ -81,8 +104,8 @@ on-failure
 always
 
 
-AI Interaction
+Взаимодействие с AI
 
 URI взаимодействует с AI через inbox/outbox protocol.
 
-AI получает execution artifacts и может продолжить работу.
+AI получает execution-артефакты и может продолжить работу.

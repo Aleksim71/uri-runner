@@ -13,24 +13,23 @@ describe('processed/', () => {
   it('creates deterministic accepted-flow marker', async () => {
     const sandbox = await createSandbox();
 
-    const metaPath = path.join(sandbox.root, 'META.json');
+    const runbookPath = path.join(sandbox.root, 'RUNBOOK.yaml');
     await fs.writeFile(
-      metaPath,
-      JSON.stringify(
-        {
-          version: 1,
-          project: 'uri-runner',
-          kind: 'patch'
-        },
-        null,
-        2
-      ),
+      runbookPath,
+`receiver: uri
+project: uri-runner
+goal: deterministic test
+goal_checks: []
+max_attempts: 1
+provide: []
+modify: []
+`,
       'utf8'
     );
 
     const inboxZipPath = path.join(sandbox.downloads, 'inbox.zip');
     await makeZip(inboxZipPath, {
-      'META.json': metaPath
+      'RUNBOOK.yaml': runbookPath
     });
 
     await runNodeScript('src/uram/watch-inbox-once.cjs', [], sandbox);
