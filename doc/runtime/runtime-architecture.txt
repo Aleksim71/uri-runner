@@ -1,7 +1,7 @@
 URI Runner
 Архитектура Runtime
 
-Версия: 1
+Версия: 2 (A13)
 
 
 Обзор
@@ -11,101 +11,54 @@ URI Runner
 URI — artifact-driven execution engine.
 
 
-Цели выполнения
+Ключевое изменение (A13)
 
-deterministic execution
-artifact-driven pipeline
-baseline restoration
-AI-compatible reporting
+Execution теперь основан на materialized plan.
 
-
-Pipeline выполнения
-
-0 Intake Gate
-1 Inbox Intake
-2 Scenario Decode
-3 Plan Compile
-4 Baseline Capture
-5 Execution
-6 Restore / Rollback
-7 Baseline Verification
-8 Outbox Packaging
+Runbook больше не исполняется напрямую.
 
 
-Intake Gate
+Pipeline выполнения (A13)
 
-Перед фазой Inbox Intake URI выполняет фильтрацию входящих пакетов.
+RUNBOOK
+→ compile
+→ materialize plan
+→ plan validation
+→ run-plan
+→ execution
+→ trace / history / outbox
 
-Назначение:
 
-принимать только пакеты, адресованные URI.
+Совместимость
 
-Правило:
+materializePlanFromRunbook:
+- используется watcher и legacy flows
+- компилирует runbook через compileRunbookFile
+- сохраняет plan.json
 
-receiver == uri → ACCEPT  
-receiver != uri → IGNORE  
-receiver отсутствует → REJECT
-
-Intake Gate не создаёт:
-- trace
-- outbox
-- execution events
-
-Это чистый фильтр входящих данных.
+materializePlan:
+- новый API
+- возвращает plan объект
+- используется adapter-логикой
 
 
 Система артефактов
 
 Основные execution-артефакты:
 
-PLAN
-TRACE
-RESULT
-ROLLBACK_PLAN
-ROLLBACK_RESULT
-BASELINE_VERIFY_RESULT
-META
+PLAN (plan.json)  
+TRACE  
+RESULT  
+META  
 
 
-Домены состояния
+Гарантии
 
-files
-database
-environment
-server/runtime
-processes
-temp workspace
-
-
-Принцип baseline
-
-После каждого run система должна возвращаться к baseline-состоянию.
-
-
-Граф выполнения
-
-Runtime поддерживает graph-based execution.
-
-Узлы:
-
-command
-group
-branch
-rollback
-verify
-finalize
-
-
-Связи:
-
-depends-on
-on-success
-on-failure
-always
+- каждый run создаёт plan artifact до выполнения  
+- execution всегда идёт через plan  
+- history содержит planRelPath  
 
 
 Взаимодействие с AI
 
 URI взаимодействует с AI через inbox/outbox protocol.
-
-AI получает execution-артефакты и может продолжить работу.

@@ -1,65 +1,50 @@
 Протокол Inbox–Outbox
 
 
-Выходы URI делятся на две категории.
-
-
-Внешний выход (для AI)
+Внешний выход
 
 outbox.zip
 
 Содержимое:
 
-outbox.json
-предоставленные данные
+outbox.json  
+provided files  
 
 
-Внутренний выход (runtime history)
+Внутренний output
 
-trace.json
-events.jsonl
-
-
-Важное правило
-
-Внешний AI получает только outbox.zip.
-
-Внутренние execution-traces остаются внутри runtime history.
+trace.json  
+events.jsonl  
+plan.json (A13)  
 
 
-Назначение
+A13 ДОПОЛНЕНИЕ
 
-outbox.json → коммуникация с AI
-trace.json → отладка и replay
+Каждый run создаёт plan.json:
+
+- сохраняется в runtime artifacts  
+- связан с history через planRelPath  
+
+
+Outbox contract
+
+outbox.zip всегда содержит:
+
+- outbox.json  
+- provided files (если есть)  
+
+
+exitCode:
+
+0 → success  
+1 → error  
 
 
 Получатель (receiver)
 
-Каждый входящий пакет должен содержать поле:
-
-receiver
-
-Пример:
-
 receiver: uri
 
-Назначение поля receiver:
-
-определяет, какому агенту адресован входящий пакет.
 
 Правило:
 
-URI обрабатывает только пакеты, где:
-
-receiver == uri
-
-Пакеты с другим receiver:
-- игнорируются
-- не попадают в inbox
-- не создают outbox
-- не считаются ошибкой
-
-Важно:
-
-Внешний AI (Макс) не получает информацию
-о проигнорированных пакетах.
+URI обрабатывает только пакеты с receiver == uri
