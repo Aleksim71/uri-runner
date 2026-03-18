@@ -55,6 +55,12 @@ function materializePlanFromRunbook(options = {}) {
   };
 }
 
+async function materializePlan(options = {}) {
+  const result = materializePlanFromRunbook(options);
+  return result.plan;
+}
+
 module.exports = {
+  materializePlan,
   materializePlanFromRunbook
 };
