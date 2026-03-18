@@ -1,0 +1,166 @@
+EXECUTABLE PLAN v1
+Project: uri-runner-next
+Status: compiled execution intent specification
+Date: 2026-03-17
+
+1. PURPOSE
+executable-plan.json is the compiled execution intent produced by URI after reading the runbook and before actual execution.
+
+2. ROLE IN THE PIPELINE
+runbook -> executable-plan -> trace
+
+Meaning:
+- runbook = Max intent
+- executable-plan = URI intent
+- trace = execution fact
+
+3. WHY EXECUTABLE PLAN EXISTS
+- shows how URI understood the runbook
+- records selected execution scenario
+- records normalized commands to execute
+- supports replay/debugging/testing
+- separates compilation from execution
+
+4. CORE PRINCIPLE
+The executable plan should be compiled completely first, then executed.
+URI should not treat direct on-the-fly interpretation as the canonical architecture.
+
+5. STRUCTURE OVERVIEW
+Suggested top-level structure:
+- version
+- runId
+- project
+- goal
+- runbook
+- execution
+- commands
+- checks
+- artifacts
+
+6. FIELD DEFINITIONS
+6.1 version
+Format version of executable plan.
+Example: 1
+
+6.2 runId
+Unique run identifier.
+Example: run_20260317_abc123
+
+6.3 project
+Project name from runbook.
+
+6.4 goal
+Goal text from runbook.
+
+6.5 runbook
+Reference to the source runbook.
+Suggested fields:
+- source
+- hash (optional)
+
+6.6 execution
+Execution configuration chosen by URI.
+Suggested fields:
+- mode
+- scenario
+- maxAttempts
+
+6.7 commands
+Normalized internal commands compiled from provide/modify sections.
+Each command should have at minimum:
+- id
+- kind
+- input
+
+6.8 checks
+Normalized internal checks compiled from goal_checks section.
+Each check should have at minimum:
+- id
+- kind
+- input
+
+6.9 artifacts
+References to payload roots and related compiled input resources.
+Suggested field:
+- payloadRoot
+
+7. NORMALIZED COMMAND MODEL
+A normalized command should look like:
+- id: unique within the plan
+- kind: namespace.action form
+- input: object containing arguments
+
+Examples of kinds:
+Provide kinds:
+- provide.file
+- provide.tree
+- provide.browser_view
+
+Modify kinds:
+- modify.file.replace_from_file
+- modify.file.delete_range
+- modify.file.replace_match_from_files
+- modify.operations_file
+
+8. NORMALIZED CHECK MODEL
+A normalized check should look like:
+- id: unique within checks
+- kind: namespace.action form
+- input: object containing arguments
+
+Examples of kinds:
+- check.command
+- check.file_contains
+- check.dom_contains
+- check.browser_view
+- check.checks_file
+
+9. RELATION TO EXECUTION SCENARIO
+Important distinction:
+- commands/checks are the normalized steps
+- execution.scenario tells URI under which behavioral wrapper to run them
+
+Thus one executable plan keeps both:
+- command intent
+- scenario intent
+
+This gives a complete executable package without collapsing structure.
+
+10. SINGLE FILE, SEPARATE STRUCTURE
+Executable plan should be stored as a single artifact file, but it should keep scenario and commands/checks structurally separated inside the file.
+
+Recommended mental model:
+- one executable package
+- several internal sections
+
+11. EXAMPLE SHAPE
+Example conceptual shape:
+{
+  "version": 1,
+  "runId": "run_20260317_abc123",
+  "project": "uri-runner-next",
+  "goal": "Add visible button to page",
+  "runbook": {
+    "source": "inbox/RUNBOOK.md"
+  },
+  "execution": {
+    "mode": "safe",
+    "scenario": "safe_iteration_default",
+    "maxAttempts": 2
+  },
+  "commands": [ ... ],
+  "checks": [ ... ],
+  "artifacts": {
+    "payloadRoot": "inbox/payloads"
+  }
+}
+
+12. SAVING RULE
+URI should persist executable-plan.json as an artifact of the run before actual execution of commands begins.
+
+13. BENEFITS
+- readable pre-execution intent
+- replay support
+- easier blame analysis between runbook/compile/execution stages
+- stable testing surface for compiler and executor independently
+

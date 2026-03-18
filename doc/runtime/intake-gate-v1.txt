@@ -1,0 +1,44 @@
+URI Runner
+Intake Gate v1
+
+
+Назначение
+
+Отбор входящих пакетов до их попадания в Inbox.
+
+
+Алгоритм
+
+1. Обнаружение пакета в папке загрузки
+2. Открытие пакета без полного распаковывания
+3. Чтение RUNBOOK.yaml
+4. Извлечение поля receiver
+5. Принятие решения
+
+
+Решения
+
+ACCEPT:
+receiver == uri
+→ пакет переносится в Inbox
+
+IGNORE:
+receiver != uri
+→ пакет игнорируется
+
+REJECT:
+receiver отсутствует или metadata некорректна
+→ пакет отклоняется
+
+
+Свойства
+
+- Intake Gate не создаёт trace
+- Intake Gate не создаёт outbox
+- Intake Gate не запускает сценарий
+- Intake Gate не пишет логи в v1
+
+
+Граница
+
+Execution scenario начинается только после ACCEPT.

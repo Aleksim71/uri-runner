@@ -1,0 +1,188 @@
+RUNBOOK SPEC v1
+Project: uri-runner-next
+Status: architecture-level specification
+Date: 2026-03-17
+
+1. PURPOSE
+This document defines the broader runbook architecture, including the current working core and the next planned entities.
+It is not limited to what is immediately implemented.
+It defines what belongs in the protocol between Max and URI.
+
+2. RUNBOOK PHILOSOPHY
+- Max speaks in macro-commands and requested results
+- URI translates macro-commands into internal micro-commands
+- URI executes them inside its own execution scenario
+- YAML remains clean; large payloads live in attached inbox files
+
+3. RUNBOOK FORMAT
+- container: markdown file with YAML frontmatter
+- markdown body: human context, notes, links, rationale
+- YAML frontmatter: machine-readable execution intent
+
+4. MINIMAL HEADER
+receiver: uri
+project: <project-name>
+goal: <string>
+goal_checks: []
+max_attempts: <integer>
+provide: []
+modify: []
+
+5. SEMANTIC MODEL
+5.1 Runbook
+External intent from Max.
+Describes:
+- what data should be provided
+- what should be modified
+- how the goal should be proven
+
+5.2 Executable plan
+Compiled execution intent created by URI.
+Describes:
+- how URI understood the runbook
+- which internal normalized commands it will run
+- under which execution scenario it will run them
+
+5.3 Trace
+Execution fact.
+Describes:
+- what actually happened
+- what succeeded
+- what failed
+- which artifacts were produced
+
+6. PROVIDE ENTITY CATALOG
+6.1 Current core
+- file
+- tree
+- browser_view
+
+6.2 Planned next entities
+- env
+- db
+- tests
+- browser_devtools
+- files
+
+6.3 Meaning of next entities
+A. env
+Safe environment information, for example:
+- git branch
+- git status
+- current HEAD
+- node/npm versions
+- runtime summary
+
+B. db
+Database information, for example:
+- schema
+- list of tables
+- rows
+- table dependencies
+
+C. tests
+Test information as data, for example:
+- test tree
+- test catalog
+- latest test results
+
+D. browser_devtools
+DevTools-level information via connected browser agent, for example:
+- console
+- network
+- DOM
+- current URL
+
+E. files
+A set of files selected by conditions, for example:
+- all *.json
+- all *.md
+- all files under a root matching filters
+
+7. MODIFY ENTITY CATALOG
+7.1 Current core
+- inline file operations
+- operations_file
+
+7.2 Planned next entities
+- service (can be kept as modify subtype)
+- db
+- grouped files operations
+
+7.3 Important rule
+Environment changes are not a separate top-level section.
+They are just another kind of modify operation.
+
+8. GOAL CHECKS MODEL
+8.1 Principle
+Goal checks are not only technical health checks.
+They must prove the actual feature/result goal.
+
+8.2 Examples
+- generic health: npm test
+- feature proof: DOM contains button
+- visual proof: screenshot shows button visible
+- CLI proof: output changed exactly as intended
+
+8.3 Dual mode
+- inline checks in YAML
+- checks_file for larger, sequential, multi-step validation
+
+9. TWO MODES FOR MODIFY AND GOAL CHECKS
+9.1 Inline mode
+Use directly in YAML for small/simple operations.
+
+9.2 File mode
+Use attached YAML files for large or sequential operations.
+This applies both to:
+- modify via operations_file
+- goal_checks via checks_file
+
+10. PAYLOAD RULE
+Runbook YAML must not carry large replacement blocks or large matching blocks.
+Those must live in attached inbox files.
+YAML only points to them.
+
+11. MATCHING RULE FOR V1
+Exact text matching only.
+No regex in v1.
+For match-based modifications:
+- 0 matches -> fail
+- >1 matches -> fail
+- exactly 1 match -> success
+
+12. RANGE RULE FOR V1
+For file content ranges and target/source ranges:
+- start_line = integer | start
+- end_line = integer | end
+- line numbering is 1-based
+
+13. TREE RULE FOR V1
+For tree requests:
+- subtype currently supported: file_system
+- depth = positive integer | full
+
+14. BROWSER VIEW RULE FOR V1
+For browser screenshots:
+- return currently supported: screenshot
+- capture = overview | normal | detailed
+- URI internally selects viewport/resolution/optimization
+
+15. EXECUTION PHILOSOPHY
+URI must not execute Max runbook directly on the fly as the canonical architecture.
+Canonical model:
+runbook -> executable plan -> execution -> trace
+
+Compile-first is preferred because it provides:
+- a visible URI interpretation layer
+- replay capability
+- easier debugging
+- separation of intent and fact
+
+16. DOCUMENTATION LAYOUT RECOMMENDATION
+Recommended chat-traveling docs:
+- runbook-current.txt
+- runbook-spec.txt
+- executable-plan-v1.txt
+- execution-lifecycle-v1.txt
+

@@ -1,0 +1,83 @@
+URI RUNNER — STAGE A13 STATUS
+Updated: 2026-03-17
+
+TITLE
+A13 status: materialized plan execution works manually; legacy scenario runtime still unstable
+
+SUMMARY
+Stage A13 has been partially validated.
+
+What works:
+1. Intake accepts inbox.zip with RUNBOOK.yaml
+2. RUNBOOK is materialized into plan.json
+3. Materialized plan can be executed manually through:
+   uri run-plan <plan.json>
+4. First materialized step provide:file.read works on a real file
+5. goal.check step also works
+6. watch-inbox-once strict intake remains green
+7. materialized plan schema is accepted
+
+Manual proof
+A manually executed plan produced:
+- exitCode: 0
+- status: success
+- steps: 2/2
+- provide:file.read returned file content from demo/src/index.js
+
+Confirmed materialized flow
+inbox.zip
+→ watch-inbox-once
+→ extract RUNBOOK.yaml
+→ materialize plan.json
+→ uri run-plan plan.json
+→ execute provide:file.read
+→ success result payload
+
+IMPORTANT LIMITATION
+Legacy scenario runtime compatibility is NOT restored yet.
+
+Current failing areas:
+1. scenario runtime environment reset
+2. execution lock error propagation
+3. max_steps error propagation
+4. normal scenario smoke/outbox contract
+5. history plan link
+6. scenario plan artifact persistence
+7. unknown command in scenario runtime still collapses to PIPELINE_INTERNAL_ERROR
+8. CLI compile/debug commands still not fully aligned with expected legacy behavior
+
+CURRENT INTERPRETATION
+A13 is not complete.
+A13 materialized path is proven manually.
+Legacy scenario pipeline still needs stabilization before moving to the next functional stage.
+
+ARCHITECTURAL STATUS
+Stable:
+- strict intake
+- RUNBOOK-based routing
+- materialized plan creation
+- materialized plan manual execution
+- provide:file.read
+- goal.check
+
+Unstable:
+- legacy scenario runtime path
+- scenario pipeline error semantics
+- scenario outbox/history artifact flow
+- some CLI compile/debug legacy contracts
+
+NEXT REQUIRED WORK
+A13 stabilization pass:
+1. restore scenario runtime compatibility
+2. restore correct error codes:
+   - COMMAND_NOT_FOUND
+   - MAX_STEPS_EXCEEDED
+   - EXECUTION_LOCKED
+3. restore environment reset invocation in legacy scenario flow
+4. restore outbox/history/plan-artifact behavior
+5. align CLI compile/debug legacy behavior with tests
+
+DECISION
+Do NOT mark A13 as finished.
+Next session should continue with:
+“Stage A13 stabilization — restore legacy scenario runtime compatibility”

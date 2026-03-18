@@ -1,0 +1,241 @@
+RUNBOOK CURRENT v1
+Project: uri-runner-next
+Status: working contract for current implementation planning
+Date: 2026-03-17
+
+1. PURPOSE
+This document defines the current working contract between Max and URI.
+It is intended to travel between chats together with Piligrim.
+It contains only the agreed practical core that can be used now.
+
+2. RUNBOOK CONTAINER
+Format:
+- one .md file with YAML frontmatter
+- markdown body keeps human context
+- YAML keeps machine-readable structure
+
+3. MINIMAL RUNBOOK SHAPE
+receiver: uri
+project: <project-name>
+goal: <string>
+goal_checks: []
+max_attempts: <integer>
+provide: []
+modify: []
+
+4. REQUIRED FIELDS
+- receiver: address of the document; URI processes only documents addressed to uri
+- project: project name
+- goal: goal in plain text
+- goal_checks: checks proving the goal is reached
+- max_attempts: maximum number of attempts
+- provide: data URI must provide without changing the system
+- modify: changes URI must perform
+
+5. FIELDS NOT EXPOSED NOW
+These are intentionally not separate runbook fields for v1:
+- policy
+- collect
+Reason:
+- execution policy belongs to URI internal scenario
+- outbox content belongs to URI internal scenario
+
+6. PROVIDE V1-CORE
+6.1 type: file
+Purpose:
+- provide file content and/or file metadata
+
+Shape:
+- type: file
+  path: <relative-path>
+  range:
+    start_line: <integer | start>
+    end_line: <integer | end>
+  return:
+    - content
+    - metadata
+
+Rules:
+- path is relative to project root
+- range is optional
+- if range is missing, URI works with the whole file
+- line numbering is 1-based
+- start_line may be integer or start
+- end_line may be integer or end
+
+Examples:
+- whole file content
+- file metadata only
+- partial content by line range
+- content from start to line N
+- content from line N to end
+
+6.2 type: tree
+Purpose:
+- provide file system tree
+
+Shape:
+- type: tree
+  subtype: file_system
+  root: <relative-path>
+  depth: <positive-integer | full>
+  return:
+    - structure
+
+Rules:
+- for current v1 only subtype file_system is supported
+- root is the folder from which the tree is built
+- depth may be positive integer or full
+- full means full tree
+
+6.3 type: browser_view
+Purpose:
+- provide visual browser data
+
+Shape:
+- type: browser_view
+  target: <browser-target>
+  return:
+    - screenshot
+  capture: <overview | normal | detailed>
+
+Rules:
+- target identifies browser target/page/app
+- for current v1 only screenshot is supported in return
+- capture selects detail level
+- URI internally decides viewport, resize and optimization
+
+Capture modes:
+- overview: broad layout overview
+- normal: balanced screenshot
+- detailed: detailed screenshot for close inspection
+
+7. PROVIDE NEXT CANDIDATES
+These are defined architecturally but not yet part of the current working core:
+- env
+- db
+- tests
+- browser_devtools
+- files
+
+8. MODIFY V1-CORE
+Modify supports two modes:
+- inline operations inside runbook YAML
+- operations_file for larger sequential modifications
+
+8.1 Inline file operations
+A. replace whole file from attached file
+- type: file
+  target: <relative-path>
+  action: replace_from_file
+  source: <inbox-relative-path>
+
+B. create file from attached file
+- type: file
+  target: <relative-path>
+  action: create_from_file
+  source: <inbox-relative-path>
+
+C. delete whole file
+- type: file
+  target: <relative-path>
+  action: delete
+
+D. replace line range from attached file
+- type: file
+  target: <relative-path>
+  action: replace_range_from_file
+  source: <inbox-relative-path>
+  source_range:
+    start_line: <integer | start>
+    end_line: <integer | end>
+  target_range:
+    start_line: <integer | start>
+    end_line: <integer | end>
+
+E. delete line range
+- type: file
+  target: <relative-path>
+  action: delete_range
+  target_range:
+    start_line: <integer | start>
+    end_line: <integer | end>
+
+F. exact find-and-replace using attached files
+- type: file
+  target: <relative-path>
+  action: replace_match_from_files
+  find_source: <inbox-relative-path>
+  replace_source: <inbox-relative-path>
+
+G. exact find-and-delete using attached file
+- type: file
+  target: <relative-path>
+  action: delete_match_from_file
+  find_source: <inbox-relative-path>
+
+Inline rules:
+- all source files are taken only from inbox payloads
+- match operations use exact text match in v1
+- match result policy for v1:
+  - 0 matches -> fail
+  - more than 1 match -> fail
+  - exactly 1 match -> success
+
+8.2 Operations file mode
+Runbook may point to a separate operations file for large or sequential edits.
+
+Shape in runbook:
+- type: operations_file
+  source: <inbox-relative-path>
+
+The operations file is structured YAML and contains sequential file edit operations.
+URI executes them top-to-bottom.
+On first failure execution stops and URI applies its own recovery scenario.
+
+9. GOAL_CHECKS V1
+Goal checks prove that the goal is reached as a feature/result.
+They are not the same as generic project health checks.
+
+Important distinction:
+- npm test may prove the project did not break
+- but it may not prove the feature goal is achieved
+
+Therefore goal checks must be feature-specific when needed.
+Examples:
+- DOM contains the new button
+- browser screenshot shows the button visually
+- CLI command output changed as intended
+- database state reflects the target feature
+
+Goal checks support two modes:
+- inline checks in runbook YAML
+- checks_file for larger sequential validation scenarios
+
+9.1 Inline checks examples
+- command
+- file_contains
+- dom_contains
+- browser_view screenshot as evidence
+
+9.2 Checks file mode
+Shape:
+- type: checks_file
+  source: <inbox-relative-path>
+
+The checks file is structured YAML and contains sequential validation steps.
+
+10. EXECUTION MODEL
+URI works in compile-first mode:
+runbook -> executable plan -> execution -> trace
+
+Meaning:
+1. URI first compiles the whole executable intention
+2. URI then walks the compiled plan
+3. URI writes trace and prepares outbox
+
+11. THREE LEVELS OF INTENT/FACT
+- runbook = Max intent
+- executable plan = URI intent
+- trace = execution fact
+

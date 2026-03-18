@@ -1,0 +1,109 @@
+EXECUTION LIFECYCLE v1
+Project: uri-runner-next
+Status: execution flow contract
+Date: 2026-03-17
+
+1. PURPOSE
+This document defines the canonical execution lifecycle for URI.
+It explains how URI should move from runbook to actual execution and final output.
+
+2. CANONICAL FLOW
+runbook -> executable-plan -> execution -> trace -> outbox
+
+3. HIGH-LEVEL STAGES
+Stage 1. Intake
+- receive inbox
+- locate runbook
+- verify receiver == uri
+- verify project target
+- register runId
+- stage payload files
+
+Stage 2. Parse
+- parse markdown + YAML
+- validate required runbook fields
+- validate provide/modify/goal_checks structure
+
+Stage 3. Compile
+- translate runbook macro-commands into normalized URI micro-commands
+- choose execution scenario/mode
+- build executable-plan.json
+- persist executable-plan.json before command execution starts
+
+Stage 4. Execute
+- load executable plan
+- execute commands in order according to URI scenario
+- record per-step status
+- stage per-step artifacts
+
+Stage 5. Validate Goal
+- execute compiled checks in order
+- if a check fails, goal is not reached
+- URI may apply retry/recovery according to internal scenario and maxAttempts
+
+Stage 6. Finalize
+- write trace.json
+- assemble outbox artifacts according to URI internal scenario
+- package outbox.zip
+- stabilize environment according to URI internal scenario
+
+4. INTERNAL EXECUTION PRINCIPLE
+URI should not expose internal micro-commands directly to Max.
+Max writes macro-level runbook requests.
+URI compiles them and executes internally.
+
+5. COMPILE-FIRST RULE
+The canonical architecture is compile-first, not on-the-fly execution.
+Meaning:
+- URI first builds the whole executable plan
+- URI then walks the compiled plan
+
+6. WHY COMPILE-FIRST
+- visible URI interpretation layer
+- separation between understanding and doing
+- replay/debugging support
+- easier testability of compiler and executor separately
+
+7. STEP EXECUTION MODEL
+For each compiled command/check:
+- execute step
+- capture step result
+- write step trace record
+- if step fails, apply scenario rules
+
+8. TRACE PRINCIPLE
+Trace records facts, not intentions.
+Intent belongs to executable plan.
+Fact belongs to trace.
+
+9. ATTEMPTS PRINCIPLE
+maxAttempts comes from the runbook.
+Retry/recovery behavior belongs to URI internal execution scenario.
+
+10. OUTBOX PRINCIPLE
+Outbox content is not a separate runbook field in current v1.
+URI assembles outbox according to its own internal scenario.
+
+11. POLICY PRINCIPLE
+Execution policy is not a separate runbook field in current v1.
+URI runs under its internal scenario, currently assumed safe-oriented by default.
+
+12. FAILURE PRINCIPLE
+If an execution step or goal check fails:
+- URI records failure in trace
+- URI applies recovery according to internal scenario
+- URI either retries or finalizes as failed depending on scenario and remaining attempts
+
+13. RESULTING ARTIFACTS
+Expected core run artifacts:
+- executable-plan.json
+- trace.json
+- staged artifacts/logs
+- outbox.zip
+
+14. MENTAL MODEL
+- runbook = what Max wants
+- executable plan = what URI intends to do
+- trace = what URI actually did
+- outbox = what URI returns
+
