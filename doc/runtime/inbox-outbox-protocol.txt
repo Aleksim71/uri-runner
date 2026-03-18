@@ -26,6 +26,18 @@ A13 ДОПОЛНЕНИЕ
 - связан с history через planRelPath  
 
 
+A14 ДОПОЛНЕНИЕ
+
+Если compiled plan структурно некорректен:
+
+- execution не запускается  
+- outbox формируется как ошибка  
+
+Тип ошибки:
+
+PLAN_SCHEMA_INVALID  
+
+
 Outbox contract
 
 outbox.zip всегда содержит:

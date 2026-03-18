@@ -1,45 +1,74 @@
 URI Runner
 Архитектура Runtime
 
-Версия: 2 (A13)
+Версия: 3 (A13 + A14)
 
 
 Обзор
 
-Архитектура Runtime описывает execution-ядро URI Runner.
+Архитектура Runtime описывает ядро выполнения URI Runner.
 
-URI — artifact-driven execution engine.
-
-
-Ключевое изменение (A13)
-
-Execution теперь основан на materialized plan.
-
-Runbook больше не исполняется напрямую.
+URI — движок выполнения, основанный на артефактах (artifact-driven execution engine).
 
 
-Pipeline выполнения (A13)
+Ключевые изменения
+
+A13:
+Execution основан на materialized plan  
+Runbook больше не исполняется напрямую  
+
+A14:
+Добавлена валидация структуры compiled plan перед execution  
+
+
+Pipeline выполнения
 
 RUNBOOK
 → compile
 → materialize plan
-→ plan validation
+→ plan validation (A14)
 → run-plan
 → execution
 → trace / history / outbox
 
 
+Валидация плана (A14)
+
+Перед запуском execution runtime проверяет структурную целостность plan:
+
+- plan должен быть объектом  
+- plan.version обязателен  
+- plan.steps должен быть массивом  
+- каждый step должен иметь корректную минимальную структуру  
+
+Если validation не пройдена:
+
+- execution не начинается  
+- run завершается с ошибкой PLAN_SCHEMA_INVALID  
+
+
+Важно:
+
+Validation проверяет только структуру.
+
+Она не заменяет:
+
+- проверку существования команд  
+- проверку root policy  
+- runtime ограничения (например max_steps)  
+
+
 Совместимость
 
 materializePlanFromRunbook:
-- используется watcher и legacy flows
-- компилирует runbook через compileRunbookFile
-- сохраняет plan.json
+- используется watcher и legacy flows  
+- компилирует runbook через compileRunbookFile  
+- сохраняет plan.json  
 
 materializePlan:
-- новый API
-- возвращает plan объект
-- используется adapter-логикой
+- новый API  
+- возвращает объект plan  
+- используется адаптерами  
 
 
 Система артефактов

@@ -34,6 +34,22 @@ RUNBOOK
 → trace / history / outbox  
 
 ------------------------------------------------
+A14 UPDATE (Plan Schema Validation)
+------------------------------------------------
+
+Начиная с A14:
+
+- compiled plan валидируется перед execution  
+- structurally invalid plan не исполняется  
+- execution не начинается при нарушении структуры  
+- ошибка контракта: PLAN_SCHEMA_INVALID  
+
+Важно:
+
+- проверяется только структура plan  
+- validation не заменяет execution и policy  
+
+------------------------------------------------
 Базовая архитектура
 ------------------------------------------------
 
@@ -79,7 +95,7 @@ compilePlan
         ↓  
 materialize plan (A13)  
         ↓  
-plan validation  
+plan validation (A14)  
         ↓  
 run-plan execution  
         ↓  

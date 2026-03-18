@@ -2,170 +2,70 @@ URI Runner
 Жизненный цикл выполнения
 
 
-Обзор
+Ключевые изменения
 
-Выполнение URI состоит из последовательных фаз.
+A13:
+Добавлен этап materialize plan  
 
-
-Канонический жизненный цикл
-
-1 Intake Gate
-2 Inbox Intake
-3 Scenario Decode
-4 Plan Compile
-5 Run Sandbox Initialization
-6 Baseline Capture
-7 Environment Reset
-8 Execution
-9 Restore / Rollback
-10 Baseline Verification
-11 Outbox Packaging
-12 History Persistence
+A14:
+Добавлена валидация структуры plan перед execution  
 
 
-Детали фаз
+Обновлённый lifecycle
+
+1 Intake Gate  
+2 Inbox Intake  
+3 Scenario Decode  
+4 Plan Compile  
+5 Materialize Plan (A13)  
+6 Plan Validation (A14)  
+7 Run Sandbox Initialization  
+8 Environment Reset  
+9 Execution (run-plan)  
+10 Trace Recording  
+11 Outbox Packaging  
+12 History Persistence  
 
 
-Intake Gate
+Materialize Plan
 
-URI отслеживает папку загрузки (download / intake folder)
-и обнаруживает входящие пакеты (например inbox.zip).
+RUNBOOK преобразуется в plan:
 
-Перед переносом пакета в Inbox URI выполняет intake-проверку:
+- нормализация  
+- валидация  
+- сохранение plan.json  
 
-1. Открывает пакет без полного распаковывания
-2. Извлекает RUNBOOK.yaml (или metadata YAML)
-3. Читает поле receiver
-
-Правила:
-
-- если receiver == uri → пакет принимается и переносится в Inbox
-- если receiver != uri → пакет игнорируется
-- если metadata отсутствует или некорректна → пакет отклоняется
-
-Важно:
-
-Пакеты, не адресованные URI, не попадают в Inbox и не запускают выполнение.
-
-Сценарий выполнения начинается только после успешного прохождения intake-проверки.
+Каждый run создаёт plan до выполнения.
 
 
-Inbox Intake
+Plan Validation (A14)
 
-URI принимает пакет, прошедший intake gate, и размещает его в Inbox.
+На этом этапе runtime проверяет структурный контракт plan:
 
+- plan является объектом  
+- присутствует plan.version  
+- plan.steps является массивом  
+- каждый шаг (step) корректной структуры  
 
-Scenario Decode
+Если validation не пройдена:
 
-RUNBOOK.yaml извлекается и валидируется.
-
-
-Plan Compile
-
-RUNBOOK компилируется во внутренний execution plan.
-
-
-Run Sandbox Initialization
-
-Для run создаётся отдельная runtime-песочница.
-
-Структура:
-
-runtime/runs/<runId>/
-
-Создаваемые подкаталоги:
-
-traces
-artifacts
-provided
-logs
-tmp
-
-Назначение:
-
-изолировать execution-артефакты
-предотвратить загрязнение между run
-обеспечить детерминированное хранение trace-данных
-
-
-Baseline Capture
-
-Фиксируется начальное состояние системы.
-
-
-Environment Reset
-
-Необязательная фаза подготовки окружения, выполняемая
-перед первым шагом сценария.
-
-Срабатывает, когда:
-
-runtime.environment.reset_before_run = true
-
-Pipeline сброса:
-
-1 stop managed processes
-2 cleanup runtime state
-3 start managed server
-4 run healthcheck
-
-Назначение:
-
-обеспечить детерминированное окружение выполнения
-предотвратить загрязнение состояния между запусками
+- execution не начинается  
+- возвращается ошибка PLAN_SCHEMA_INVALID  
 
 
 Execution
 
-Выполняются шаги, определённые в секции execute RUNBOOK.
+Выполнение происходит через run-plan.
+
+Runtime не исполняет runbook напрямую.
 
 
-Restore / Rollback
+History
 
-При необходимости состояние системы восстанавливается.
+History сохраняет:
 
+- trace  
+- outbox  
+- planRelPath  
 
-Baseline Verification
-
-Проверки подтверждают стабильность окружения.
-
-
-Outbox Packaging
-
-URI создаёт пакет результата выполнения.
-
-outbox.zip
-
-Содержимое:
-
-outbox.json
-опциональные provided files
-
-
-History Persistence
-
-Execution-артефакты и метаданные сохраняются в runtime history.
-
-Артефакты, записываемые на этой фазе:
-
-trace.json
-execution-trace, сформированный из execution events
-
-outbox.zip
-пакет результата выполнения
-
-history index
-
-runtime/history/index.json
-
-Индекс истории обеспечивает быстрый доступ к завершённым run
-и поддерживает CLI-команды:
-
-uri history
-uri last
-uri show <runId>
-
-
-Trace-файлы остаются каноническим источником истины для каждого run.
-
-History index — это компактный реестр, указывающий на trace-артефакты.
+planRelPath указывает на plan.json.
