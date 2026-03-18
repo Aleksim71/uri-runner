@@ -1,69 +1,164 @@
 "use strict";
 
-/**
- * URAM runner entrypoint.
- *
- * Goal:
- * - provide a stable module for CLI: require("./uram/run.cjs")
- * - delegate real work to ./pipeline.cjs (whatever API shape it has)
- *
- * This file is intentionally defensive: it supports several export styles
- * to avoid breaking when pipeline internals evolve.
- */
+const os = require("os");
+const path = require("path");
 
-function loadPipeline() {
-  // eslint-disable-next-line global-require
-  return require("./pipeline.cjs");
+const { runUramPipeline } = require("./pipeline.cjs");
+
+function normalizeKnownError(error) {
+  if (!error || typeof error !== "object") {
+    return {
+      name: "Error",
+      code: "PIPELINE_INTERNAL_ERROR",
+      message: String(error),
+      details: {},
+    };
+  }
+
+  return {
+    name:
+      typeof error.name === "string" && error.name.trim()
+        ? error.name
+        : "Error",
+    code:
+      typeof error.code === "string" && error.code.trim()
+        ? error.code
+        : "PIPELINE_INTERNAL_ERROR",
+    message:
+      typeof error.message === "string" && error.message.trim()
+        ? error.message
+        : "Unknown runtime error",
+    details:
+      error.details && typeof error.details === "object" && !Array.isArray(error.details)
+        ? error.details
+        : {},
+  };
 }
 
-async function callPipeline(mod, argv) {
-  // 1) module itself is a function
-  if (typeof mod === "function") {
-    return await mod(argv);
-  }
+async function run(params = {}) {
+  const uramCli =
+    typeof params.uram === "string" && params.uram.trim()
+      ? params.uram.trim()
+      : typeof params.uramCli === "string" && params.uramCli.trim()
+        ? params.uramCli.trim()
+        : null;
 
-  // 2) preferred explicit APIs
-  if (mod && typeof mod.run === "function") {
-    return await mod.run(argv);
-  }
-  if (mod && typeof mod.main === "function") {
-    return await mod.main(argv);
-  }
+  const workspaceCli =
+    typeof params.workspace === "string" && params.workspace.trim()
+      ? params.workspace.trim()
+      : typeof params.workspaceCli === "string" && params.workspaceCli.trim()
+        ? params.workspaceCli.trim()
+        : null;
 
-  // 3) alternative naming that we might already have
-  if (mod && typeof mod.runUram === "function") {
-    return await mod.runUram(argv);
-  }
-  if (mod && typeof mod.runUramPipeline === "function") {
-    return await mod.runUramPipeline(argv);
-  }
-  if (mod && typeof mod.processInbox === "function") {
-    return await mod.processInbox(argv);
-  }
+  const quiet = params.quiet === true;
 
-  const keys = mod && typeof mod === "object" ? Object.keys(mod) : [];
-  throw new Error(
-    `[uram/run] Unsupported pipeline export shape in src/uram/pipeline.cjs. Exports: ${keys.join(", ")}`
-  );
+  try {
+    return await runUramPipeline({
+      uramCli,
+      workspaceCli,
+      quiet,
+      env: process.env,
+      homeDir: os.homedir(),
+    });
+  } catch (error) {
+    const normalized = normalizeKnownError(error);
+
+    return {
+      runId: null,
+      project: "unknown",
+      engine: "unknown",
+      exitCode: 1,
+      ok: false,
+      executableCtx: null,
+      loadedCommands: [],
+      error: normalized,
+      tmpProvidedDir: null,
+    };
+  }
 }
 
-/**
- * Run URAM pipeline (used by CLI "run" and "fass").
- * Returns whatever pipeline returns.
- */
-async function run(argv = process.argv) {
-  const pipeline = loadPipeline();
-  return await callPipeline(pipeline, argv);
+async function runFromCli(args = {}) {
+  const input =
+    args && typeof args === "object" && !Array.isArray(args) ? args : {};
+
+  return run({
+    uram:
+      typeof input.uram === "string"
+        ? input.uram
+        : typeof input.uramCli === "string"
+          ? input.uramCli
+          : null,
+    workspace:
+      typeof input.workspace === "string"
+        ? input.workspace
+        : typeof input.workspaceCli === "string"
+          ? input.workspaceCli
+          : null,
+    quiet: input.quiet === true,
+  });
 }
 
-/**
- * Commander-friendly entrypoint style (if someone calls main()).
- */
-async function main(argv = process.argv) {
-  return await run(argv);
+function resolveUramArg(argv = []) {
+  const items = Array.isArray(argv) ? argv : [];
+
+  for (let i = 0; i < items.length; i += 1) {
+    const token = items[i];
+
+    if (token === "--uram" && typeof items[i + 1] === "string") {
+      return items[i + 1];
+    }
+
+    if (typeof token === "string" && token.startsWith("--uram=")) {
+      return token.slice("--uram=".length);
+    }
+  }
+
+  return null;
+}
+
+function resolveWorkspaceArg(argv = []) {
+  const items = Array.isArray(argv) ? argv : [];
+
+  for (let i = 0; i < items.length; i += 1) {
+    const token = items[i];
+
+    if (token === "--workspace" && typeof items[i + 1] === "string") {
+      return items[i + 1];
+    }
+
+    if (typeof token === "string" && token.startsWith("--workspace=")) {
+      return token.slice("--workspace=".length);
+    }
+  }
+
+  return null;
+}
+
+function resolveQuietArg(argv = []) {
+  const items = Array.isArray(argv) ? argv : [];
+  return items.includes("--quiet");
+}
+
+async function main(argv = process.argv.slice(2)) {
+  const result = await runFromCli({
+    uram: resolveUramArg(argv),
+    workspace: resolveWorkspaceArg(argv),
+    quiet: resolveQuietArg(argv),
+  });
+
+  if (!result || typeof result !== "object") {
+    throw new Error("run() returned invalid result");
+  }
+
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+
+  return result;
 }
 
 module.exports = {
   run,
+  runFromCli,
   main,
 };

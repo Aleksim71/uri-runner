@@ -2,6 +2,7 @@
 
 const PLAN_VERSION = 1;
 const PLAN_KIND_SCENARIO = "scenario-plan";
+const PLAN_KIND_MATERIALIZED = "materialized-plan";
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -60,164 +61,6 @@ function assertOptionalArray(value, fieldName, details = undefined) {
   return value;
 }
 
-function assertRuntimeEnvironmentShape(environment) {
-  if (environment === undefined || environment === null) {
-    return undefined;
-  }
-
-  if (!isPlainObject(environment)) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment must be an object",
-      { field: "runtime.environment" }
-    );
-  }
-
-  if (
-    environment.reset_before_run !== undefined &&
-    typeof environment.reset_before_run !== "boolean"
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.reset_before_run must be a boolean",
-      { field: "runtime.environment.reset_before_run" }
-    );
-  }
-
-  if (
-    environment.managed_processes !== undefined &&
-    !Array.isArray(environment.managed_processes)
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.managed_processes must be an array",
-      { field: "runtime.environment.managed_processes" }
-    );
-  }
-
-  if (
-    environment.startup !== undefined &&
-    !isPlainObject(environment.startup)
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup must be an object",
-      { field: "runtime.environment.startup" }
-    );
-  }
-
-  const startup = environment.startup || {};
-
-  if (
-    startup.command !== undefined &&
-    typeof startup.command !== "string"
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.command must be a string",
-      { field: "runtime.environment.startup.command" }
-    );
-  }
-
-  if (
-    startup.healthcheck !== undefined &&
-    !isPlainObject(startup.healthcheck)
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.healthcheck must be an object",
-      { field: "runtime.environment.startup.healthcheck" }
-    );
-  }
-
-  const healthcheck = startup.healthcheck || {};
-
-  if (
-    healthcheck.type !== undefined &&
-    typeof healthcheck.type !== "string"
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.healthcheck.type must be a string",
-      { field: "runtime.environment.startup.healthcheck.type" }
-    );
-  }
-
-  if (
-    healthcheck.url !== undefined &&
-    typeof healthcheck.url !== "string"
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.healthcheck.url must be a string",
-      { field: "runtime.environment.startup.healthcheck.url" }
-    );
-  }
-
-  if (
-    healthcheck.timeoutSec !== undefined &&
-    !Number.isFinite(healthcheck.timeoutSec)
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.healthcheck.timeoutSec must be a finite number",
-      { field: "runtime.environment.startup.healthcheck.timeoutSec" }
-    );
-  }
-
-  if (
-    healthcheck.host !== undefined &&
-    typeof healthcheck.host !== "string"
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.healthcheck.host must be a string",
-      { field: "runtime.environment.startup.healthcheck.host" }
-    );
-  }
-
-  if (
-    healthcheck.port !== undefined &&
-    healthcheck.port !== null &&
-    (!Number.isInteger(healthcheck.port) || healthcheck.port <= 0)
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.healthcheck.port must be a positive integer or null",
-      { field: "runtime.environment.startup.healthcheck.port" }
-    );
-  }
-
-  if (
-    healthcheck.pid !== undefined &&
-    healthcheck.pid !== null &&
-    (!Number.isInteger(healthcheck.pid) || healthcheck.pid <= 0)
-  ) {
-    throw createPlanSchemaError(
-      "Plan runtime is invalid: environment.startup.healthcheck.pid must be a positive integer or null",
-      { field: "runtime.environment.startup.healthcheck.pid" }
-    );
-  }
-
-  return {
-    reset_before_run: environment.reset_before_run === true,
-    managed_processes: Array.isArray(environment.managed_processes)
-      ? environment.managed_processes
-      : [],
-    startup: {
-      command:
-        typeof startup.command === "string" ? startup.command : "",
-      healthcheck: {
-        type:
-          typeof healthcheck.type === "string" ? healthcheck.type : "http_ok",
-        url:
-          typeof healthcheck.url === "string" ? healthcheck.url : "",
-        timeoutSec:
-          Number.isFinite(healthcheck.timeoutSec) ? healthcheck.timeoutSec : 30,
-        host:
-          typeof healthcheck.host === "string" ? healthcheck.host : "",
-        port:
-          Number.isInteger(healthcheck.port) && healthcheck.port > 0
-            ? healthcheck.port
-            : null,
-        pid:
-          Number.isInteger(healthcheck.pid) && healthcheck.pid > 0
-            ? healthcheck.pid
-            : null,
-      },
-    },
-  };
-}
-
 function assertRuntimeShape(runtime) {
   const normalized = assertOptionalPlainObject(runtime, "runtime");
 
@@ -242,8 +85,6 @@ function assertRuntimeShape(runtime) {
     );
   }
 
-  const environment = assertRuntimeEnvironmentShape(normalized.environment);
-
   return {
     maxSteps:
       normalized.maxSteps === undefined ? null : normalized.maxSteps,
@@ -251,7 +92,6 @@ function assertRuntimeShape(runtime) {
       normalized.strictCommands === undefined
         ? false
         : normalized.strictCommands,
-    ...(environment !== undefined ? { environment } : {}),
   };
 }
 
@@ -283,7 +123,7 @@ function assertExecutableCtxSnapshot(snapshot) {
   };
 }
 
-function assertPlanStep(step, index) {
+function assertLegacyPlanStep(step, index) {
   if (!isPlainObject(step)) {
     throw createPlanSchemaError(
       "Plan step is invalid: step must be an object",
@@ -341,7 +181,7 @@ function assertPlanStep(step, index) {
   };
 }
 
-function assertPlanSteps(steps) {
+function assertLegacyPlanSteps(steps) {
   const normalizedSteps = assertOptionalArray(steps, "steps");
 
   if (normalizedSteps.length === 0) {
@@ -354,7 +194,7 @@ function assertPlanSteps(steps) {
   const seenStepIds = new Set();
 
   return normalizedSteps.map((step, index) => {
-    const normalizedStep = assertPlanStep(step, index);
+    const normalizedStep = assertLegacyPlanStep(step, index);
 
     if (normalizedStep.index !== index) {
       throw createPlanSchemaError(
@@ -383,11 +223,71 @@ function assertPlanSteps(steps) {
   });
 }
 
-function assertPlanShape(plan) {
-  if (!isPlainObject(plan)) {
-    throw createPlanSchemaError("Plan is invalid: object expected");
+function assertMaterializedPlanStep(step, index) {
+  if (!isPlainObject(step)) {
+    throw createPlanSchemaError(
+      "Materialized plan step is invalid: step must be an object",
+      { stepIndex: index }
+    );
   }
 
+  const type = assertNonEmptyString(step.type, "steps[].type", {
+    stepIndex: index,
+    field: "type",
+  });
+
+  const action = assertNonEmptyString(step.action, "steps[].action", {
+    stepIndex: index,
+    field: "action",
+  });
+
+  const payload = assertOptionalPlainObject(step.payload, "steps[].payload", {
+    stepIndex: index,
+    field: "payload",
+  });
+
+  if (type === "provide" && action === "file.read") {
+    assertNonEmptyString(payload.path, "steps[].payload.path", {
+      stepIndex: index,
+      field: "payload.path",
+    });
+  }
+
+  if (type === "check" && action === "goal.check") {
+    assertNonEmptyString(payload.text, "steps[].payload.text", {
+      stepIndex: index,
+      field: "payload.text",
+    });
+  }
+
+  return {
+    type,
+    action,
+    payload,
+    stepId:
+      typeof step.stepId === "string" && step.stepId.trim().length > 0
+        ? step.stepId.trim()
+        : `materialized-step-${index}`,
+    index,
+  };
+}
+
+function assertMaterializedPlanSteps(steps) {
+  const normalizedSteps = assertOptionalArray(steps, "steps");
+
+  if (normalizedSteps.length === 0) {
+    throw createPlanSchemaError(
+      "Plan is invalid: steps must be a non-empty array",
+      { field: "steps" }
+    );
+  }
+
+  return normalizedSteps.map((step, index) =>
+    assertMaterializedPlanStep(step, index)
+  );
+}
+
+function assertLegacyScenarioPlanShape(plan) {
   if (plan.version !== PLAN_VERSION) {
     throw createPlanSchemaError(
       `Plan is invalid: version must be ${PLAN_VERSION}`,
@@ -417,7 +317,7 @@ function assertPlanShape(plan) {
   const executableCtxSnapshot = assertExecutableCtxSnapshot(
     plan.executableCtxSnapshot
   );
-  const steps = assertPlanSteps(plan.steps);
+  const steps = assertLegacyPlanSteps(plan.steps);
 
   return {
     version: PLAN_VERSION,
@@ -430,9 +330,122 @@ function assertPlanShape(plan) {
   };
 }
 
+function assertMaterializedPlanShape(plan) {
+  if (plan.version !== PLAN_VERSION) {
+    throw createPlanSchemaError(
+      `Plan is invalid: version must be ${PLAN_VERSION}`,
+      {
+        field: "version",
+        expected: PLAN_VERSION,
+        actual: plan.version,
+      }
+    );
+  }
+
+  const kind = assertNonEmptyString(plan.kind, "kind");
+  if (kind !== PLAN_KIND_MATERIALIZED) {
+    throw createPlanSchemaError(
+      `Plan is invalid: unsupported kind ${kind}`,
+      {
+        field: "kind",
+        expected: PLAN_KIND_MATERIALIZED,
+        actual: kind,
+      }
+    );
+  }
+
+  const receiver = assertNonEmptyString(plan.receiver, "receiver");
+  if (receiver !== "uri") {
+    throw createPlanSchemaError(
+      `Plan is invalid: unsupported receiver ${receiver}`,
+      {
+        field: "receiver",
+        expected: "uri",
+        actual: receiver,
+      }
+    );
+  }
+
+  const project = assertNonEmptyString(plan.project, "project");
+  const goal = assertNonEmptyString(plan.goal, "goal");
+
+  if (
+    plan.maxAttempts !== undefined &&
+    plan.maxAttempts !== null &&
+    (!Number.isInteger(plan.maxAttempts) || plan.maxAttempts <= 0)
+  ) {
+    throw createPlanSchemaError(
+      "Plan is invalid: maxAttempts must be a positive integer",
+      {
+        field: "maxAttempts",
+        actual: plan.maxAttempts,
+      }
+    );
+  }
+
+  const source = assertOptionalPlainObject(plan.source, "source");
+  const steps = assertMaterializedPlanSteps(plan.steps);
+
+  return {
+    version: PLAN_VERSION,
+    kind: PLAN_KIND_MATERIALIZED,
+    source,
+    receiver,
+    project,
+    goal,
+    maxAttempts:
+      plan.maxAttempts === undefined || plan.maxAttempts === null
+        ? 1
+        : plan.maxAttempts,
+    steps,
+    runtime: {
+      maxSteps: null,
+      strictCommands: false,
+    },
+    executableCtxSnapshot: {
+      engine: "materialized",
+      commands: {},
+      runtime: {},
+    },
+    engine: "materialized",
+  };
+}
+
+function assertPlanShape(plan) {
+  if (!isPlainObject(plan)) {
+    throw createPlanSchemaError("Plan is invalid: object expected");
+  }
+
+  if (typeof plan.kind === "string") {
+    const kind = plan.kind.trim();
+
+    if (kind === PLAN_KIND_SCENARIO) {
+      return assertLegacyScenarioPlanShape(plan);
+    }
+
+    if (kind === PLAN_KIND_MATERIALIZED) {
+      return assertMaterializedPlanShape(plan);
+    }
+
+    throw createPlanSchemaError(
+      `Plan is invalid: unsupported kind ${kind}`,
+      {
+        field: "kind",
+        actual: kind,
+      }
+    );
+  }
+
+  return assertMaterializedPlanShape({
+    ...plan,
+    kind: PLAN_KIND_MATERIALIZED,
+  });
+}
+
 module.exports = {
   PLAN_VERSION,
   PLAN_KIND_SCENARIO,
+  PLAN_KIND_MATERIALIZED,
   isPlainObject,
   createPlanSchemaError,
   assertPlanShape,

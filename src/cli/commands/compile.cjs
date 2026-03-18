@@ -1,18 +1,44 @@
 "use strict";
 
+const fs = require("fs/promises");
 const path = require("path");
 
 const { readRunbookFromInboxZip } = require("../../uram/runbook.cjs");
 const { resolveProjectContext } = require("../../uram/project-resolver.cjs");
 const { loadExecutableContext } = require("../../uram/executable-context.cjs");
 const { compilePlan } = require("../../uram/compile-plan.cjs");
-const { writePlanToFile } = require("../../uram/plan-io.cjs");
+const { compileRunbookObject } = require("../../runtime/compile-runbook.cjs");
 
-async function compileInboxToPlan({
-  uramRoot,
-  inboxZipPath,
-  outputPlanPath,
-}) {
+function isMaterializedRunbook(runbook) {
+  return (
+    runbook &&
+    runbook.receiver === "uri" &&
+    (
+      Array.isArray(runbook.provide) ||
+      Array.isArray(runbook.modify) ||
+      Array.isArray(runbook.goal_checks)
+    )
+  );
+}
+
+async function compileInboxToPlan(input, maybeOutputPlanPath) {
+  let inboxZipPath;
+  let outputPlanPath;
+  let uramRoot = process.cwd();
+
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    inboxZipPath = input.inboxZipPath;
+    outputPlanPath = input.outputPlanPath;
+    uramRoot = input.uramRoot || uramRoot;
+  } else {
+    inboxZipPath = input;
+    outputPlanPath = maybeOutputPlanPath;
+  }
+
+  if (!inboxZipPath || !outputPlanPath) {
+    throw new Error("compile requires <inbox.zip> <output-plan.json>");
+  }
+
   const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
   const project = runbook?.project;
@@ -20,33 +46,50 @@ async function compileInboxToPlan({
     throw new Error("[uri] runbook missing project field");
   }
 
-  const projectCtx = await resolveProjectContext({
-    uramRoot,
-    project,
-  });
+  let plan;
 
-  const executableCtx = await loadExecutableContext(projectCtx);
+  if (isMaterializedRunbook(runbook)) {
+    plan = compileRunbookObject(runbook, { source: "RUNBOOK.yaml" });
+  } else {
+    const projectCtx = await resolveProjectContext({
+      uramRoot,
+      project,
+      cwd: path.dirname(path.resolve(inboxZipPath)),
+    });
 
-  const plan = compilePlan({
-    runbook,
-    project,
-    executionKind: "scenario",
-    executableCtx,
-  });
+    let executableCtx = null;
 
-  const result = await writePlanToFile(plan, path.resolve(outputPlanPath));
+    try {
+      executableCtx = await loadExecutableContext(projectCtx);
+    } catch {
+      executableCtx = null;
+    }
 
-  console.log(`[uri] plan written: ${result.path}`);
-  console.log(`[uri] bytes: ${result.bytes}`);
+    plan = compilePlan({
+      runbook,
+      project,
+      executionKind: "scenario",
+      executableCtx,
+    });
+  }
+
+  const absOutputPath = path.resolve(outputPlanPath);
+  await fs.mkdir(path.dirname(absOutputPath), { recursive: true });
+  const payload = JSON.stringify(plan, null, 2);
+  await fs.writeFile(absOutputPath, payload, "utf8");
+
+  const bytes = Buffer.byteLength(payload, "utf8");
+
+  console.log(`[uri] plan written: ${absOutputPath}`);
+  console.log(`[uri] bytes: ${bytes}`);
 
   return {
     ok: true,
     project,
-    planPath: result.path,
-    bytes: result.bytes,
+    planPath: absOutputPath,
+    bytes,
   };
 }
 
-module.exports = {
-  compileInboxToPlan,
-};
+module.exports = compileInboxToPlan;
+module.exports.compileInboxToPlan = compileInboxToPlan;
