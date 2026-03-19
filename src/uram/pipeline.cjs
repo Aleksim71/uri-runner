@@ -1,8 +1,10 @@
+// path: src/uram/pipeline.cjs
 "use strict";
 
 const fsp = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
+const { execFileSync } = require("child_process");
 
 const { resolveProjectContext } = require("./project-resolver.cjs");
 const { withExecutionLock } = require("./execution-lock.cjs");
@@ -232,6 +234,10 @@ function normalizeEngineError(err, fallbackEngine) {
       },
       tmpProvidedDir:
         err && typeof err.tmpProvidedDir === "string" ? err.tmpProvidedDir : null,
+      fileDeliveryReport:
+        err && err.fileDeliveryReport && typeof err.fileDeliveryReport === "object"
+          ? err.fileDeliveryReport
+          : null,
     },
   };
 }
@@ -283,7 +289,108 @@ function buildCanonicalRuntimeOutbox({
     finalPayload.tmpProvidedDir = meta.tmpProvidedDir ?? null;
   }
 
+  if (meta?.fileDeliveryReport && typeof meta.fileDeliveryReport === "object") {
+    finalPayload.fileDeliveryReport = meta.fileDeliveryReport;
+  }
+
   return finalPayload;
+}
+
+async function syncOutboxJsonIntoZip({
+  zipPath,
+  fileDeliveryReport,
+}) {
+  if (
+    typeof zipPath !== "string" ||
+    !zipPath.endsWith(".zip") ||
+    !fileDeliveryReport ||
+    typeof fileDeliveryReport !== "object"
+  ) {
+    return;
+  }
+
+  const zipAbs = path.resolve(zipPath);
+
+  try {
+    await fsp.access(zipAbs);
+  } catch {
+    return;
+  }
+
+  let existingOutbox = {};
+
+  try {
+    const raw = execFileSync("unzip", ["-p", zipAbs, "outbox.json"], {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      existingOutbox = parsed;
+    }
+  } catch {
+    existingOutbox = {};
+  }
+
+  const nextOutbox = {
+    ...existingOutbox,
+    fileDeliveryReport,
+  };
+
+  const patchRoot = await fsp.mkdtemp(path.join(path.dirname(zipAbs), ".outbox-sync-"));
+  const outboxJsonPath = path.join(patchRoot, "outbox.json");
+
+  try {
+    await fsp.writeFile(
+      outboxJsonPath,
+      JSON.stringify(nextOutbox, null, 2),
+      "utf-8"
+    );
+
+    try {
+      execFileSync("zip", ["-q", "-d", zipAbs, "outbox.json"], {
+        stdio: "ignore",
+      });
+    } catch {
+      // ignore when outbox.json does not exist yet inside zip
+    }
+
+    execFileSync("zip", ["-q", zipAbs, "outbox.json"], {
+      cwd: patchRoot,
+      stdio: "ignore",
+    });
+  } finally {
+    await fsp.rm(patchRoot, { recursive: true, force: true });
+  }
+}
+
+async function syncHistoryOutboxJson({
+  historyDir,
+  runId,
+  fileDeliveryReport,
+}) {
+  if (typeof historyDir !== "string" || !historyDir.trim()) {
+    return;
+  }
+
+  let entries = [];
+  try {
+    entries = await fsp.readdir(historyDir);
+  } catch {
+    return;
+  }
+
+  const candidates = entries
+    .filter((name) => name.startsWith(`${runId}__`) && name.endsWith(".outbox.zip"))
+    .map((name) => path.join(historyDir, name));
+
+  for (const candidate of candidates) {
+    await syncOutboxJsonIntoZip({
+      zipPath: candidate,
+      fileDeliveryReport,
+    });
+  }
 }
 
 async function persistPlanArtifacts({
@@ -415,7 +522,7 @@ async function persistScenarioPostExecutionArtifacts({
   };
 }
 
-function buildSuccessOutboxPayload({ provided }) {
+function buildSuccessOutboxPayload({ provided, fileDeliveryReport = null }) {
   const payload = {
     status: "success",
     attempts: 1,
@@ -425,10 +532,14 @@ function buildSuccessOutboxPayload({ provided }) {
     payload.provided = provided;
   }
 
+  if (fileDeliveryReport && typeof fileDeliveryReport === "object") {
+    payload.fileDeliveryReport = fileDeliveryReport;
+  }
+
   return payload;
 }
 
-function buildErrorOutboxPayload({ error, provided }) {
+function buildErrorOutboxPayload({ error, provided, fileDeliveryReport = null }) {
   const payload = {
     status: "error",
     attempts: 1,
@@ -437,6 +548,10 @@ function buildErrorOutboxPayload({ error, provided }) {
 
   if (Array.isArray(provided) && provided.length > 0) {
     payload.provided = provided;
+  }
+
+  if (fileDeliveryReport && typeof fileDeliveryReport === "object") {
+    payload.fileDeliveryReport = fileDeliveryReport;
   }
 
   return payload;
@@ -526,7 +641,7 @@ async function runScenarioPhases({
       resultArtifact,
     });
 
-    const { provided, tmpProvidedDir } = await buildProvidedOutputs({
+    const { provided, tmpProvidedDir, fileDeliveryReport } = await buildProvidedOutputs({
       runbook,
       projectRoot,
       workspaceDir,
@@ -539,7 +654,11 @@ async function runScenarioPhases({
       path: planArtifacts.planRelPath,
     };
     engineResult.meta.tmpProvidedDir = tmpProvidedDir || null;
-    engineResult.outboxPayload = buildSuccessOutboxPayload({ provided });
+    engineResult.meta.fileDeliveryReport = fileDeliveryReport || null;
+    engineResult.outboxPayload = buildSuccessOutboxPayload({
+      provided,
+      fileDeliveryReport,
+    });
 
     return engineResult;
   } catch (error) {
@@ -567,6 +686,7 @@ async function runScenarioPhases({
 
     let provided = [];
     let tmpProvidedDir = null;
+    let fileDeliveryReport = null;
 
     try {
       const collected = await buildProvidedOutputs({
@@ -578,6 +698,7 @@ async function runScenarioPhases({
       });
       provided = collected.provided;
       tmpProvidedDir = collected.tmpProvidedDir;
+      fileDeliveryReport = collected.fileDeliveryReport || null;
     } catch {
       // ignore provide failures on error path
     }
@@ -585,8 +706,10 @@ async function runScenarioPhases({
     error.outboxPayload = buildErrorOutboxPayload({
       error,
       provided,
+      fileDeliveryReport,
     });
     error.tmpProvidedDir = tmpProvidedDir;
+    error.fileDeliveryReport = fileDeliveryReport;
 
     throw error;
   }
@@ -720,6 +843,17 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
       tmpProvidedDir: engineResult.meta?.tmpProvidedDir || null,
     });
 
+    await syncOutboxJsonIntoZip({
+      zipPath: latestOutboxPath,
+      fileDeliveryReport: engineResult.meta?.fileDeliveryReport || null,
+    });
+
+    await syncHistoryOutboxJson({
+      historyDir,
+      runId,
+      fileDeliveryReport: engineResult.meta?.fileDeliveryReport || null,
+    });
+
     const runtimeResult = buildRuntimeResult({
       runId,
       project,
@@ -783,6 +917,17 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
           quiet,
           planRelPath: normalizedResult.meta?.plan?.path || null,
           tmpProvidedDir: normalizedResult.meta?.tmpProvidedDir || null,
+        });
+
+        await syncOutboxJsonIntoZip({
+          zipPath: latestOutboxPath,
+          fileDeliveryReport: normalizedResult.meta?.fileDeliveryReport || null,
+        });
+
+        await syncHistoryOutboxJson({
+          historyDir,
+          runId,
+          fileDeliveryReport: normalizedResult.meta?.fileDeliveryReport || null,
         });
       } catch (finalizeErr) {
         const finalizeMessage =

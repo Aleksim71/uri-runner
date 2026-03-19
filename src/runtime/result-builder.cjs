@@ -1,3 +1,4 @@
+// path: src/runtime/result-builder.cjs
 "use strict";
 
 function buildRuntimeResult(input = {}) {
@@ -7,6 +8,11 @@ function buildRuntimeResult(input = {}) {
     exitCode: input.exitCode,
     error: input.error,
   });
+  const outboxPayload = normalizePlainObject(input.outboxPayload);
+  const meta = normalizeMeta(input.meta);
+  const fileDeliveryReport = normalizeFileDeliveryReport(
+    input.fileDeliveryReport ?? meta.fileDeliveryReport ?? outboxPayload.fileDeliveryReport ?? null
+  );
 
   return {
     runId: normalizeString(input.runId),
@@ -20,8 +26,9 @@ function buildRuntimeResult(input = {}) {
       input.loadedCommands ?? input.meta?.loadedCommands
     ),
     error: normalizeRuntimeError(input.error ?? input.meta?.error ?? null),
-    meta: normalizeMeta(input.meta),
-    outboxPayload: normalizePlainObject(input.outboxPayload),
+    meta,
+    outboxPayload,
+    fileDeliveryReport,
   };
 }
 
@@ -97,6 +104,78 @@ function normalizeRuntimeError(error) {
   };
 }
 
+function normalizeFileDeliveryReport(report) {
+  if (!isPlainObject(report)) {
+    return null;
+  }
+
+  const fileResults = Array.isArray(report.fileResults)
+    ? report.fileResults.map(normalizeFileResult)
+    : [];
+
+  return {
+    ok: report.ok === true,
+    error: normalizeRuntimeError(report.error),
+    summary: normalizeSummary(report.summary),
+    requestedFiles: normalizeStringArray(report.requestedFiles),
+    providedFiles: normalizeStringArray(report.providedFiles),
+    fileResults,
+    projectTree: normalizeProjectTree(report.projectTree),
+  };
+}
+
+function normalizeFileResult(item) {
+  const source = isPlainObject(item) ? { ...item } : {};
+  const normalized = {
+    requestedPath: normalizeString(source.requestedPath) || "[unknown]",
+    status: normalizeFileStatus(source.status),
+    providedPath: normalizeString(source.providedPath),
+    error: normalizeRuntimeError(source.error),
+  };
+
+  if (typeof source.kind === "string" && source.kind.trim()) {
+    normalized.kind = source.kind.trim();
+  }
+
+  if (Array.isArray(source.lines)) {
+    normalized.lines = source.lines.filter(Number.isInteger);
+  }
+
+  if (typeof source.source === "string" && source.source.trim()) {
+    normalized.source = source.source.trim();
+  }
+
+  return normalized;
+}
+
+function normalizeFileStatus(status) {
+  return status === "provided" || status === "missing" || status === "failed"
+    ? status
+    : "failed";
+}
+
+function normalizeSummary(summary) {
+  const source = isPlainObject(summary) ? summary : {};
+  return {
+    requested: normalizeCounter(source.requested),
+    provided: normalizeCounter(source.provided),
+    missing: normalizeCounter(source.missing),
+    failed: normalizeCounter(source.failed),
+  };
+}
+
+function normalizeCounter(value) {
+  return Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function normalizeProjectTree(projectTree) {
+  const source = isPlainObject(projectTree) ? projectTree : {};
+  return {
+    attached: source.attached === true,
+    path: normalizeString(source.path),
+  };
+}
+
 function normalizeMeta(meta) {
   const source = normalizePlainObject(meta);
   const normalized = { ...source };
@@ -111,8 +190,17 @@ function normalizeMeta(meta) {
     delete normalized.plan;
   }
 
-  if (typeof normalized.tmpProvidedDir !== "string" && normalized.tmpProvidedDir !== null) {
+  if (
+    typeof normalized.tmpProvidedDir !== "string" &&
+    normalized.tmpProvidedDir !== null
+  ) {
     delete normalized.tmpProvidedDir;
+  }
+
+  if ("fileDeliveryReport" in source) {
+    normalized.fileDeliveryReport = normalizeFileDeliveryReport(
+      source.fileDeliveryReport
+    );
   }
 
   return normalized;
@@ -123,9 +211,15 @@ function normalizeLoadedCommands(value) {
     return [];
   }
 
-  return value
-    .map((item) => normalizeString(item))
-    .filter(Boolean);
+  return value.map((item) => normalizeString(item)).filter(Boolean);
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => normalizeString(item)).filter(Boolean);
 }
 
 function normalizeAttempts(value) {
@@ -163,4 +257,5 @@ module.exports = {
   buildFailureResult,
   resolveExitCode,
   normalizeRuntimeError,
+  normalizeFileDeliveryReport,
 };

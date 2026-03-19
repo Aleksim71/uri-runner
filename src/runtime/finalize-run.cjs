@@ -1,3 +1,4 @@
+// path: src/runtime/finalize-run.cjs
 "use strict";
 
 const { buildRuntimeResult } = require("./result-builder.cjs");
@@ -17,6 +18,7 @@ function toPipelineReturn(result) {
     ok: runtimeResult.ok,
     executableCtx: runtimeResult.executableCtx,
     loadedCommands: runtimeResult.loadedCommands,
+    fileDeliveryReport: runtimeResult.fileDeliveryReport,
     ...(runtimeResult.meta || {}),
   };
 }

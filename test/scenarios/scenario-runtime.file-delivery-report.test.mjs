@@ -1,4 +1,4 @@
-// path: test/scenarios/scenario-runtime.outbox-contract.test.mjs
+// path: test/scenarios/scenario-runtime.file-delivery-report.test.mjs
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import fsp from "fs/promises";
@@ -17,22 +17,6 @@ async function ensureDir(p) {
 async function writeFile(p, body) {
   await ensureDir(path.dirname(p));
   await fsp.writeFile(p, body, "utf8");
-}
-
-async function walk(dir) {
-  const out = [];
-  const entries = await fsp.readdir(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...(await walk(full)));
-    } else {
-      out.push(full);
-    }
-  }
-
-  return out;
 }
 
 function zipRunbook(tempDir, runbookText) {
@@ -57,12 +41,6 @@ function unzipJson(zipPath, entryName) {
   return JSON.parse(raw);
 }
 
-function unzipText(zipPath, entryName) {
-  return execFileSync("unzip", ["-p", zipPath, entryName], {
-    encoding: "utf8",
-  });
-}
-
 function unzipList(zipPath) {
   return execFileSync("unzip", ["-Z1", zipPath], {
     encoding: "utf8",
@@ -73,9 +51,9 @@ function unzipList(zipPath) {
     .sort();
 }
 
-describe("scenario runtime outbox contract", () => {
-  it("puts outbox.json and requested provided files into outbox.zip", async () => {
-    const root = await fsp.mkdtemp(path.join(os.tmpdir(), "uri-v3-outbox-"));
+describe("scenario runtime file delivery report", () => {
+  it("attaches project tree and reports missing required files without flipping execution exitCode", async () => {
+    const root = await fsp.mkdtemp(path.join(os.tmpdir(), "uri-v3-delivery-report-"));
 
     const uramRoot = path.join(root, "uram");
     const projectName = "demo";
@@ -113,10 +91,7 @@ describe("scenario runtime outbox contract", () => {
       ].join("\n")
     );
 
-    await writeFile(
-      path.join(projectRoot, "report.txt"),
-      ["alpha", "beta", "gamma", "delta", "epsilon"].join("\n")
-    );
+    await writeFile(path.join(projectRoot, "report.txt"), "hello\nworld\n");
 
     const runbookText = [
       "version: 1",
@@ -125,13 +100,12 @@ describe("scenario runtime outbox contract", () => {
       "  - id: step_echo_1",
       "    command: system.echo",
       "    args:",
-      '      message: "hello outbox contract"',
+      '      message: "hello delivery report"',
       "provide:",
       "  - kind: file",
       "    path: report.txt",
-      "  - kind: file_fragment",
-      "    path: report.txt",
-      "    lines: [2, 4]",
+      "  - kind: file",
+      "    path: missing.txt",
       "",
     ].join("\n");
 
@@ -155,74 +129,53 @@ describe("scenario runtime outbox contract", () => {
     });
 
     expect(res.exitCode).toBe(0);
+    expect(res.ok).toBe(true);
     expect(res.fileDeliveryReport).toMatchObject({
-      ok: true,
-      error: null,
+      ok: false,
+      error: {
+        code: "REQUIRED_FILES_DELIVERY_FAILED",
+      },
       summary: {
         requested: 2,
-        provided: 2,
-        missing: 0,
+        provided: 1,
+        missing: 1,
         failed: 0,
       },
-      requestedFiles: ["report.txt", "report.txt"],
-      providedFiles: ["report.txt", "report.txt"],
+      requestedFiles: ["report.txt", "missing.txt"],
+      providedFiles: ["report.txt"],
       projectTree: {
-        attached: false,
-        path: null,
+        attached: true,
+        path: "provided/project-tree.txt",
       },
     });
 
-    const allFiles = await walk(uramRoot);
-    const outboxFiles = allFiles.filter((p) => p.endsWith(".outbox.zip"));
-    expect(outboxFiles.length).toBeGreaterThan(0);
-
-    const latestOutbox = outboxFiles.sort().at(-1);
+    const projectBoxDir = path.join(uramRoot, `${projectName}Box`);
+    const latestOutbox = path.join(projectBoxDir, "outbox.latest.zip");
     const entries = unzipList(latestOutbox);
 
-    expect(entries).toEqual([
-      "outbox.json",
-      "provided/fragments/report.txt_2_4.txt",
-      "provided/report.txt",
-    ]);
+    expect(entries).toContain("outbox.json");
+    expect(entries).toContain("provided/report.txt");
+    expect(entries).toContain("provided/project-tree.txt");
 
     const outbox = unzipJson(latestOutbox, "outbox.json");
-
     expect(outbox.status).toBe("success");
-    expect(outbox.attempts).toBe(1);
-    expect(outbox.provided).toEqual([
-      {
-        kind: "file",
-        path: "provided/report.txt",
-      },
-      {
-        kind: "file_fragment",
-        path: "provided/fragments/report.txt_2_4.txt",
-        source: "report.txt",
-        lines: [2, 4],
-      },
-    ]);
     expect(outbox.fileDeliveryReport).toMatchObject({
-      ok: true,
-      error: null,
+      ok: false,
+      error: {
+        code: "REQUIRED_FILES_DELIVERY_FAILED",
+      },
       summary: {
         requested: 2,
-        provided: 2,
-        missing: 0,
+        provided: 1,
+        missing: 1,
         failed: 0,
       },
+      requestedFiles: ["report.txt", "missing.txt"],
+      providedFiles: ["report.txt"],
       projectTree: {
-        attached: false,
-        path: null,
+        attached: true,
+        path: "provided/project-tree.txt",
       },
     });
-
-    const deliveredFile = unzipText(latestOutbox, "provided/report.txt");
-    expect(deliveredFile).toBe(["alpha", "beta", "gamma", "delta", "epsilon"].join("\n"));
-
-    const deliveredFragment = unzipText(
-      latestOutbox,
-      "provided/fragments/report.txt_2_4.txt"
-    );
-    expect(deliveredFragment).toBe(["beta", "gamma", "delta"].join("\n"));
   });
 });

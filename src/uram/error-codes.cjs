@@ -1,3 +1,4 @@
+// path: src/uram/error-codes.cjs
 "use strict";
 
 const ERROR_CODES = Object.freeze({
@@ -9,10 +10,18 @@ const ERROR_CODES = Object.freeze({
   MAX_STEPS_EXCEEDED: "MAX_STEPS_EXCEEDED",
   SCENARIO_INVALID: "SCENARIO_INVALID",
   PIPELINE_INTERNAL_ERROR: "PIPELINE_INTERNAL_ERROR",
+
+  REQUIRED_FILES_DELIVERY_FAILED: "REQUIRED_FILES_DELIVERY_FAILED",
+  INTERNAL_DELIVERY_ERROR: "INTERNAL_DELIVERY_ERROR",
+  FILE_NOT_FOUND: "FILE_NOT_FOUND",
+  FILE_READ_FAILED: "FILE_READ_FAILED",
+  FILE_COPY_FAILED: "FILE_COPY_FAILED",
+  FILE_ACCESS_DENIED: "FILE_ACCESS_DENIED",
+  FILE_CORRUPT: "FILE_CORRUPT",
 });
 
 function isKnownErrorCode(code) {
-  return Object.prototype.hasOwnProperty.call(ERROR_CODES, code);
+  return Object.values(ERROR_CODES).includes(code);
 }
 
 module.exports = {

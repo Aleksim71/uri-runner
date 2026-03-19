@@ -1,114 +1,136 @@
-URI Runner Runtime Finalize Contract
+URI Runner
+Контракт финализации Runtime
 
-Overview
+Версия: A16 (A15 + File Delivery Report V1)
 
-The finalize stage converts runtime execution results into stable artifacts
-used by both URI internal systems and external AI integrations.
+Обзор
 
-Success Run Contract
+Статус
 
-For successful runs (exitCode = 0):
+Слой реализован и подтверждён regression tests.
 
-latest outbox is stored as ZIP artifact.
+Стадия finalize переводит внутренний результат выполнения в устойчивые артефакты,
+которые используют и внутренние системы URI, и внешний handoff для Макса.
 
-Structure:
+Главный принцип
+
+Finalize не должен повторно вычислять истину о результате.
+Он принимает уже нормализованный runtime result и собирает поверхности:
+
+- outbox для внешнего handoff
+- history artifacts
+- runtime summary / telemetry
+
+Разделение уровней
+
+Уровень 1:
+outbox.json
+Минимальный внешний отчёт для Макса.
+
+Уровень 2:
+history index
+trace files
+runtime summary
+
+Это операционная телеметрия URI, а не внешний handoff-контракт.
+
+Транспортный артефакт outbox
+
+Базовый успешный transport-артефакт:
 
 latest.outbox.zip
 
-```
+Структура:
+
 outbox.json
 provided/
-```
 
-Minimal success payload:
-
-{
-"status": "success",
-"attempts": 1
-}
-
-Optional fields:
-
-provided
-trace
-
-Error Run Contract
-
-For failed runs (exitCode != 0):
-
-latest outbox is stored as JSON runtime summary.
-
-Structure:
-
-latest.outbox.json
-
-Example:
+Минимальная успешная форма outbox.json:
 
 {
-"runId": "...",
-"project": "...",
-"engine": "scenario",
-"exitCode": 1,
-"ok": false,
-"error": {
-"name": "...",
-"code": "...",
-"message": "...",
-"details": {}
+  "status": "success",
+  "attempts": 1
 }
+
+Допустимые расширения успешного outbox.json:
+- provided
+- plan
+- tmpProvidedDir
+- fileDeliveryReport
+
+Ошибка выполнения
+
+При ошибке runtime internal result остаётся отдельным от транспортного handoff.
+
+Важно:
+- `exitCode != 0` описывает завершение запуска
+- `error.code` описывает тип ошибки
+- `outbox.json` остаётся внешним отчётом
+
+Для handoff-доставки это означает:
+- если есть полезные вложения (`provided/*`), transport-артефакт может оставаться ZIP
+- внутри `outbox.json` фиксируется статус ошибки и диагностические поля
+- runtime summary / history не подменяются transport-формой
+
+Required Files Delivery Report V1
+
+Начиная с V1, finalize должен поддерживать внешний отчёт по обязательным файлам.
+
+Если запрошен обязательный набор файлов, то в `outbox.json` допускается поле:
+
+fileDeliveryReport
+
+Минимальная форма:
+
+{
+  "ok": false,
+  "error": {
+    "code": "REQUIRED_FILES_DELIVERY_FAILED",
+    "message": "Не удалось подготовить и передать полный набор обязательных файлов",
+    "details": {}
+  },
+  "summary": {
+    "requested": 3,
+    "provided": 1,
+    "missing": 1,
+    "failed": 1
+  },
+  "requestedFiles": [],
+  "providedFiles": [],
+  "fileResults": [],
+  "projectTree": {
+    "attached": true,
+    "path": "provided/project-tree.txt"
+  }
 }
+
+Правила финализации для V1:
+
+1. `outbox.json` остаётся главным внешним отчётом.
+2. Handoff-файл может быть неуспешным (`ok=false` в fileDeliveryReport), но при этом обязан сохранить полезные приложенные файлы.
+3. Если `fileDeliveryReport.ok=false`, дерево проекта должно быть приложено как внешний диагностический артефакт.
+4. Финализация не должна скрывать частично собранные полезные файлы.
+5. Финализация не должна создавать вторую независимую систему результата рядом с A15.
+
+Совместимость
+
+Сценарные regression tests, проверяющие:
+- наличие `outbox.json`
+- наличие `provided/*`
+- стабильность success-формы
+
+не должны ломаться.
+
+Значит:
+- старое поле `provided` сохраняется
+- новый отчёт добавляется расширением, а не заменой
+- old success-case остаётся валидным без обязательного присутствия `fileDeliveryReport`
 
 History Artifacts
 
-Every run produces history artifacts.
+Каждый run продолжает выпускать history artifacts.
 
-history/
+History нужен для URI runtime.
+Outbox нужен для handoff Максу.
 
-```
-<runId>__<engine>__OK.outbox.zip
-<runId>__<engine>__ERR.outbox.zip
-```
-
-Each history artifact contains:
-
-outbox.json
-provided/*
-
-History Index
-
-Two compatible formats exist.
-
-Structured format (success runs):
-
-{
-"version": 1,
-"runs": [...]
-}
-
-Legacy format (error compatibility):
-
-[
-runRecord,
-runRecord
-]
-
-This dual format exists to maintain compatibility
-with scenario runtime regression tests.
-
-Design Principle
-
-Execution report and runtime summary are intentionally separated.
-
-Layer 1:
-
-outbox.json
-Minimal execution report intended for external AI.
-
-Layer 2:
-
-runtime summary
-history index
-trace files
-
-Operational telemetry used by URI runtime itself.
-
+Эти две поверхности связаны, но не тождественны.

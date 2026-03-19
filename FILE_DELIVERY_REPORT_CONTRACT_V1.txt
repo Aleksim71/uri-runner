@@ -1,0 +1,272 @@
+URI RUNNER
+V1 CONTRACT — REQUIRED FILES DELIVERY REPORT
+DATE: 2026-03-19
+STATUS: IMPLEMENTED (A16)
+
+1. НАЗНАЧЕНИЕ
+
+Контракт описывает результат попытки URI собрать и передать Максу обязательный набор файлов.
+
+Ключевой принцип:
+- достижение цели оценивается бинарно
+- цель достигнута только если весь обязательный набор файлов успешно передан
+- если хотя бы один обязательный файл не передан, цель НЕ достигнута
+- при недостижении цели URI всё равно возвращает все полезные данные: переданные файлы, диагностику по каждому запрошенному файлу и дерево проекта
+
+2. СЕМАНТИКА РЕЗУЛЬТАТА
+
+ok: true
+- все обязательные файлы успешно переданы
+- ошибок по обязательным файлам нет
+- дерево проекта по умолчанию не прикладывается
+- отчёт доставки не переводит run в ошибку
+
+ok: false
+- хотя бы один обязательный файл не был успешно передан
+- в отчёте обязательно присутствует error
+- в отчёте обязательно присутствует fileResults
+- в отчёте обязательно присутствует projectTree
+- итог handoff считается неуспешным, даже если часть файлов была полезно передана
+
+3. ФОРМА ВЕРХНЕУРОВНЕВОГО ОТЧЁТА
+
+{
+  "ok": false,
+  "error": {
+    "code": "REQUIRED_FILES_DELIVERY_FAILED",
+    "message": "Не удалось подготовить и передать полный набор обязательных файлов",
+    "details": {}
+  },
+  "summary": {
+    "requested": 3,
+    "provided": 1,
+    "missing": 1,
+    "failed": 1
+  },
+  "requestedFiles": [
+    "src/runtime/run-plan.cjs",
+    "src/runtime/finalize-run.cjs",
+    "src/runtime/result-builder.cjs"
+  ],
+  "providedFiles": [
+    "src/runtime/run-plan.cjs"
+  ],
+  "fileResults": [
+    {
+      "requestedPath": "src/runtime/run-plan.cjs",
+      "status": "provided",
+      "providedPath": "src/runtime/run-plan.cjs",
+      "error": null
+    },
+    {
+      "requestedPath": "src/runtime/finalize-run.cjs",
+      "status": "missing",
+      "providedPath": null,
+      "error": {
+        "code": "FILE_NOT_FOUND",
+        "message": "Файл отсутствует в проекте",
+        "details": {}
+      }
+    },
+    {
+      "requestedPath": "src/runtime/result-builder.cjs",
+      "status": "failed",
+      "providedPath": null,
+      "error": {
+        "code": "FILE_COPY_FAILED",
+        "message": "Не удалось скопировать файл",
+        "details": {}
+      }
+    }
+  ],
+  "projectTree": {
+    "attached": true,
+    "path": "provided/project-tree.txt"
+  }
+}
+
+4. ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ВЕРХНЕГО УРОВНЯ
+
+ok
+- type: boolean
+- meaning: достигнута ли цель передачи полного обязательного набора
+
+error
+- type: object | null
+- required when ok=false
+- must be null when ok=true
+
+summary
+- type: object
+- required always
+- fields:
+  - requested: integer >= 0
+  - provided: integer >= 0
+  - missing: integer >= 0
+  - failed: integer >= 0
+
+requestedFiles
+- type: string[]
+- required always
+- exact list requested by Max
+
+providedFiles
+- type: string[]
+- required always
+- list of files actually attached and transferred
+
+fileResults
+- type: object[]
+- required always
+- one entry per requested file
+- order must match requestedFiles
+
+projectTree
+- type: object
+- required always
+- fields:
+  - attached: boolean
+  - path: string | null
+
+5. КОДЫ ВЕРХНЕУРОВНЕВЫХ ОШИБОК
+
+REQUIRED_FILES_DELIVERY_FAILED
+- хотя бы один обязательный файл не был передан
+
+INTERNAL_DELIVERY_ERROR
+- внутренняя ошибка сборки отчёта / подготовки артефактов до классификации по файлам
+
+6. ФОРМА ЭЛЕМЕНТА fileResults
+
+{
+  "requestedPath": "src/runtime/run-plan.cjs",
+  "status": "provided",
+  "providedPath": "src/runtime/run-plan.cjs",
+  "error": null
+}
+
+Fields:
+- requestedPath: string, required
+- status: "provided" | "missing" | "failed", required
+- providedPath: string | null, required
+- error: object | null, required
+
+Rules:
+- status="provided" => providedPath must be string, error must be null
+- status="missing" => providedPath must be null, error.code must be FILE_NOT_FOUND
+- status="failed" => providedPath must be null, error must be non-null
+
+7. КОДЫ ОШИБОК НА УРОВНЕ ФАЙЛА
+
+FILE_NOT_FOUND
+- файл отсутствует по запрошенному пути
+
+FILE_READ_FAILED
+- файл найден, но не удалось прочитать
+
+FILE_COPY_FAILED
+- файл найден, но не удалось скопировать / подготовить к передаче
+
+FILE_ACCESS_DENIED
+- нет прав доступа
+
+FILE_CORRUPT
+- файл повреждён или не проходит базовую проверку чтения
+
+8. ПРАВИЛА ДЛЯ ДЕРЕВА ПРОЕКТА
+
+projectTree.attached = false
+- только если ok=true
+
+projectTree.attached = true
+- обязательно если ok=false
+
+projectTree.path
+- путь к приложенному артефакту дерева проекта внутри provided/outbox
+- если дерево не приложено, значение null
+
+9. ПРАВИЛО ПРИНЯТИЯ РЕШЕНИЯ
+
+Goal achieved:
+- every requested file has status="provided"
+- ok=true
+- error=null
+
+Goal failed:
+- at least one requested file has status="missing" or status="failed"
+- ok=false
+- error.code="REQUIRED_FILES_DELIVERY_FAILED"
+- projectTree.attached=true
+
+10. ЧТО НЕ ВХОДИТ В V1
+
+V1 специально НЕ требует:
+- автоматического угадывания альтернативных путей
+- автоматической подмены путей
+- fuzzy matching
+- multiple candidate files per request
+- always-on project tree on success
+
+11. МЕСТО В PIPELINE
+
+Зафиксированный порядок фаз:
+
+required-files intake check
+→ collect requested files
+→ build file delivery report
+→ if ok=false attach project tree and finalize failure
+→ if ok=true continue normal handoff
+
+В текущей реализации URI это означает:
+- не относить проверку к Intake Gate watcher-уровня
+- не относить её к compile или plan validation
+- встраивать слой в handoff / surface path после execution
+- выполнять классификацию файлов до финальной сборки outbox
+
+12. ВАЖНОЕ АРХИТЕКТУРНОЕ ПРАВИЛО
+
+Нельзя смешивать:
+- достижение цели
+- диагностическую полезность результата
+
+Правильно:
+- цель оценивается бинарно
+- полезные найденные файлы всё равно передаются
+- диагностика по каждому файлу включается в отчёт
+
+13. СОВМЕСТИМОСТЬ С A15
+
+Контракт V1 не вводит параллельную runtime-систему.
+
+Он должен усиливать уже существующий путь:
+
+COMPILE
+→ VALIDATE
+→ EXECUTE
+→ NORMALIZE RESULT
+→ COLLECT / CLASSIFY REQUIRED FILES
+→ FINALIZE SURFACES
+
+Следствия:
+- единый internal result layer остаётся источником истины
+- внешний outbox может быть расширен новыми полями
+- старый success-case `provided` не должен ломаться
+- history / trace / runtime summary не должны вычислять отдельную альтернативную истину
+
+14. МИНИМАЛЬНЫЕ ИНВАРИАНТЫ ВНЕДРЕНИЯ
+
+- `fileResults.length === requestedFiles.length`
+- `providedFiles` содержит только реально приложенные файлы
+- `summary.requested` равен `requestedFiles.length`
+- `summary.provided + summary.missing + summary.failed === summary.requested`
+- при `ok=false` должен существовать верхнеуровневый `error.code`
+- при `ok=false` должен прикладываться `provided/project-tree.txt` или эквивалентный диагностический артефакт дерева
+- `outbox.json` остаётся главным внешним отчётом для Макса
+
+12. СТАТУС РЕАЛИЗАЦИИ
+
+Начиная с A16:
+- `fileDeliveryReport` сохраняется в `outbox.json`
+- при `ok=false` прикладывается `provided/project-tree.txt`
+- старый smoke success-case остаётся совместимым
+- итоговая зелёная проверка: 42/42 test files PASS, 100/100 tests PASS
