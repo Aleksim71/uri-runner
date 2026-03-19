@@ -3,6 +3,10 @@
 const path = require('path');
 
 const {
+  toHistoryEntryExtras
+} = require('../finalize-run.cjs');
+
+const {
   readHistoryIndex,
   resolveHistoryIndexPath
 } = require('./read-history-index.cjs');
@@ -56,6 +60,8 @@ function buildHistoryEntry(options) {
   const trace = options.trace;
   const projectRoot = resolveProjectRoot(options.projectRoot);
 
+  const resultExtras = toHistoryEntryExtras(options.result || {});
+
   return {
     runId: trace.runId,
     createdAt: normalizeString(trace.createdAt) || new Date().toISOString(),
@@ -65,7 +71,9 @@ function buildHistoryEntry(options) {
     stepCount: Array.isArray(trace.steps) ? trace.steps.length : 0,
     traceRelPath: toRelPath(options.tracePath, projectRoot),
     outboxRelPath: toRelPath(options.outboxPath, projectRoot),
-    planRelPath: toRelPath(options.planPath, projectRoot)
+    planRelPath: toRelPath(options.planPath, projectRoot),
+    exitCode: resultExtras.exitCode,
+    errorCode: resultExtras.errorCode
   };
 }
 

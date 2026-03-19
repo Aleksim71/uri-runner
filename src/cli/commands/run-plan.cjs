@@ -4,6 +4,8 @@ const path = require("path");
 const fs = require("fs/promises");
 
 const { readPlanFromFile } = require("../../uram/plan-io.cjs");
+const { buildRuntimeResult } = require("../../runtime/result-builder.cjs");
+const { appendHistoryEntry } = require("../../runtime/history/append-history-entry.cjs");
 const { resolveProjectContext } = require("../../uram/project-resolver.cjs");
 const { runPlan } = require("../../uram/run-plan.cjs");
 const {
@@ -95,58 +97,6 @@ async function writeTrace(runtimePaths, trace) {
   return tracePath;
 }
 
-async function updateHistory({
-  runtimeRoot,
-  projectRoot,
-  trace,
-  tracePath,
-  planFilePath,
-}) {
-  const historyDir = path.join(runtimeRoot, "history");
-  await ensureDir(historyDir);
-
-  const indexPath = path.join(historyDir, "index.json");
-
-  let index = {
-    version: 1,
-    updatedAt: new Date().toISOString(),
-    runs: []
-  };
-
-  try {
-    const raw = await fs.readFile(indexPath, "utf8");
-    const parsed = JSON.parse(raw);
-
-    index = {
-      version: Number.isInteger(parsed?.version) ? parsed.version : 1,
-      updatedAt: parsed?.updatedAt || new Date().toISOString(),
-      runs: Array.isArray(parsed?.runs) ? parsed.runs : []
-    };
-  } catch {
-    // first run
-  }
-
-  index.runs = index.runs.filter((item) => item.runId !== trace.runId);
-
-  index.runs.unshift({
-    runId: trace.runId,
-    createdAt: trace.createdAt,
-    goal: trace.goal,
-    finalStatus: trace.finalStatus,
-    attempts: trace.attempts,
-    stepCount: Array.isArray(trace.steps) ? trace.steps.length : 0,
-    traceRelPath: path.relative(projectRoot, tracePath).replace(/\\/g, "/"),
-    outboxRelPath: null,
-    planRelPath: path.relative(process.cwd(), path.resolve(planFilePath)).replace(/\\/g, "/")
-  });
-
-  index.updatedAt = new Date().toISOString();
-
-  await fs.writeFile(indexPath, JSON.stringify(index, null, 2));
-
-  return indexPath;
-}
-
 async function runPlanFile({
   uramRoot,
   planFilePath,
@@ -190,12 +140,25 @@ async function runPlanFile({
   });
 
   const tracePath = await writeTrace(runtimePaths, trace);
-  const historyIndexPath = await updateHistory({
-    runtimeRoot: runtimePaths.runtimeRoot,
-    projectRoot: projectCtx.cwd,
+
+  const runtimeResult = buildRuntimeResult({
+    runId,
+    project,
+    engine: result?.outboxPayload?.engine || plan?.engine || "scenario",
+    exitCode: result?.exitCode,
+    meta: result?.meta || {},
+    outboxPayload: result?.outboxPayload || {},
+  });
+
+  const historyIndexPath = path.join(runtimePaths.runtimeRoot, "history", "index.json");
+
+  await appendHistoryEntry({
+    historyIndexPath,
     trace,
     tracePath,
-    planFilePath: absolutePlanPath,
+    planPath: absolutePlanPath,
+    projectRoot: projectCtx.cwd,
+    result: runtimeResult,
   });
 
   process.stdout.write(`${JSON.stringify(result.outboxPayload, null, 2)}\n`);

@@ -64,6 +64,8 @@ const { restoreBaselineSafe } = require("./state/restore-baseline.cjs");
 const { verifyBaselineSafe } = require("./state/verify-baseline.cjs");
 const { finalizeRuntimeSummary } = require("./runtime-summary.cjs");
 const { collectProvideOutputs } = require("./provide-output.cjs");
+const { buildRuntimeResult } = require("../runtime/result-builder.cjs");
+const { toPipelineReturn } = require("../runtime/finalize-run.cjs");
 
 class UramRuntimeError extends Error {
   constructor(message, code = ERROR_CODES.PIPELINE_INTERNAL_ERROR, details = {}) {
@@ -718,15 +720,18 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
       tmpProvidedDir: engineResult.meta?.tmpProvidedDir || null,
     });
 
-    return {
+    const runtimeResult = buildRuntimeResult({
       runId,
       project,
       engine: executionKind,
       exitCode: engineResult.exitCode,
-      ok: engineResult.exitCode === 0,
       executableCtx,
-      ...(engineResult.meta || {}),
-    };
+      loadedCommands: engineResult.meta?.loadedCommands || [],
+      meta: engineResult.meta || {},
+      outboxPayload: finalOutboxPayload,
+    });
+
+    return toPipelineReturn(runtimeResult);
   } catch (err) {
     const normalizedResult = normalizeEngineError(err, executionKind);
 
@@ -795,15 +800,19 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
       }
     }
 
-    return {
+    const runtimeResult = buildRuntimeResult({
       runId,
       project,
       engine: executionKind,
       exitCode: normalizedResult.exitCode,
-      ok: false,
       executableCtx,
-      ...(normalizedResult.meta || {}),
-    };
+      loadedCommands: normalizedResult.meta?.loadedCommands || [],
+      error: normalizedResult.meta?.error || null,
+      meta: normalizedResult.meta || {},
+      outboxPayload: normalizedResult.outboxPayload || {},
+    });
+
+    return toPipelineReturn(runtimeResult);
   }
 }
 

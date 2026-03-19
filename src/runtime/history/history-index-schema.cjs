@@ -44,7 +44,9 @@ function normalizeRunEntry(input) {
     stepCount: normalizePositiveInteger(input.stepCount, 0),
     traceRelPath: normalizeString(input.traceRelPath),
     outboxRelPath: normalizeString(input.outboxRelPath),
-    planRelPath: normalizeString(input.planRelPath)
+    planRelPath: normalizeString(input.planRelPath),
+    exitCode: normalizeNonNegativeInteger(input.exitCode),
+    errorCode: normalizeString(input.errorCode)
   };
 }
 
@@ -93,6 +95,14 @@ function normalizeString(value) {
 function normalizePositiveInteger(value, fallback) {
   if (!Number.isInteger(value) || value < 0) {
     return fallback;
+  }
+
+  return value;
+}
+
+function normalizeNonNegativeInteger(value) {
+  if (!Number.isInteger(value) || value < 0) {
+    return null;
   }
 
   return value;
