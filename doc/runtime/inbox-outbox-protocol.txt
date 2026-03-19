@@ -3,27 +3,27 @@
 
 Внешний выход
 
-outbox.zip
+`outbox.zip`
 
 Содержимое:
 
-outbox.json  
-provided files  
+- `outbox.json`  
+- provided files  
 
 
 Внутренний output
 
-trace.json  
-events.jsonl  
-plan.json (A13)  
+- `trace.json`  
+- `events.jsonl`  
+- `plan.json` (A13)  
 
 
 A13 ДОПОЛНЕНИЕ
 
-Каждый run создаёт plan.json:
+Каждый run создаёт `plan.json`:
 
 - сохраняется в runtime artifacts  
-- связан с history через planRelPath  
+- связан с history через `planRelPath`  
 
 
 A14 ДОПОЛНЕНИЕ
@@ -35,28 +35,50 @@ A14 ДОПОЛНЕНИЕ
 
 Тип ошибки:
 
-PLAN_SCHEMA_INVALID  
+`PLAN_SCHEMA_INVALID`
+
+
+A15 ДОПОЛНЕНИЕ
+
+Начиная с A15:
+
+- внутренний результат выполнения нормализуется до сборки внешнего ответа  
+- `outbox.json` получает данные из общего слоя результата  
+- внешний контракт `outbox.json` сохранён совместимым  
+
+Это означает:
+
+- `outbox.json` не должен сам вычислять итог выполнения  
+- `outbox.json` является внешней поверхностью результата, а не источником истины  
 
 
 Outbox contract
 
-outbox.zip всегда содержит:
+`outbox.zip` всегда содержит:
 
-- outbox.json  
+- `outbox.json`  
 - provided files (если есть)  
 
 
-exitCode:
+Код завершения
 
-0 → success  
-1 → error  
+`exitCode`:
+
+- `0` → success  
+- `1` → error  
+
+`exitCode` отражает итог завершения запуска.
+
+`error.code` отражает тип ошибки.
+
+Эти значения относятся к разным уровням контракта и не должны смешиваться.
 
 
 Получатель (receiver)
 
-receiver: uri
+`receiver: uri`
 
 
-Правило:
+Правило
 
-URI обрабатывает только пакеты с receiver == uri
+URI обрабатывает только пакеты, у которых `receiver == uri`.

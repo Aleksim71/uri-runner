@@ -8,23 +8,28 @@ A13:
 Добавлен этап materialize plan  
 
 A14:
-Добавлена валидация структуры plan перед execution  
+Добавлена проверка структуры plan перед выполнением  
+
+A15:
+Добавлен этап нормализации результата и финализации запуска  
 
 
 Обновлённый lifecycle
 
-1 Intake Gate  
-2 Inbox Intake  
-3 Scenario Decode  
-4 Plan Compile  
-5 Materialize Plan (A13)  
-6 Plan Validation (A14)  
-7 Run Sandbox Initialization  
-8 Environment Reset  
-9 Execution (run-plan)  
-10 Trace Recording  
-11 Outbox Packaging  
-12 History Persistence  
+1. Intake Gate  
+2. Inbox Intake  
+3. Scenario Decode  
+4. Plan Compile  
+5. Materialize Plan (A13)  
+6. Plan Validation (A14)  
+7. Run Sandbox Initialization  
+8. Environment Reset  
+9. Execution (run-plan)  
+10. Normalize Result (A15)  
+11. Finalize Run (A15)  
+12. Trace Recording  
+13. Outbox Packaging  
+14. History Persistence  
 
 
 Materialize Plan
@@ -32,8 +37,8 @@ Materialize Plan
 RUNBOOK преобразуется в plan:
 
 - нормализация  
-- валидация  
-- сохранение plan.json  
+- структурная подготовка  
+- сохранение `plan.json`  
 
 Каждый run создаёт plan до выполнения.
 
@@ -43,21 +48,56 @@ Plan Validation (A14)
 На этом этапе runtime проверяет структурный контракт plan:
 
 - plan является объектом  
-- присутствует plan.version  
-- plan.steps является массивом  
-- каждый шаг (step) корректной структуры  
+- присутствует `plan.version`  
+- `plan.steps` является массивом  
+- каждый шаг (`step`) имеет корректную минимальную структуру  
 
-Если validation не пройдена:
+Если проверка не пройдена:
 
 - execution не начинается  
-- возвращается ошибка PLAN_SCHEMA_INVALID  
+- возвращается ошибка `PLAN_SCHEMA_INVALID`  
 
 
 Execution
 
-Выполнение происходит через run-plan.
+Выполнение происходит через `run-plan`.
 
 Runtime не исполняет runbook напрямую.
+
+
+Normalize Result (A15)
+
+После выполнения runtime строит единый внутренний результат запуска.
+
+На этом этапе нормализуются:
+
+- `ok`  
+- `exitCode`  
+- `error`  
+- `attempts`  
+- прочие поля итогового результата  
+
+Задача этапа:
+
+- убрать дублирование логики между runtime, CLI и history  
+- получить единую внутреннюю форму результата  
+
+
+Finalize Run (A15)
+
+После нормализации результата runtime выполняет финализацию запуска.
+
+На этом этапе:
+
+- подготавливаются terminal surface и CLI surface  
+- строится итог для history  
+- подготавливается внешний outbox-отчёт  
+
+Важно:
+
+- terminal surface не должен заново вычислять итог выполнения  
+- history не должен заново вычислять итог выполнения  
+- outbox не должен становиться отдельным источником истины  
 
 
 History
@@ -66,6 +106,6 @@ History сохраняет:
 
 - trace  
 - outbox  
-- planRelPath  
+- `planRelPath`  
 
-planRelPath указывает на plan.json.
+`planRelPath` указывает на `plan.json`.

@@ -1,24 +1,28 @@
 URI Runner
 Архитектура Runtime
 
-Версия: 3 (A13 + A14)
+Версия: 4 (A13 + A14 + A15)
 
 
 Обзор
 
 Архитектура Runtime описывает ядро выполнения URI Runner.
 
-URI — движок выполнения, основанный на артефактах (artifact-driven execution engine).
+URI — движок выполнения, основанный на артефактах.
 
 
 Ключевые изменения
 
 A13:
-Execution основан на materialized plan  
+Выполнение основано на materialized plan  
 Runbook больше не исполняется напрямую  
 
 A14:
-Добавлена валидация структуры compiled plan перед execution  
+Добавлена проверка структуры compiled plan перед выполнением  
+
+A15:
+Добавлен единый внутренний контракт результата выполнения  
+Результат нормализуется до построения внешних поверхностей  
 
 
 Pipeline выполнения
@@ -29,53 +33,85 @@ RUNBOOK
 → plan validation (A14)
 → run-plan
 → execution
+→ normalize result / finalize run (A15)
 → trace / history / outbox
 
 
-Валидация плана (A14)
+Проверка плана (A14)
 
 Перед запуском execution runtime проверяет структурную целостность plan:
 
 - plan должен быть объектом  
-- plan.version обязателен  
-- plan.steps должен быть массивом  
+- `plan.version` обязателен  
+- `plan.steps` должен быть массивом  
 - каждый step должен иметь корректную минимальную структуру  
 
-Если validation не пройдена:
+Если проверка не пройдена:
 
 - execution не начинается  
-- run завершается с ошибкой PLAN_SCHEMA_INVALID  
+- run завершается с ошибкой `PLAN_SCHEMA_INVALID`  
 
 
-Важно:
+Важно
 
-Validation проверяет только структуру.
+Проверка проверяет только структуру.
 
 Она не заменяет:
 
 - проверку существования команд  
 - проверку root policy  
-- runtime ограничения (например max_steps)  
+- runtime-ограничения (например `max_steps`)  
+
+
+Единый контракт результата (A15)
+
+Начиная с A15, runtime опирается на единый внутренний контракт результата выполнения.
+
+Этот внутренний результат используется как источник истины для:
+
+- terminal surface  
+- history persistence  
+- внешнего outbox-отчёта  
+
+Разделение ответственности:
+
+- internal result — внутренняя нормализованная форма результата  
+- terminal output — отображение результата для CLI/терминала  
+- persisted artifacts — сохраняемые артефакты выполнения  
+
+Важно:
+
+- `exitCode` — это код завершения запуска  
+- `error.code` — это тип ошибки  
+- эти значения не тождественны и не должны смешиваться  
+
+A15 не вводит параллельную runtime-систему.
+Он усиливает существующий pipeline слоем нормализации и финализации результата.
 
 
 Совместимость
 
-materializePlanFromRunbook:
-- используется watcher и legacy flows  
-- компилирует runbook через compileRunbookFile  
-- сохраняет plan.json  
+`materializePlanFromRunbook`:
+- используется watcher и legacy-потоками  
+- компилирует runbook через `compileRunbookFile`  
+- сохраняет `plan.json`  
 
-materializePlan:
+`materializePlan`:
 - новый API  
 - возвращает объект plan  
 - используется адаптерами  
+
+A15-совместимость:
+- существующий внешний `outbox.json` сохранён совместимым  
+- CLI и history читают результат из общего слоя  
+- surface-слои не должны вычислять итог выполнения повторно  
 
 
 Система артефактов
 
 Основные execution-артефакты:
 
-PLAN (plan.json)  
+PLAN (`plan.json`)  
 TRACE  
 RESULT  
 META  
@@ -85,9 +121,10 @@ META
 
 - каждый run создаёт plan artifact до выполнения  
 - execution всегда идёт через plan  
-- history содержит planRelPath  
+- history содержит `planRelPath`  
+- итог выполнения нормализуется до записи во внешние поверхности  
 
 
 Взаимодействие с AI
 
-URI взаимодействует с AI через inbox/outbox protocol.
+URI взаимодействует с AI через протокол Inbox–Outbox.

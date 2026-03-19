@@ -6,48 +6,67 @@
 
 Документация URI Runner организована по нескольким логическим слоям:
 
-1 Архитектура runtime  
-2 Жизненный цикл выполнения  
-3 Модули runtime  
-4 Системные контексты  
-5 Протоколы артефактов  
-6 CLI-интерфейс  
-7 История изменений  
+1. Архитектура runtime  
+2. Жизненный цикл выполнения  
+3. Модули runtime  
+4. Системные контексты  
+5. Протоколы артефактов  
+6. CLI-интерфейс  
+7. История изменений  
 
 ------------------------------------------------
-A13 UPDATE (Materialized Execution)
+A13 UPDATE (Материализованное выполнение)
 ------------------------------------------------
 
 Начиная с A13:
 
-- materialized execution является базовой моделью выполнения  
-- выполнение происходит через plan (а не напрямую из runbook)  
-- plan.json становится обязательным execution-артефактом  
-- добавлена совместимость через materializePlanFromRunbook  
+- материализованное выполнение является базовой моделью запуска  
+- выполнение происходит через plan, а не напрямую из runbook  
+- `plan.json` становится обязательным артефактом выполнения  
+- добавлена совместимость через `materializePlanFromRunbook`  
 
 Pipeline:
 
 RUNBOOK  
 → compile  
-→ plan  
+→ materialize plan  
 → run-plan  
 → trace / history / outbox  
 
 ------------------------------------------------
-A14 UPDATE (Plan Schema Validation)
+A14 UPDATE (Проверка схемы плана)
 ------------------------------------------------
 
 Начиная с A14:
 
-- compiled plan валидируется перед execution  
-- structurally invalid plan не исполняется  
-- execution не начинается при нарушении структуры  
-- ошибка контракта: PLAN_SCHEMA_INVALID  
+- compiled plan проходит структурную проверку перед выполнением  
+- структурно некорректный plan не исполняется  
+- выполнение не начинается при нарушении структуры  
+- ошибка контракта: `PLAN_SCHEMA_INVALID`  
 
 Важно:
 
 - проверяется только структура plan  
-- validation не заменяет execution и policy  
+- проверка не заменяет execution и policy  
+
+------------------------------------------------
+A15 UPDATE (Единый контракт результата)
+------------------------------------------------
+
+Начиная с A15:
+
+- введён единый внутренний контракт результата выполнения  
+- результат выполнения нормализуется перед выводом наружу  
+- CLI, history и terminal surface читают итог из общего слоя  
+- внешний `outbox.json` сохранён совместимым  
+- execution pipeline завершает run через слой normalizing/finalize  
+
+Важно:
+
+- единый внутренний результат не равен формату CLI-вывода  
+- единый внутренний результат не равен persisted history entry  
+- единый внутренний результат не равен внешнему `outbox.json`  
+- внешние поверхности получают данные через адаптацию общего результата  
 
 ------------------------------------------------
 Базовая архитектура
@@ -58,10 +77,19 @@ Runtime Pack
 doc/runtime/runtime-pack.md
 
 
-Execution Lifecycle
+Архитектура runtime
+
+doc/runtime/runtime-architecture.txt
+
+
+Жизненный цикл выполнения
 
 doc/runtime/execution-lifecycle.txt
 
+
+Протокол Inbox–Outbox
+
+doc/runtime/inbox-outbox-protocol.txt
 
 ------------------------------------------------
 Артефакты выполнения
@@ -69,15 +97,15 @@ doc/runtime/execution-lifecycle.txt
 
 Run Sandbox System
 
-runtime/runs/<runId>/
+`runtime/runs/<runId>/`
 
 Содержимое:
 
-traces  
-artifacts  
-provided  
-logs  
-tmp  
+- traces  
+- artifacts  
+- provided  
+- logs  
+- tmp  
 
 ------------------------------------------------
 Pipeline выполнения runtime
@@ -91,13 +119,15 @@ intake gate
         ↓  
 inbox intake  
         ↓  
-compilePlan  
+compile plan  
         ↓  
 materialize plan (A13)  
         ↓  
 plan validation (A14)  
         ↓  
 run-plan execution  
+        ↓  
+normalize result / finalize run (A15)  
         ↓  
 trace recording  
         ↓  
