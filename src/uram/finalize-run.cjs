@@ -1,3 +1,4 @@
+/* path: src/uram/finalize-run.cjs */
 "use strict";
 
 const fsp = require("fs/promises");
@@ -93,6 +94,10 @@ function buildMinimalSuccessOutbox(summary) {
     outbox.trace = summary.trace;
   }
 
+  if (summary?.fileDeliveryReport && typeof summary.fileDeliveryReport === "object") {
+    outbox.fileDeliveryReport = summary.fileDeliveryReport;
+  }
+
   return outbox;
 }
 
@@ -177,6 +182,54 @@ async function appendStructuredHistoryIndex(filePath, runRecord) {
   await writeJson(filePath, doc);
 }
 
+async function writeProjectOutbox({
+  projectOutboxDir,
+  outboxPayload,
+  tmpProvidedDir = null,
+}) {
+  if (typeof projectOutboxDir !== "string" || !projectOutboxDir.trim()) {
+    return { outboxZipPath: null, outboxJsonPath: null };
+  }
+
+  const outboxZipPath = path.join(projectOutboxDir, "outbox.zip");
+  const outboxJsonPath = path.join(projectOutboxDir, "outbox.json");
+
+  await ensureDir(projectOutboxDir);
+  await buildZipArtifact({
+    zipPath: outboxZipPath,
+    outboxPayload,
+    tmpProvidedDir,
+  });
+  await writeJson(outboxJsonPath, outboxPayload);
+
+  return { outboxZipPath, outboxJsonPath };
+}
+
+async function writeProjectFailedLog({
+  projectFailedLogsDir,
+  runId,
+  outboxPayload,
+  tmpProvidedDir = null,
+}) {
+  if (typeof projectFailedLogsDir !== "string" || !projectFailedLogsDir.trim()) {
+    return null;
+  }
+
+  const runDir = path.join(projectFailedLogsDir, runId);
+  const outboxZipPath = path.join(runDir, "outbox.zip");
+  const outboxJsonPath = path.join(runDir, "outbox.json");
+
+  await ensureDir(runDir);
+  await buildZipArtifact({
+    zipPath: outboxZipPath,
+    outboxPayload,
+    tmpProvidedDir,
+  });
+  await writeJson(outboxJsonPath, outboxPayload);
+
+  return runDir;
+}
+
 async function finalizeRun({
   tmpOutboxPath,
   latestOutboxPath,
@@ -193,6 +246,8 @@ async function finalizeRun({
   quiet,
   planRelPath = null,
   tmpProvidedDir = null,
+  projectOutboxDir = null,
+  projectFailedLogsDir = null,
 }) {
   const historyJsonlPath = path.join(historyDir, "index.jsonl");
   const historyIndexPath = path.join(historyDir, "index.json");
@@ -231,6 +286,12 @@ async function finalizeRun({
       outboxPayload: successOutbox,
       tmpProvidedDir,
     });
+
+    await writeProjectOutbox({
+      projectOutboxDir,
+      outboxPayload: successOutbox,
+      tmpProvidedDir,
+    });
   } else {
     await writeJson(latestOutboxPath, payload);
 
@@ -253,6 +314,19 @@ async function finalizeRun({
 
     await buildZipArtifact({
       zipPath: historyOutboxPath,
+      outboxPayload: errorOutbox,
+      tmpProvidedDir,
+    });
+
+    await writeProjectOutbox({
+      projectOutboxDir,
+      outboxPayload: errorOutbox,
+      tmpProvidedDir,
+    });
+
+    await writeProjectFailedLog({
+      projectFailedLogsDir,
+      runId,
       outboxPayload: errorOutbox,
       tmpProvidedDir,
     });

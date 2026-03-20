@@ -1,3 +1,4 @@
+/* path: src/uram/project-resolver.cjs */
 "use strict";
 
 const fs = require("fs/promises");
@@ -36,6 +37,16 @@ async function loadProjectsConfig(uramRoot) {
   return doc.projects;
 }
 
+function resolveAbsolute(baseDir, candidate) {
+  if (typeof candidate !== "string" || !candidate.trim()) {
+    return null;
+  }
+
+  return path.isAbsolute(candidate)
+    ? candidate
+    : path.resolve(baseDir, candidate);
+}
+
 async function resolveProjectContext({ uramRoot, project }) {
   if (!uramRoot || typeof uramRoot !== "string") {
     throw new Error("[uri] resolveProjectContext: uramRoot is required");
@@ -53,8 +64,14 @@ async function resolveProjectContext({ uramRoot, project }) {
       return {
         project,
         cwd: uramRoot,
+        projectRoot: null,
+        outboxDir: null,
+        failedLogsDir: null,
+        snapshotsDir: null,
+        stateDir: null,
       };
     }
+
     throw new Error(`[uri] project not registered: ${project}`);
   }
 
@@ -66,9 +83,31 @@ async function resolveProjectContext({ uramRoot, project }) {
     ? entry.cwd
     : path.resolve(uramRoot, entry.cwd);
 
+  const projectRoot =
+    resolveAbsolute(uramRoot, entry.project_root || entry.projectRoot) || null;
+
+  const baseDir = projectRoot || cwd;
+
   return {
     project,
     cwd,
+    projectRoot,
+    outboxDir:
+      resolveAbsolute(baseDir, entry.outbox_dir || entry.outboxDir) ||
+      (projectRoot ? path.join(projectRoot, "Outbox") : null),
+    failedLogsDir:
+      resolveAbsolute(
+        baseDir,
+        entry.failed_logs_dir || entry.failedLogsDir || entry.logs_failed_dir
+      ) || (projectRoot ? path.join(projectRoot, "Logs", "failed") : null),
+    snapshotsDir:
+      resolveAbsolute(baseDir, entry.snapshots_dir || entry.snapshotsDir) ||
+      (projectRoot ? path.join(projectRoot, "Snapshots") : null),
+    stateDir:
+      resolveAbsolute(
+        baseDir,
+        entry.state_dir || entry.stateDir || entry.uri_state_dir
+      ) || (projectRoot ? path.join(projectRoot, ".uri") : null),
   };
 }
 

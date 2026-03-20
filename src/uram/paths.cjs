@@ -1,19 +1,57 @@
+/* path: src/uram/paths.cjs */
 "use strict";
 
+const fs = require("fs");
 const path = require("path");
 
+function pathExists(p) {
+  try {
+    fs.accessSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function preferExisting(primaryPath, fallbackPath, defaultPath = primaryPath) {
+  if (pathExists(primaryPath)) {
+    return primaryPath;
+  }
+
+  if (pathExists(fallbackPath)) {
+    return fallbackPath;
+  }
+
+  return defaultPath;
+}
+
 function resolveUramRoot({ cliUram, env, homeDir }) {
-  // Priority C:
-  // 1) --uram
-  // 2) URAM_ROOT env
-  // 3) ~/uram
-  if (cliUram && String(cliUram).trim()) return path.resolve(String(cliUram).trim());
-  if (env?.URAM_ROOT && String(env.URAM_ROOT).trim()) return path.resolve(String(env.URAM_ROOT).trim());
-  return path.resolve(homeDir, "uram");
+  if (cliUram && String(cliUram).trim()) {
+    return path.resolve(String(cliUram).trim());
+  }
+
+  if (env?.URAM_ROOT && String(env.URAM_ROOT).trim()) {
+    return path.resolve(String(env.URAM_ROOT).trim());
+  }
+
+  const workspaceDefault = path.resolve(homeDir, "workspace", "uram");
+  const legacyDefault = path.resolve(homeDir, "uram");
+
+  if (pathExists(workspaceDefault)) {
+    return workspaceDefault;
+  }
+
+  if (pathExists(legacyDefault)) {
+    return legacyDefault;
+  }
+
+  return workspaceDefault;
 }
 
 function getInboxDir(uramRoot) {
-  return path.join(uramRoot, "Inbox");
+  const modern = path.join(uramRoot, "intake", "Inbox");
+  const legacy = path.join(uramRoot, "Inbox");
+  return preferExisting(modern, legacy, modern);
 }
 
 function getInboxZipPath(uramRoot) {
@@ -21,11 +59,15 @@ function getInboxZipPath(uramRoot) {
 }
 
 function getProcessedDir(uramRoot) {
-  return path.join(getInboxDir(uramRoot), "processed");
+  const modern = path.join(uramRoot, "runtime", "watch", "processed");
+  const legacy = path.join(uramRoot, "processed");
+  return preferExisting(modern, legacy, modern);
 }
 
 function getTmpDir(uramRoot) {
-  return path.join(uramRoot, "tmp");
+  const modern = path.join(uramRoot, "runtime", "watch", "tmp");
+  const legacy = path.join(uramRoot, "tmp");
+  return preferExisting(modern, legacy, modern);
 }
 
 function getProjectBoxDir(uramRoot, project) {

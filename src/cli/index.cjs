@@ -85,6 +85,11 @@ async function main(argv = process.argv.slice(2)) {
     });
   }
 
+  if (command === "watch") {
+    const { runWatchCommand } = require("./commands/watch.cjs");
+    return runWatchCommand(commandArgs);
+  }
+
   if (command === "runtime") {
     const subcommand = commandArgs[0];
     const subArgs = commandArgs.slice(1);
@@ -138,6 +143,7 @@ function printHelp() {
   console.log("  replay <trace-file|runId> [project]");
   console.log("  run-plan <plan-file>");
   console.log("  runtime gc [--keep-last-runs N] [--dry-run] [project]");
+  console.log("  watch [--once] [--config <file>] [--interval <ms>]");
   console.log("");
 }
 

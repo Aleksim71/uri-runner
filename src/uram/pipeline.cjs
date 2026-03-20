@@ -299,6 +299,7 @@ function buildCanonicalRuntimeOutbox({
 async function syncOutboxJsonIntoZip({
   zipPath,
   fileDeliveryReport,
+  jsonPath = null,
 }) {
   if (
     typeof zipPath !== "string" ||
@@ -337,6 +338,14 @@ async function syncOutboxJsonIntoZip({
     ...existingOutbox,
     fileDeliveryReport,
   };
+
+  if (typeof jsonPath === "string" && jsonPath.trim()) {
+    await fsp.writeFile(
+      path.resolve(jsonPath),
+      JSON.stringify(nextOutbox, null, 2),
+      "utf-8"
+    );
+  }
 
   const patchRoot = await fsp.mkdtemp(path.join(path.dirname(zipAbs), ".outbox-sync-"));
   const outboxJsonPath = path.join(patchRoot, "outbox.json");
@@ -841,12 +850,22 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
       quiet,
       planRelPath: engineResult.meta?.plan?.path || null,
       tmpProvidedDir: engineResult.meta?.tmpProvidedDir || null,
+      projectOutboxDir: projectCtx?.outboxDir || null,
+      projectFailedLogsDir: projectCtx?.failedLogsDir || null,
     });
 
     await syncOutboxJsonIntoZip({
       zipPath: latestOutboxPath,
       fileDeliveryReport: engineResult.meta?.fileDeliveryReport || null,
     });
+
+    if (projectCtx?.outboxDir) {
+      await syncOutboxJsonIntoZip({
+        zipPath: path.join(projectCtx.outboxDir, "outbox.zip"),
+        jsonPath: path.join(projectCtx.outboxDir, "outbox.json"),
+        fileDeliveryReport: engineResult.meta?.fileDeliveryReport || null,
+      });
+    }
 
     await syncHistoryOutboxJson({
       historyDir,
@@ -917,12 +936,22 @@ async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
           quiet,
           planRelPath: normalizedResult.meta?.plan?.path || null,
           tmpProvidedDir: normalizedResult.meta?.tmpProvidedDir || null,
+          projectOutboxDir: projectCtx?.outboxDir || null,
+          projectFailedLogsDir: projectCtx?.failedLogsDir || null,
         });
 
         await syncOutboxJsonIntoZip({
           zipPath: latestOutboxPath,
           fileDeliveryReport: normalizedResult.meta?.fileDeliveryReport || null,
         });
+
+        if (projectCtx?.outboxDir) {
+          await syncOutboxJsonIntoZip({
+            zipPath: path.join(projectCtx.outboxDir, "outbox.zip"),
+            jsonPath: path.join(projectCtx.outboxDir, "outbox.json"),
+            fileDeliveryReport: normalizedResult.meta?.fileDeliveryReport || null,
+          });
+        }
 
         await syncHistoryOutboxJson({
           historyDir,
