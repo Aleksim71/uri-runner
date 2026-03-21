@@ -1,0 +1,5 @@
+version: 1
+
+projects:
+  uri-runner:
+    cwd: /home/aleksim/uri-runner-next

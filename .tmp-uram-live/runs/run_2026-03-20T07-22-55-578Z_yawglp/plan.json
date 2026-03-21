@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "source": {
+    "type": "runbook",
+    "path": "/home/aleksim/uri-runner-next/.tmp-uram-live/runs/run_2026-03-20T07-22-55-578Z_yawglp/inbox/RUNBOOK.yaml"
+  },
+  "receiver": "uri",
+  "project": "uri-runner-next",
+  "goal": "Проверить A16 happy path на живом прогоне",
+  "maxAttempts": 1,
+  "steps": [
+    {
+      "type": "provide",
+      "action": "file.read",
+      "payload": {
+        "path": "package.json"
+      }
+    },
+    {
+      "type": "provide",
+      "action": "file.read",
+      "payload": {
+        "path": "doc/runtime/runtime-architecture.txt"
+      }
+    }
+  ]
+}

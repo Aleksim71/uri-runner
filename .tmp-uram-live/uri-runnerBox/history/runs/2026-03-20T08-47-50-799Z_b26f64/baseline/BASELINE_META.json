@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "runId": "2026-03-20T08-47-50-799Z_b26f64",
+  "captured": true,
+  "capturedAt": "2026-03-20T08:47:50.810Z",
+  "domains": {
+    "files": {
+      "supported": true,
+      "verifyDefault": "ok"
+    },
+    "workspace": {
+      "supported": true,
+      "verifyDefault": "ok"
+    },
+    "database": {
+      "supported": false,
+      "verifyDefault": "not_checked"
+    },
+    "environment": {
+      "supported": false,
+      "verifyDefault": "not_checked"
+    },
+    "server": {
+      "supported": false,
+      "verifyDefault": "not_checked"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "status": "success",
+  "attempts": 1,
+  "provided": [
+    {
+      "kind": "file",
+      "path": "provided/package.json"
+    },
+    {
+      "kind": "file",
+      "path": "provided/doc/runtime/runtime-architecture.txt"
+    }
+  ],
+  "fileDeliveryReport": {
+    "ok": true,
+    "error": null,
+    "summary": {
+      "requested": 2,
+      "provided": 2,
+      "missing": 0,
+      "failed": 0
+    },
+    "requestedFiles": [
+      "package.json",
+      "doc/runtime/runtime-architecture.txt"
+    ],
+    "providedFiles": [
+      "package.json",
+      "doc/runtime/runtime-architecture.txt"
+    ],
+    "fileResults": [
+      {
+        "requestedPath": "package.json",
+        "status": "provided",
+        "providedPath": "provided/package.json",
+        "error": null,
+        "kind": "file"
+      },
+      {
+        "requestedPath": "doc/runtime/runtime-architecture.txt",
+        "status": "provided",
+        "providedPath": "provided/doc/runtime/runtime-architecture.txt",
+        "error": null,
+        "kind": "file"
+      }
+    ],
+    "projectTree": {
+      "attached": false,
+      "path": null
+    }
+  }
+}

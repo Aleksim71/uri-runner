@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "kind": "scenario-plan",
+  "engine": "scenario",
+  "project": "uri-runner",
+  "runtime": {
+    "maxSteps": 100,
+    "strictCommands": true
+  },
+  "executableCtxSnapshot": {
+    "engine": "scenario",
+    "commands": {
+      "roots": [
+        "system",
+        "project"
+      ]
+    },
+    "runtime": {
+      "max_steps": 100,
+      "strict_commands": true,
+      "environment": {
+        "reset_before_run": false,
+        "managed_processes": [],
+        "startup": {
+          "command": "",
+          "healthcheck": {
+            "type": "http_ok",
+            "url": "http://127.0.0.1:3000/health",
+            "timeoutSec": 30,
+            "host": "",
+            "port": null,
+            "pid": null
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "kind": "command",
+      "stepId": "step_echo_1",
+      "index": 0,
+      "command": "system.echo",
+      "commandRoot": "system",
+      "args": {
+        "message": "hello A16 happy path"
+      }
+    }
+  ]
+}

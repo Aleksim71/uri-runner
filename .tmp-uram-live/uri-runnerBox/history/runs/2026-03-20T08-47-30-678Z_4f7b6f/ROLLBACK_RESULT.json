@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "runId": "2026-03-20T08-47-30-678Z_4f7b6f",
+  "rollbackExecuted": true,
+  "rollbackStatus": "restored",
+  "startedAt": "2026-03-20T08:47:30.686Z",
+  "finishedAt": "2026-03-20T08:47:30.686Z",
+  "durationMs": 0,
+  "domainsPlanned": [
+    "files",
+    "workspace"
+  ],
+  "domainsRestored": [
+    "files",
+    "workspace"
+  ],
+  "domainsSkipped": [],
+  "domainsFailed": [],
+  "error": null
+}

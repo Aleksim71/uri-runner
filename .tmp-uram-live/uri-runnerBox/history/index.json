@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "runs": [
+    {
+      "runId": "2026-03-20T08-40-24-482Z_447f2f",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996024482,
+      "finishedAt": 1773996024524,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-40-24-482Z_447f2f__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-40-24-482Z_447f2f.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-01-846Z_3a4756",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996421846,
+      "finishedAt": 1773996421886,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-01-846Z_3a4756__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-01-846Z_3a4756.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-03-927Z_1da02a",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996423927,
+      "finishedAt": 1773996423957,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-03-927Z_1da02a__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-03-927Z_1da02a.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-05-988Z_65d1d7",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996425988,
+      "finishedAt": 1773996426014,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-05-988Z_65d1d7__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-05-988Z_65d1d7.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-08-042Z_ec05cb",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996428042,
+      "finishedAt": 1773996428067,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-08-042Z_ec05cb__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-08-042Z_ec05cb.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-10-099Z_de2043",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996430099,
+      "finishedAt": 1773996430129,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-10-099Z_de2043__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-10-099Z_de2043.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-12-166Z_1343e1",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996432166,
+      "finishedAt": 1773996432192,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-12-166Z_1343e1__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-12-166Z_1343e1.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-14-222Z_d99c4e",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996434222,
+      "finishedAt": 1773996434247,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-14-222Z_d99c4e__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-14-222Z_d99c4e.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-16-276Z_493fd6",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996436276,
+      "finishedAt": 1773996436306,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-16-276Z_493fd6__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-16-276Z_493fd6.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-18-334Z_e9e33b",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996438334,
+      "finishedAt": 1773996438362,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-18-334Z_e9e33b__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-18-334Z_e9e33b.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-20-390Z_1b6903",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996440390,
+      "finishedAt": 1773996440420,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-20-390Z_1b6903__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-20-390Z_1b6903.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-22-449Z_ba03c7",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996442449,
+      "finishedAt": 1773996442477,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-22-449Z_ba03c7__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-22-449Z_ba03c7.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-24-505Z_f63927",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996444505,
+      "finishedAt": 1773996444533,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-24-505Z_f63927__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-24-505Z_f63927.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-26-564Z_31a5ca",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996446564,
+      "finishedAt": 1773996446589,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-26-564Z_31a5ca__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-26-564Z_31a5ca.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-28-621Z_e17e5e",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996448621,
+      "finishedAt": 1773996448649,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-28-621Z_e17e5e__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-28-621Z_e17e5e.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-30-678Z_4f7b6f",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996450678,
+      "finishedAt": 1773996450703,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-30-678Z_4f7b6f__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-30-678Z_4f7b6f.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-32-733Z_1f5f4e",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996452733,
+      "finishedAt": 1773996452757,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-32-733Z_1f5f4e__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-32-733Z_1f5f4e.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-34-786Z_7ff988",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996454786,
+      "finishedAt": 1773996454813,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-34-786Z_7ff988__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-34-786Z_7ff988.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-36-845Z_e237ac",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996456845,
+      "finishedAt": 1773996456870,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-36-845Z_e237ac__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-36-845Z_e237ac.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-48-725Z_f19507",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996468725,
+      "finishedAt": 1773996468763,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-48-725Z_f19507__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-48-725Z_f19507.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-50-799Z_b26f64",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996470799,
+      "finishedAt": 1773996470825,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-50-799Z_b26f64__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-50-799Z_b26f64.plan.json"
+    },
+    {
+      "runId": "2026-03-20T08-47-52-859Z_a5a50c",
+      "project": "uri-runner",
+      "executionKind": "scenario",
+      "exitCode": 0,
+      "startedAt": 1773996472859,
+      "finishedAt": 1773996472885,
+      "cwd": "/home/aleksim/uri-runner-next",
+      "loadedCommands": [
+        "system.echo"
+      ],
+      "outboxPath": "2026-03-20T08-47-52-859Z_a5a50c__scenario__OK.outbox.zip",
+      "planRelPath": "history/plans/2026-03-20T08-47-52-859Z_a5a50c.plan.json"
+    }
+  ]
+}

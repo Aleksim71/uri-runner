@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "runId": "2026-03-20T08-21-36-767Z_55b1ce",
+  "executionStatus": "crashed",
+  "startedAt": "2026-03-20T08:21:36.780Z",
+  "finishedAt": "2026-03-20T08:21:36.781Z",
+  "durationMs": 1,
+  "stepsTotal": 0,
+  "stepsCompleted": 0,
+  "failedStep": null,
+  "planWritten": false,
+  "traceWritten": false,
+  "artifactsProduced": true,
+  "error": {
+    "name": "PlanCompileError",
+    "message": "Scenario runbook is invalid: steps must be a non-empty array",
+    "code": "SCENARIO_INVALID",
+    "stack": "PlanCompileError: Scenario runbook is invalid: steps must be a non-empty array\n    at createPlanCompileError (/home/aleksim/uri-runner-next/src/uram/compile-plan.cjs:29:10)\n    at validateRunbookSteps (/home/aleksim/uri-runner-next/src/uram/compile-plan.cjs:446:11)\n    at compilePlan (/home/aleksim/uri-runner-next/src/uram/compile-plan.cjs:580:17)\n    at runScenarioPhases (/home/aleksim/uri-runner-next/src/uram/pipeline.cjs:591:18)\n    at /home/aleksim/uri-runner-next/src/uram/pipeline.cjs:778:24\n    at withExecutionLock (/home/aleksim/uri-runner-next/src/uram/execution-lock.cjs:75:18)\n    at async runUramPipeline (/home/aleksim/uri-runner-next/src/uram/pipeline.cjs:766:26)\n    at async runPipelineFullCycle (/home/aleksim/uri-runner-next/src/uram/watch-inbox-once.cjs:360:26)\n    at async handleInboxZip (/home/aleksim/uri-runner-next/src/uram/watch-inbox-once.cjs:413:25)\n    at async watchInboxOnce (/home/aleksim/uri-runner-next/src/uram/watch-inbox-once.cjs:558:20)\n    at async runWatchCommand (/home/aleksim/uri-runner-next/src/cli/commands/watch.cjs:116:14)\n    at async /home/aleksim/uri-runner-next/bin/uri.cjs:17:7"
+  }
+}

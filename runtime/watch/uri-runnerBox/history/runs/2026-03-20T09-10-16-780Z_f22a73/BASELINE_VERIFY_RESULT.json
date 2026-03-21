@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "runId": "2026-03-20T09-10-16-780Z_f22a73",
+  "verified": true,
+  "verifyStatus": "verified",
+  "startedAt": "2026-03-20T09:10:16.801Z",
+  "finishedAt": "2026-03-20T09:10:16.801Z",
+  "durationMs": 0,
+  "domains": {
+    "files": "ok",
+    "workspace": "ok",
+    "database": "not_checked",
+    "environment": "not_checked",
+    "server": "not_checked"
+  },
+  "error": null
+}

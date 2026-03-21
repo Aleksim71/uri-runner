@@ -1,0 +1,10 @@
+receiver: uri
+version: 1
+project: uri-runner
+goal: Проверить A16 happy path на живом прогоне
+goal_checks: []
+max_attempts: 1
+provide:
+  - package.json
+  - doc/runtime/runtime-architecture.txt
+modify: []

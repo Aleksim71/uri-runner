@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "source": {
+    "type": "runbook",
+    "path": "/tmp/runtime/watch/runs/run_2026-03-21T20-43-43-659Z_2sz28g/inbox/RUNBOOK.yaml"
+  },
+  "receiver": "uri",
+  "project": "uri-runner",
+  "goal": "test accepted inbox",
+  "maxAttempts": 1,
+  "steps": []
+}

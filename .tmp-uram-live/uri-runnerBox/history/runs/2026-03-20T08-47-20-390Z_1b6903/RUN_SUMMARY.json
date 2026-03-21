@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "runId": "2026-03-20T08-47-20-390Z_1b6903",
+  "finalStatus": "success",
+  "safeToContinue": true,
+  "executionStatus": "success",
+  "rollbackStatus": "restored",
+  "verifyStatus": "verified",
+  "baselineRestored": true,
+  "baselineVerified": true,
+  "startedAt": "2026-03-20T08:47:20.397Z",
+  "finishedAt": "2026-03-20T08:47:20.404Z",
+  "durationMs": 7,
+  "artifacts": {
+    "result": "RESULT.json",
+    "rollbackResult": "ROLLBACK_RESULT.json",
+    "baselineVerifyResult": "BASELINE_VERIFY_RESULT.json",
+    "runSummary": "RUN_SUMMARY.json",
+    "baselineMeta": "baseline/BASELINE_META.json"
+  }
+}

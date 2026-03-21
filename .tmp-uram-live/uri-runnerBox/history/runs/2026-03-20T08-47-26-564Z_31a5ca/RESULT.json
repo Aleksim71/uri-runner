@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "runId": "2026-03-20T08-47-26-564Z_31a5ca",
+  "executionStatus": "success",
+  "startedAt": "2026-03-20T08:47:26.574Z",
+  "finishedAt": "2026-03-20T08:47:26.574Z",
+  "durationMs": 0,
+  "stepsTotal": 1,
+  "stepsCompleted": 1,
+  "failedStep": null,
+  "planWritten": true,
+  "traceWritten": false,
+  "artifactsProduced": true,
+  "error": null
+}
