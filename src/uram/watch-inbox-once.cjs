@@ -10,6 +10,7 @@ const YAML = require("yaml");
 const { materializePlanFromRunbook } = require("../runtime/materialize-plan.cjs");
 const { runUramPipeline } = require("./pipeline.cjs");
 const { resolveProjectContext } = require("./project-resolver.cjs");
+const { buildWatchPaths } = require("../runtime/watch-paths.cjs");
 
 function pickFirst(...values) {
   for (const value of values) {
@@ -45,7 +46,7 @@ function defaultDownloadsDir() {
 }
 
 function defaultConfigPath() {
-  return path.join(defaultUramRoot(), "config", "watch.json");
+  return buildWatchPaths().configPath;
 }
 
 function resolveConfigPath(explicitConfigPath) {
@@ -84,64 +85,33 @@ function loadConfig(options = {}) {
     path.dirname(path.dirname(configPath))
   );
 
-  const watchRoot = pickFirst(
-    config.watchRoot,
-    config.runtimeRoot,
-    path.join(uramRoot, "runtime", "watch")
-  );
+  const resolved = buildWatchPaths({
+    configPath,
+    config,
+    uramRoot,
+  });
 
   return {
     config,
     configPath,
-    uramRoot: path.resolve(uramRoot),
-    watchRoot: path.resolve(watchRoot),
+    uramRoot: resolved.uramRoot,
+    watchRoot: resolved.watchRoot,
   };
 }
 
 function resolvePaths(config, uramRoot, watchRoot) {
-  const downloadsDir = pickFirst(
-    config.downloads,
-    config.downloadsDir,
-    config.paths && config.paths.downloads,
-    defaultDownloadsDir()
-  );
-
-  const inboxDir = pickFirst(
-    config.inbox,
-    config.inboxDir,
-    config.paths && config.paths.inbox,
-    path.join(uramRoot, "intake", "Inbox")
-  );
-
-  const processedDir = pickFirst(
-    config.processed,
-    config.processedDir,
-    config.paths && config.paths.processed,
-    path.join(watchRoot, "processed")
-  );
-
-  const processedSourceDir = pickFirst(
-    config.processedSource,
-    config.processedSourceDir,
-    config.paths && config.paths.processedSource,
-    config.paths && config.paths.processed_source,
-    path.join(uramRoot, "intake", "source-processed")
-  );
-
-  const lastRun = pickFirst(
-    config.lastRun,
-    config.last_run,
-    config.paths && config.paths.lastRun,
-    config.paths && config.paths.last_run,
-    path.join(watchRoot, "last_run.txt")
-  );
+  const resolved = buildWatchPaths({
+    config,
+    uramRoot,
+    watchRoot,
+  });
 
   return {
-    downloadsDir,
-    inboxDir,
-    processedDir,
-    processedSourceDir,
-    lastRun,
+    downloadsDir: resolved.downloadsDir,
+    inboxDir: resolved.inboxDir,
+    processedDir: resolved.processedDir,
+    processedSourceDir: resolved.processedSourceDir,
+    lastRun: resolved.lastRun,
   };
 }
 
