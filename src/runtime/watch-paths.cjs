@@ -35,10 +35,10 @@ function defaultDownloadsDir() {
 }
 
 /**
- * A17.2
- * - добавлен project-owned режим
- * - default остаётся legacy-uram
- * - watcher НЕ меняется
+ * A17.5
+ * - explicit config overrides always win
+ * - project-owned mode changes fallback defaults for watchRoot, processedDir, lastRun, inboxDir
+ * - downloads/processedSource stay legacy by default
  */
 
 function buildWatchPaths(options = {}) {
@@ -52,119 +52,92 @@ function buildWatchPaths(options = {}) {
     ? path.resolve(options.uramRoot)
     : defaultUramRoot();
 
-  const config = options.config && typeof options.config === "object"
-    ? options.config
-    : {};
+  const config =
+    options.config && typeof options.config === "object" ? options.config : {};
 
   const projectRoot = options.projectRoot
     ? path.resolve(options.projectRoot)
     : process.cwd();
 
-  // --- LEGACY MODE (без изменений) ---
-  if (mode === "legacy-uram") {
-    const watchRoot = path.resolve(
-      pickFirst(
-        config.watchRoot,
-        config.runtimeRoot,
-        path.join(uramRoot, "runtime", "watch")
-      )
-    );
+  const legacyWatchRoot = path.join(uramRoot, "runtime", "watch");
+  const projectWatchRoot = path.join(projectRoot, "runtime", "watch");
 
-    return {
-      mode: "legacy-uram",
+  const watchRoot = path.resolve(
+    pickFirst(
+      config.watchRoot,
+      config.runtimeRoot,
+      mode === "project-owned" ? projectWatchRoot : legacyWatchRoot
+    )
+  );
 
-      workspaceRoot,
-      uramRoot,
-      projectRoot,
-      watchRoot,
+  const legacyInboxDir = path.join(uramRoot, "intake", "Inbox");
+  const projectInboxDir = path.join(projectRoot, "Inbox");
+  const legacyProcessedSourceDir = path.join(uramRoot, "intake", "source-processed");
 
-      configPath: options.configPath
-        ? path.resolve(options.configPath)
-        : path.join(uramRoot, "config", "watch.json"),
+  const downloadsDir = path.resolve(
+    pickFirst(
+      config.downloads,
+      config.downloadsDir,
+      config.paths && config.paths.downloads,
+      defaultDownloadsDir()
+    )
+  );
 
-      downloadsDir: path.resolve(
-        pickFirst(
-          config.downloads,
-          config.downloadsDir,
-          config.paths && config.paths.downloads,
-          defaultDownloadsDir()
-        )
-      ),
+  const inboxDir = path.resolve(
+    pickFirst(
+      config.inbox,
+      config.inboxDir,
+      config.paths && config.paths.inbox,
+      mode === "project-owned" ? projectInboxDir : legacyInboxDir
+    )
+  );
 
-      inboxDir: path.resolve(
-        pickFirst(
-          config.inbox,
-          config.inboxDir,
-          config.paths && config.paths.inbox,
-          path.join(uramRoot, "intake", "Inbox")
-        )
-      ),
+  const processedDir = path.resolve(
+    pickFirst(
+      config.processed,
+      config.processedDir,
+      config.paths && config.paths.processed,
+      path.join(watchRoot, "processed")
+    )
+  );
 
-      processedDir: path.resolve(
-        pickFirst(
-          config.processed,
-          config.processedDir,
-          config.paths && config.paths.processed,
-          path.join(watchRoot, "processed")
-        )
-      ),
+  const processedSourceDir = path.resolve(
+    pickFirst(
+      config.processedSource,
+      config.processedSourceDir,
+      config.paths && config.paths.processedSource,
+      config.paths && config.paths.processed_source,
+      legacyProcessedSourceDir
+    )
+  );
 
-      processedSourceDir: path.resolve(
-        pickFirst(
-          config.processedSource,
-          config.processedSourceDir,
-          config.paths && config.paths.processedSource,
-          path.join(uramRoot, "intake", "source-processed")
-        )
-      ),
+  const lastRun = path.resolve(
+    pickFirst(
+      config.lastRun,
+      config.last_run,
+      config.paths && config.paths.lastRun,
+      config.paths && config.paths.last_run,
+      path.join(watchRoot, "last_run.txt")
+    )
+  );
 
-      lastRun: path.resolve(
-        pickFirst(
-          config.lastRun,
-          config.last_run,
-          config.paths && config.paths.lastRun,
-          path.join(watchRoot, "last_run.txt")
-        )
-      ),
-    };
-  }
+  return {
+    mode,
+    workspaceRoot,
+    uramRoot,
+    projectRoot,
+    watchRoot,
 
-  // --- PROJECT-OWNED MODE (новый) ---
-  if (mode === "project-owned") {
-    const runtimeRoot = path.join(projectRoot, "runtime", "watch");
+    configPath: options.configPath
+      ? path.resolve(options.configPath)
+      : path.join(uramRoot, "config", "watch.json"),
 
-    return {
-      mode: "project-owned",
-
-      workspaceRoot,
-      uramRoot,
-      projectRoot,
-      watchRoot: runtimeRoot,
-
-      // пока config остаётся legacy
-      configPath: options.configPath
-        ? path.resolve(options.configPath)
-        : path.join(uramRoot, "config", "watch.json"),
-
-      // downloads остаётся системный
-      downloadsDir: path.resolve(
-        pickFirst(
-          config.downloads,
-          config.downloadsDir,
-          defaultDownloadsDir()
-        )
-      ),
-
-      // 🔥 вот главное отличие
-      inboxDir: path.join(projectRoot, "Inbox"),
-
-      processedDir: path.join(runtimeRoot, "processed"),
-      processedSourceDir: path.join(runtimeRoot, "source-processed"),
-      lastRun: path.join(runtimeRoot, "last_run.txt"),
-    };
-  }
-
-  throw new Error(`Unknown transport mode: ${mode}`);
+    downloadsDir,
+    inboxDir,
+    processedDir,
+    processedSourceDir,
+    lastRun,
+  };
 }
 
 module.exports = {
