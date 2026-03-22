@@ -78,6 +78,12 @@ function loadConfig(options = {}) {
   const raw = fs.readFileSync(configPath, "utf8");
   const config = JSON.parse(raw);
 
+  const transportMode = pickFirst(
+    config.transportMode,
+    config.transport_mode,
+    "legacy-uram"
+  );
+
   const uramRoot = pickFirst(
     config.uramRoot,
     config.root,
@@ -86,24 +92,35 @@ function loadConfig(options = {}) {
   );
 
   const resolved = buildWatchPaths({
+    mode: transportMode,
     configPath,
     config,
     uramRoot,
+    projectRoot: process.cwd(),
   });
 
   return {
     config,
     configPath,
+    transportMode,
     uramRoot: resolved.uramRoot,
     watchRoot: resolved.watchRoot,
   };
 }
 
 function resolvePaths(config, uramRoot, watchRoot) {
+  const transportMode = pickFirst(
+    config.transportMode,
+    config.transport_mode,
+    "legacy-uram"
+  );
+
   const resolved = buildWatchPaths({
+    mode: transportMode,
     config,
     uramRoot,
     watchRoot,
+    projectRoot: process.cwd(),
   });
 
   return {
@@ -305,6 +322,7 @@ function printBanner(options) {
   writeLine(stdout, "URI WATCH");
   writeLine(stdout, "────────────────────────");
   writeLine(stdout, `mode: ${options.mode}`);
+  writeLine(stdout, `transport: ${options.transportMode || "legacy-uram"}`);
   writeLine(stdout, "status: started");
   writeLine(stdout, `config: ${options.configPath || "<missing>"}`);
   writeLine(stdout, `source: ${options.downloadsDir || "<unknown>"}`);
@@ -588,7 +606,7 @@ async function runWatchCycle(loaded, options = {}) {
   const executeFullCycle = Boolean(options.executeFullCycle);
   const archiveSource = Boolean(options.archiveSource);
 
-  const { config, configPath, uramRoot, watchRoot } = loaded;
+  const { config, configPath, uramRoot, watchRoot, transportMode } = loaded;
   const { downloadsDir, inboxDir, processedDir, processedSourceDir, lastRun } = resolvePaths(
     config,
     uramRoot,
@@ -598,6 +616,7 @@ async function runWatchCycle(loaded, options = {}) {
   if (!options.suppressBanner) {
     printBanner({
       mode: options.mode || "once",
+      transportMode: transportMode || "legacy-uram",
       configPath,
       downloadsDir,
       inboxDir,
@@ -686,6 +705,7 @@ async function watchInboxOnce(options = {}) {
   } catch (error) {
     printBanner({
       mode: options.mode || "once",
+      transportMode: "legacy-uram",
       configPath: options.configPath || process.env.URI_CONFIG || defaultConfigPath(),
       stdout,
     });
@@ -723,6 +743,7 @@ async function runWatchLoop(options = {}) {
   } catch (error) {
     printBanner({
       mode: "continuous",
+      transportMode: "legacy-uram",
       configPath: options.configPath || process.env.URI_CONFIG || defaultConfigPath(),
       stdout,
     });
