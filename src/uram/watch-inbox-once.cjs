@@ -440,6 +440,8 @@ async function runPipelineFullCycle({ uramRoot, watchRoot, processedDir, runbook
     quiet: true,
     env: process.env,
     homeDir: os.homedir(),
+  processedDir,
+  inboxZipPath: path.join(inboxDir, "inbox.zip"),
   });
 
   const copiedArtifacts = await copyLatestOutboxArtifacts({

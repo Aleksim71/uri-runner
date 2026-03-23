@@ -724,11 +724,23 @@ async function runScenarioPhases({
   }
 }
 
-async function runUramPipeline({ uramCli, workspaceCli, quiet, env, homeDir }) {
+async function runUramPipeline({
+  uramCli,
+  workspaceCli,
+  quiet,
+  env,
+  homeDir,
+  processedDir: processedDirInput,
+  inboxZipPath: inboxZipPathInput,
+}) {
   const uramRoot = resolveUramRoot({ cliUram: uramCli, env, homeDir });
 
-  const inboxZipPath = getInboxZipPath(uramRoot);
-  const processedDir = getProcessedDir(uramRoot);
+  const inboxZipPath = inboxZipPathInput
+  ? path.resolve(inboxZipPathInput)
+  : getInboxZipPath(uramRoot);
+  const processedDir = processedDirInput
+  ? path.resolve(processedDirInput)
+  : getProcessedDir(uramRoot);
   const workspaceRoot = workspaceCli
     ? path.resolve(workspaceCli)
     : getTmpDir(uramRoot);
