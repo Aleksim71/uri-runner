@@ -124,29 +124,88 @@ async function main(argv = process.argv.slice(2)) {
     throw new Error(`Unknown debug command: ${subcommand}`);
   }
 
+  if (command === "browser") {
+    const { runBrowserCommand } = require("../commands/browser.cjs");
+    const options = parseBrowserArgs(commandArgs);
+    return runBrowserCommand(options);
+  }
+
   throw new Error(`Unknown command: ${command}`);
 }
 
+function parseBrowserArgs(args = []) {
+  const options = {
+    host: "127.0.0.1",
+    port: "9222",
+    artifactsDir: "runtime/browser/artifacts",
+    timeoutMs: "10000",
+    json: false,
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === "--host") {
+      index += 1;
+      if (index >= args.length) throw new Error("browser option --host requires <host>");
+      options.host = args[index];
+      continue;
+    }
+
+    if (arg === "--port") {
+      index += 1;
+      if (index >= args.length) throw new Error("browser option --port requires <port>");
+      options.port = args[index];
+      continue;
+    }
+
+    if (arg === "--target") {
+      index += 1;
+      if (index >= args.length) throw new Error("browser option --target requires <matcher>");
+      options.target = args[index];
+      continue;
+    }
+
+    if (arg === "--artifacts-dir") {
+      index += 1;
+      if (index >= args.length) throw new Error("browser option --artifacts-dir requires <path>");
+      options.artifactsDir = args[index];
+      continue;
+    }
+
+    if (arg === "--timeout-ms") {
+      index += 1;
+      if (index >= args.length) throw new Error("browser option --timeout-ms requires <ms>");
+      options.timeoutMs = args[index];
+      continue;
+    }
+
+    if (arg === "--json") {
+      options.json = true;
+      continue;
+    }
+
+    throw new Error(`Unknown browser option: ${arg}`);
+  }
+
+  return options;
+}
+
 function printHelp() {
-  console.log("");
-  console.log("URI CLI");
-  console.log("────────────────────────");
-  console.log("Available commands:");
+  console.log("\nURI CLI\n────────────────────────\nAvailable commands:");
+  console.log("  browser [--host <host>] [--port <port>] [--target <matcher>] [--artifacts-dir <path>] [--timeout-ms <ms>] [--json]");
   console.log("  compile <inbox.zip> <output-plan.json>");
   console.log("  debug commands <inbox.zip>");
   console.log("  debug plan <inbox.zip>");
   console.log("  debug runbook <inbox.zip>");
   console.log("  history");
-  console.log("  history prune [--dry-run] [project]");
   console.log("  last");
   console.log("  show <runId>");
   console.log("  replay <trace-file|runId> [project]");
   console.log("  run-plan <plan-file>");
-  console.log("  runtime gc [--keep-last-runs N] [--dry-run] [project]");
-  console.log("  watch [--once] [--config <file>] [--interval <ms>]");
+  console.log("  runtime gc");
+  console.log("  watch");
   console.log("");
 }
 
-module.exports = {
-  main,
-};
+module.exports = { main };
