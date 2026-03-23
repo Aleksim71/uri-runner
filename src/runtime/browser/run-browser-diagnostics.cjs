@@ -7,6 +7,30 @@ const { collectBrowserArtifacts } = require('./collect-browser-artifacts.cjs');
 const { normalizeBrowserResult } = require('./normalize-browser-result.cjs');
 const { writeBrowserArtifacts } = require('./write-browser-artifacts.cjs');
 
+function pickArtifactsDir(input = {}, io = {}) {
+  const ioDir = typeof io.artifactsDir === 'string' && io.artifactsDir.trim()
+    ? io.artifactsDir.trim()
+    : '';
+
+  if (ioDir) {
+    return ioDir;
+  }
+
+  const inputDir = typeof input.artifactsDir === 'string' && input.artifactsDir.trim()
+    ? input.artifactsDir.trim()
+    : '';
+
+  if (inputDir) {
+    return inputDir;
+  }
+
+  const outputDir = typeof input.outputDir === 'string' && input.outputDir.trim()
+    ? input.outputDir.trim()
+    : '';
+
+  return outputDir;
+}
+
 async function closeClientQuietly(client) {
   if (!client || typeof client.close !== 'function') {
     return;
@@ -50,7 +74,12 @@ async function runBrowserDiagnostics(input = {}, io = {}) {
     collectResult,
   });
 
-  const writeResult = await writeBrowserArtifacts(normalizedResult, io);
+  const writeIo = {
+    ...io,
+    artifactsDir: pickArtifactsDir(input, io),
+  };
+
+  const writeResult = await writeBrowserArtifacts(normalizedResult, writeIo);
 
   await closeClientQuietly(attachResult.session && attachResult.session.client);
 

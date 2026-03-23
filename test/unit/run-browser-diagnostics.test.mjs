@@ -67,4 +67,94 @@ describe('runBrowserDiagnostics', () => {
     expect(reportText).toContain('"status": "ok"');
     expect(result.writeResult.written.map((item) => item.name)).toContain('screenshot.png');
   });
+
+  it('accepts artifactsDir from input when io.artifactsDir is omitted', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'uri-browser-run-input-'));
+
+    const result = await runBrowserDiagnostics({
+      endpoint: 'ws://127.0.0.1:9222/devtools/browser/test',
+      browserType: 'chromium',
+      goal: 'browser-smoke',
+      mode: 'safe',
+      artifactsDir: tempDir,
+      targetHint: { urlIncludes: 'localhost:4173' },
+      collect: {
+        metadata: true,
+        screenshot: true,
+        console: false,
+        errors: false,
+      },
+      adapter: {
+        async listTargets() {
+          return [
+            { id: 'page-1', type: 'page', url: 'http://localhost:4173/', title: 'Preview' },
+          ];
+        },
+        async attachToTarget() {
+          return {
+            async getPageMetadata() {
+              return {
+                title: 'Preview',
+                url: 'http://localhost:4173/',
+                readyState: 'complete',
+              };
+            },
+            async takeScreenshot() {
+              return Buffer.from('png-data').toString('base64');
+            },
+            async close() {},
+          };
+        },
+      },
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.writeResult.status).toBe('ok');
+    expect(result.writeResult.manifest.baseDir).toBe(tempDir);
+  });
+
+  it('accepts outputDir as a backward-compatible alias', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'uri-browser-run-output-'));
+
+    const result = await runBrowserDiagnostics({
+      endpoint: 'ws://127.0.0.1:9222/devtools/browser/test',
+      browserType: 'chromium',
+      goal: 'browser-smoke',
+      mode: 'safe',
+      outputDir: tempDir,
+      targetHint: { urlIncludes: 'localhost:4173' },
+      collect: {
+        metadata: true,
+        screenshot: true,
+        console: false,
+        errors: false,
+      },
+      adapter: {
+        async listTargets() {
+          return [
+            { id: 'page-1', type: 'page', url: 'http://localhost:4173/', title: 'Preview' },
+          ];
+        },
+        async attachToTarget() {
+          return {
+            async getPageMetadata() {
+              return {
+                title: 'Preview',
+                url: 'http://localhost:4173/',
+                readyState: 'complete',
+              };
+            },
+            async takeScreenshot() {
+              return Buffer.from('png-data').toString('base64');
+            },
+            async close() {},
+          };
+        },
+      },
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.writeResult.status).toBe('ok');
+    expect(result.writeResult.manifest.baseDir).toBe(tempDir);
+  });
 });
