@@ -2,7 +2,9 @@
 
 // path: src/commands/browser.cjs
 
-const path = require('node:path');
+const {
+  normalizeBrowserRunInput,
+} = require('../runtime/browser/normalize-browser-run-input.cjs');
 
 function getRunBrowserDiagnostics() {
   const runtimeModule = require('../runtime/browser/run-browser-diagnostics.cjs');
@@ -15,32 +17,8 @@ function getRunBrowserDiagnostics() {
   throw new Error('run-browser-diagnostics.cjs does not export a runnable browser diagnostics function.');
 }
 
-function toPositiveInteger(value, fallback) {
-  if (value === undefined || value === null || value === '') {
-    return fallback;
-  }
-
-  const parsed = Number.parseInt(String(value), 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`Expected a positive integer, got: ${value}`);
-  }
-
-  return parsed;
-}
-
 function normalizeBrowserCommandOptions(options = {}) {
-  const normalized = {
-    host: String(options.host || '127.0.0.1'),
-    port: toPositiveInteger(options.port, 9222),
-    timeoutMs: toPositiveInteger(options.timeoutMs, 10000),
-    artifactsDir: path.resolve(options.artifactsDir || path.join('runtime', 'browser', 'artifacts')),
-  };
-
-  if (options.target) {
-    normalized.target = String(options.target);
-  }
-
-  return normalized;
+  return normalizeBrowserRunInput(options);
 }
 
 async function runBrowserCommand(rawOptions = {}) {

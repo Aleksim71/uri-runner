@@ -36,6 +36,17 @@ describe('browser command options', () => {
     });
   });
 
+  it('uses defaults when runtime options are omitted', () => {
+    const { normalizeBrowserCommandOptions } = require('../../src/commands/browser.cjs');
+
+    expect(normalizeBrowserCommandOptions({})).toEqual({
+      host: '127.0.0.1',
+      port: 9222,
+      timeoutMs: 10000,
+      artifactsDir: path.resolve('runtime/browser/artifacts'),
+    });
+  });
+
   it('runs browser diagnostics and strips cli-only json flag from runtime options', async () => {
     const { runBrowserCommand } = require('../../src/commands/browser.cjs');
     runBrowserDiagnostics.mockResolvedValue({ ok: true });
