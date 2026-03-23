@@ -34,6 +34,25 @@ function defaultDownloadsDir() {
   return english;
 }
 
+function resolveDefaultConfigPath({ projectRoot, uramRoot, configPath }) {
+  if (configPath && String(configPath).trim()) {
+    return path.resolve(configPath);
+  }
+
+  const projectConfigPath = path.join(projectRoot, "config", "watch.json");
+  const legacyConfigPath = path.join(uramRoot, "config", "watch.json");
+
+  if (fs.existsSync(projectConfigPath)) {
+    return projectConfigPath;
+  }
+
+  if (fs.existsSync(legacyConfigPath)) {
+    return legacyConfigPath;
+  }
+
+  return projectConfigPath;
+}
+
 /**
  * A17.5
  * - explicit config overrides always win
@@ -128,9 +147,11 @@ function buildWatchPaths(options = {}) {
     projectRoot,
     watchRoot,
 
-    configPath: options.configPath
-      ? path.resolve(options.configPath)
-      : path.join(uramRoot, "config", "watch.json"),
+    configPath: resolveDefaultConfigPath({
+      projectRoot,
+      uramRoot,
+      configPath: options.configPath,
+    }),
 
     downloadsDir,
     inboxDir,
