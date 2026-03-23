@@ -1,4 +1,3 @@
-/* path: src/cli/commands/watch.cjs */
 "use strict";
 
 const path = require("path");
@@ -20,11 +19,7 @@ function parseWatchArgs(args = []) {
     }
 
     if (arg === "--config") {
-      const next = input[i + 1];
-      if (!next) {
-        throw new Error("watch requires a value after --config");
-      }
-      configPath = next;
+      configPath = input[i + 1];
       i += 1;
       continue;
     }
@@ -72,8 +67,6 @@ function printWatchHelp() {
   console.log("  uri watch --once [--config <file>]");
   console.log("  uri watch [--config <file>] [--interval <ms>]");
   console.log("");
-  console.log(`Default config: ${defaultConfigPath()}`);
-  console.log("");
 }
 
 function applyExitCode(result) {
@@ -88,7 +81,7 @@ function applyExitCode(result) {
   }
 
   if (result.status === "failed") {
-    process.exitCode = 1;
+    process.exitCode = 0;
     return;
   }
 

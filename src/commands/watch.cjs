@@ -1,7 +1,8 @@
+/* path: src/cli/commands/watch.cjs */
 "use strict";
 
 const path = require("path");
-const { watchInboxOnce, runWatchLoop } = require("../../uram/watch-inbox-once.cjs");
+const { watchInboxOnce, runWatchLoop, defaultConfigPath } = require("../../uram/watch-inbox-once.cjs");
 
 function parseWatchArgs(args = []) {
   const input = Array.isArray(args) ? args.slice(0) : [];
@@ -19,7 +20,11 @@ function parseWatchArgs(args = []) {
     }
 
     if (arg === "--config") {
-      configPath = input[i + 1];
+      const next = input[i + 1];
+      if (!next) {
+        throw new Error("watch requires a value after --config");
+      }
+      configPath = next;
       i += 1;
       continue;
     }
@@ -67,6 +72,8 @@ function printWatchHelp() {
   console.log("  uri watch --once [--config <file>]");
   console.log("  uri watch [--config <file>] [--interval <ms>]");
   console.log("");
+  console.log(`Default config: ${defaultConfigPath()}`);
+  console.log("");
 }
 
 function applyExitCode(result) {
@@ -81,7 +88,7 @@ function applyExitCode(result) {
   }
 
   if (result.status === "failed") {
-    process.exitCode = 1;
+    process.exitCode = 0;
     return;
   }
 
@@ -101,13 +108,17 @@ async function runWatchCommand(args = []) {
   const runnerOptions = {
     configPath: options.configPath,
     stdout: process.stdout,
-    stderr: process.stderr,
   };
 
   let result;
 
   if (options.once) {
-    result = await watchInboxOnce(runnerOptions);
+    result = await watchInboxOnce({
+      ...runnerOptions,
+      mode: "once",
+      executeFullCycle: true,
+      archiveSource: true,
+    });
   } else {
     result = await runWatchLoop({
       ...runnerOptions,

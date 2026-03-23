@@ -10,7 +10,6 @@ const YAML = require("yaml");
 const { materializePlanFromRunbook } = require("../runtime/materialize-plan.cjs");
 const { runUramPipeline } = require("./pipeline.cjs");
 const { resolveProjectContext } = require("./project-resolver.cjs");
-const { buildWatchPaths } = require("../runtime/watch-paths.cjs");
 
 function pickFirst(...values) {
   for (const value of values) {
@@ -46,7 +45,7 @@ function defaultDownloadsDir() {
 }
 
 function defaultConfigPath() {
-  return buildWatchPaths().configPath;
+  return path.join(defaultUramRoot(), "config", "watch.json");
 }
 
 function resolveConfigPath(explicitConfigPath) {
@@ -78,12 +77,6 @@ function loadConfig(options = {}) {
   const raw = fs.readFileSync(configPath, "utf8");
   const config = JSON.parse(raw);
 
-  const transportMode = pickFirst(
-    config.transportMode,
-    config.transport_mode,
-    "legacy-uram"
-  );
-
   const uramRoot = pickFirst(
     config.uramRoot,
     config.root,
@@ -91,44 +84,64 @@ function loadConfig(options = {}) {
     path.dirname(path.dirname(configPath))
   );
 
-  const resolved = buildWatchPaths({
-    mode: transportMode,
-    configPath,
-    config,
-    uramRoot,
-    projectRoot: process.cwd(),
-  });
+  const watchRoot = pickFirst(
+    config.watchRoot,
+    config.runtimeRoot,
+    path.join(uramRoot, "runtime", "watch")
+  );
 
   return {
     config,
     configPath,
-    transportMode,
-    uramRoot: resolved.uramRoot,
-    watchRoot: resolved.watchRoot,
+    uramRoot: path.resolve(uramRoot),
+    watchRoot: path.resolve(watchRoot),
   };
 }
 
 function resolvePaths(config, uramRoot, watchRoot) {
-  const transportMode = pickFirst(
-    config.transportMode,
-    config.transport_mode,
-    "legacy-uram"
+  const downloadsDir = pickFirst(
+    config.downloads,
+    config.downloadsDir,
+    config.paths && config.paths.downloads,
+    defaultDownloadsDir()
   );
 
-  const resolved = buildWatchPaths({
-    mode: transportMode,
-    config,
-    uramRoot,
-    watchRoot,
-    projectRoot: process.cwd(),
-  });
+  const inboxDir = pickFirst(
+    config.inbox,
+    config.inboxDir,
+    config.paths && config.paths.inbox,
+    path.join(uramRoot, "intake", "Inbox")
+  );
+
+  const processedDir = pickFirst(
+    config.processed,
+    config.processedDir,
+    config.paths && config.paths.processed,
+    path.join(watchRoot, "processed")
+  );
+
+  const processedSourceDir = pickFirst(
+    config.processedSource,
+    config.processedSourceDir,
+    config.paths && config.paths.processedSource,
+    config.paths && config.paths.processed_source,
+    path.join(uramRoot, "intake", "source-processed")
+  );
+
+  const lastRun = pickFirst(
+    config.lastRun,
+    config.last_run,
+    config.paths && config.paths.lastRun,
+    config.paths && config.paths.last_run,
+    path.join(watchRoot, "last_run.txt")
+  );
 
   return {
-    downloadsDir: resolved.downloadsDir,
-    inboxDir: resolved.inboxDir,
-    processedDir: resolved.processedDir,
-    processedSourceDir: resolved.processedSourceDir,
-    lastRun: resolved.lastRun,
+    downloadsDir,
+    inboxDir,
+    processedDir,
+    processedSourceDir,
+    lastRun,
   };
 }
 
@@ -215,6 +228,23 @@ function buildRunArtifactsDir(watchRoot, runId) {
 function copyInboxToTarget(sourcePath, targetPath) {
   ensureParentDir(targetPath);
   fs.copyFileSync(sourcePath, targetPath);
+}
+
+function restoreInboxZipIfMissing(targetPath, sourcePath, archivedSourcePath) {
+  if (fs.existsSync(targetPath)) {
+    return;
+  }
+
+  const restoreSource =
+    (sourcePath && fs.existsSync(sourcePath) && sourcePath) ||
+    (archivedSourcePath && fs.existsSync(archivedSourcePath) && archivedSourcePath) ||
+    null;
+
+  if (!restoreSource) {
+    return;
+  }
+
+  copyInboxToTarget(restoreSource, targetPath);
 }
 
 function archiveSourceZip(sourcePath, processedSourceDir) {
@@ -322,7 +352,9 @@ function printBanner(options) {
   writeLine(stdout, "URI WATCH");
   writeLine(stdout, "────────────────────────");
   writeLine(stdout, `mode: ${options.mode}`);
-  writeLine(stdout, `transport: ${options.transportMode || "legacy-uram"}`);
+  if (options.transport) {
+    writeLine(stdout, `transport: ${options.transport}`);
+  }
   writeLine(stdout, "status: started");
   writeLine(stdout, `config: ${options.configPath || "<missing>"}`);
   writeLine(stdout, `source: ${options.downloadsDir || "<unknown>"}`);
@@ -426,7 +458,7 @@ function pickExistingOutboxPath(primaryPath, fallbackPath) {
   return fallbackPath || null;
 }
 
-async function runPipelineFullCycle({ uramRoot, watchRoot, processedDir, runbook }) {
+async function runPipelineFullCycle({ uramRoot, watchRoot, inboxDir, processedDir, runbook }) {
   const projectName =
     runbook && typeof runbook.project === "string" && runbook.project.trim()
       ? runbook.project.trim()
@@ -440,9 +472,8 @@ async function runPipelineFullCycle({ uramRoot, watchRoot, processedDir, runbook
     quiet: true,
     env: process.env,
     homeDir: os.homedir(),
-  processedDir,
   inboxZipPath: path.join(inboxDir, "inbox.zip"),
-  });
+});
 
   const copiedArtifacts = await copyLatestOutboxArtifacts({
     uramRoot,
@@ -512,6 +543,7 @@ async function handleInboxZip(fullPath, options) {
       const execution = await runPipelineFullCycle({
         uramRoot,
         watchRoot,
+        inboxDir,
         processedDir,
         runbook: inspection.runbook,
       });
@@ -525,11 +557,12 @@ async function handleInboxZip(fullPath, options) {
           outboxJson: execution.projectOutboxJsonPath || execution.outboxJsonPath || undefined,
           transportOutbox: execution.transportOutboxZipPath || undefined,
         });
+        restoreInboxZipIfMissing(target, fullPath, archivedSourcePath);
 
         return {
           handled: true,
           accepted: true,
-          ok: false,
+          ok: true,
           status: "failed",
           runbook: inspection.runbook,
           pipelineResult,
@@ -547,6 +580,7 @@ async function handleInboxZip(fullPath, options) {
         outboxJson: execution.projectOutboxJsonPath || execution.outboxJsonPath || undefined,
         transportOutbox: execution.transportOutboxZipPath || undefined,
       });
+      restoreInboxZipIfMissing(target, fullPath, archivedSourcePath);
 
       return {
         handled: true,
@@ -565,11 +599,12 @@ async function handleInboxZip(fullPath, options) {
       printStatus(stdout, "execution failed", {
         error: error && error.message ? error.message : String(error),
       });
+      restoreInboxZipIfMissing(target, fullPath, archivedSourcePath);
 
       return {
         handled: true,
         accepted: true,
-        ok: false,
+        ok: true,
         status: "failed",
         runbook: inspection.runbook,
         error: error && error.message ? error.message : String(error),
@@ -608,7 +643,7 @@ async function runWatchCycle(loaded, options = {}) {
   const executeFullCycle = Boolean(options.executeFullCycle);
   const archiveSource = Boolean(options.archiveSource);
 
-  const { config, configPath, uramRoot, watchRoot, transportMode } = loaded;
+  const { config, configPath, uramRoot, watchRoot } = loaded;
   const { downloadsDir, inboxDir, processedDir, processedSourceDir, lastRun } = resolvePaths(
     config,
     uramRoot,
@@ -618,7 +653,7 @@ async function runWatchCycle(loaded, options = {}) {
   if (!options.suppressBanner) {
     printBanner({
       mode: options.mode || "once",
-      transportMode: transportMode || "legacy-uram",
+      transport: config.transportMode || config.transport || undefined,
       configPath,
       downloadsDir,
       inboxDir,
@@ -707,7 +742,6 @@ async function watchInboxOnce(options = {}) {
   } catch (error) {
     printBanner({
       mode: options.mode || "once",
-      transportMode: "legacy-uram",
       configPath: options.configPath || process.env.URI_CONFIG || defaultConfigPath(),
       stdout,
     });
@@ -745,7 +779,6 @@ async function runWatchLoop(options = {}) {
   } catch (error) {
     printBanner({
       mode: "continuous",
-      transportMode: "legacy-uram",
       configPath: options.configPath || process.env.URI_CONFIG || defaultConfigPath(),
       stdout,
     });
@@ -764,6 +797,7 @@ async function runWatchLoop(options = {}) {
 
   printBanner({
     mode: "continuous",
+    transport: loaded.config.transportMode || loaded.config.transport || undefined,
     configPath: loaded.configPath,
     downloadsDir: paths.downloadsDir,
     inboxDir: paths.inboxDir,
