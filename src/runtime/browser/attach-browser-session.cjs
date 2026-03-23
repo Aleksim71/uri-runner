@@ -2,6 +2,8 @@
 
 'use strict';
 
+const { createCdpClientAdapter } = require('./cdp-client.cjs');
+
 function withTimeout(promise, timeoutMs, timeoutMessage) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     return Promise.resolve(promise);
@@ -31,7 +33,6 @@ function selectTarget(targets, targetHint = {}) {
   });
 
   const candidates = pageTargets.length > 0 ? pageTargets : safeTargets;
-
   const { urlIncludes, titleIncludes } = targetHint || {};
 
   if (!urlIncludes && !titleIncludes) {
@@ -42,7 +43,6 @@ function selectTarget(targets, targetHint = {}) {
     candidates.find((target) => {
       const url = typeof target.url === 'string' ? target.url : '';
       const title = typeof target.title === 'string' ? target.title : '';
-
       const urlMatch = !urlIncludes || url.includes(urlIncludes);
       const titleMatch = !titleIncludes || title.includes(titleIncludes);
 
@@ -63,6 +63,18 @@ function buildFailedResult(code, message, warnings = []) {
   };
 }
 
+function resolveAdapter(input = {}) {
+  if (input.adapter && typeof input.adapter === 'object') {
+    return input.adapter;
+  }
+
+  if (typeof input.adapterFactory === 'function') {
+    return input.adapterFactory(input);
+  }
+
+  return createCdpClientAdapter();
+}
+
 async function attachBrowserSession(input = {}) {
   const endpoint = typeof input.endpoint === 'string' ? input.endpoint.trim() : '';
   const browserType =
@@ -72,14 +84,22 @@ async function attachBrowserSession(input = {}) {
   const targetHint = input.targetHint && typeof input.targetHint === 'object' ? input.targetHint : {};
   const timeoutMs = Number.isFinite(input.timeoutMs) ? input.timeoutMs : 10_000;
   const allowCreateTarget = Boolean(input.allowCreateTarget);
-  const adapter = input.adapter && typeof input.adapter === 'object' ? input.adapter : null;
   const warnings = [];
 
   if (!endpoint) {
     return buildFailedResult('endpoint_required', 'Browser diagnostics endpoint is required.');
   }
 
-  if (!adapter) {
+  let adapter;
+
+  try {
+    adapter = resolveAdapter(input);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown browser adapter error.';
+    return buildFailedResult('adapter_invalid', message);
+  }
+
+  if (!adapter || typeof adapter !== 'object') {
     return buildFailedResult(
       'adapter_required',
       'Browser diagnostics adapter is required for attach-browser-session.'
