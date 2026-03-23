@@ -44,8 +44,12 @@ function defaultDownloadsDir() {
   return path.join(homeDir, "Downloads");
 }
 
+function projectRoot() {
+  return path.resolve(__dirname, "..", "..");
+}
+
 function defaultConfigPath() {
-  return path.join(defaultUramRoot(), "config", "watch.json");
+  return path.join(projectRoot(), "config", "watch.json");
 }
 
 function resolveConfigPath(explicitConfigPath) {
