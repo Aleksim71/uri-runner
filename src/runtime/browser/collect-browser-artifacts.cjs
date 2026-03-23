@@ -16,6 +16,7 @@ function normalizeCollectOptions(options = {}) {
       networkSummary: Boolean(collect.networkSummary),
     },
     timeoutMs: Number.isFinite(options.timeoutMs) ? options.timeoutMs : 10_000,
+    consoleSettleMs: Number.isFinite(options.consoleSettleMs) ? options.consoleSettleMs : 150,
   };
 }
 
@@ -92,6 +93,35 @@ function enrichMetadata(rawMetadata, session = {}) {
   return metadata;
 }
 
+function normalizeConsoleMessages(items) {
+  const safeItems = Array.isArray(items) ? items : [];
+
+  return safeItems.map((item) => ({
+    source: item && item.source ? item.source : 'runtime.console',
+    type: item && item.type ? item.type : 'log',
+    level: item && item.level ? item.level : 'log',
+    text: item && typeof item.text === 'string' ? item.text : '',
+    args: item && Array.isArray(item.args) ? item.args : [],
+    url: item && item.url ? item.url : null,
+    timestamp: item && item.timestamp ? item.timestamp : null,
+  }));
+}
+
+function normalizePageErrors(items) {
+  const safeItems = Array.isArray(items) ? items : [];
+
+  return safeItems.map((item) => ({
+    source: item && item.source ? item.source : 'runtime.exception',
+    type: item && item.type ? item.type : 'error',
+    level: item && item.level ? item.level : 'error',
+    text: item && typeof item.text === 'string' ? item.text : 'Unknown page error.',
+    url: item && item.url ? item.url : null,
+    lineNumber: item && Number.isFinite(item.lineNumber) ? item.lineNumber : null,
+    columnNumber: item && Number.isFinite(item.columnNumber) ? item.columnNumber : null,
+    timestamp: item && item.timestamp ? item.timestamp : null,
+  }));
+}
+
 async function collectBrowserArtifacts(sessionResult, options = {}) {
   if (!sessionResult || sessionResult.status !== 'ok' || !sessionResult.session) {
     return buildFailedResult(
@@ -155,43 +185,50 @@ async function collectBrowserArtifacts(sessionResult, options = {}) {
     }
 
     let consoleMessages = [];
+    let pageErrors = [];
+    const wantsConsoleData = normalizedOptions.collect.console || normalizedOptions.collect.errors;
 
-    if (normalizedOptions.collect.console) {
-      if (!artifacts.pageMetadata) {
-        warnings.push('Console collection is enabled before metadata was collected.');
+    if (wantsConsoleData && !artifacts.pageMetadata) {
+      warnings.push('Console collection is enabled before metadata was collected.');
+    }
+
+    if (wantsConsoleData && typeof client.getConsoleSnapshot === 'function') {
+      const snapshot = await client.getConsoleSnapshot({ settleMs: normalizedOptions.consoleSettleMs });
+      consoleMessages = normalizeConsoleMessages(snapshot && snapshot.consoleMessages);
+      pageErrors = normalizePageErrors(snapshot && snapshot.pageErrors);
+    } else {
+      if (normalizedOptions.collect.console) {
+        if (typeof client.getConsoleMessages !== 'function') {
+          warnings.push('Diagnostics client does not support getConsoleMessages().');
+        } else {
+          const rawMessages = await client.getConsoleMessages({ settleMs: normalizedOptions.consoleSettleMs });
+          consoleMessages = normalizeConsoleMessages(rawMessages);
+        }
       }
 
-      if (typeof client.getConsoleMessages !== 'function') {
-        warnings.push('Diagnostics client does not support getConsoleMessages().');
-      } else {
-        consoleMessages = await client.getConsoleMessages();
-        const safeConsoleMessages = Array.isArray(consoleMessages) ? consoleMessages : [];
-        artifacts.console = {
-          kind: 'json',
-          data: safeConsoleMessages,
-        };
+      if (normalizedOptions.collect.errors) {
+        if (typeof client.getPageErrors === 'function') {
+          const rawErrors = await client.getPageErrors({ settleMs: normalizedOptions.consoleSettleMs });
+          pageErrors = normalizePageErrors(rawErrors);
+        } else {
+          pageErrors = consoleMessages.filter((item) => item && item.level === 'error');
+          warnings.push('Diagnostics client does not support getPageErrors(); console errors were used.');
+        }
       }
     }
 
+    if (normalizedOptions.collect.console) {
+      artifacts.console = {
+        kind: 'json',
+        data: consoleMessages,
+      };
+    }
+
     if (normalizedOptions.collect.errors) {
-      if (typeof client.getPageErrors === 'function') {
-        const pageErrors = await client.getPageErrors();
-        artifacts.errors = {
-          kind: 'json',
-          data: Array.isArray(pageErrors) ? pageErrors : [],
-        };
-      } else {
-        const fallbackErrors = Array.isArray(consoleMessages)
-          ? consoleMessages.filter((item) => item && item.level === 'error')
-          : [];
-
-        artifacts.errors = {
-          kind: 'json',
-          data: fallbackErrors,
-        };
-
-        warnings.push('Diagnostics client does not support getPageErrors(); console errors were used.');
-      }
+      artifacts.errors = {
+        kind: 'json',
+        data: pageErrors,
+      };
     }
 
     const consoleData = artifacts.console ? artifacts.console.data : [];

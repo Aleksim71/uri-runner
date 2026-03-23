@@ -49,7 +49,7 @@ describe('createCdpClientAdapter', () => {
     expect(targets[0].url).toContain('localhost:4173');
   });
 
-  it('attaches and buffers console and page error events', async () => {
+  it('attaches and buffers console snapshots and page error events', async () => {
     const events = {};
     const transport = Object.assign(
       async () => ({
@@ -103,25 +103,31 @@ describe('createCdpClientAdapter', () => {
       args: [{ value: 'hello' }, { value: 'world' }],
       timestamp: 1,
     });
-    events.exception({
-      exceptionDetails: { text: 'Boom' },
+    events.console({
+      type: 'error',
+      args: [{ value: 'boom' }],
       timestamp: 2,
+    });
+    events.exception({
+      exceptionDetails: { text: 'Boom', lineNumber: 10, columnNumber: 2 },
+      timestamp: 3,
     });
     events.log({
       entry: {
         source: 'network',
         level: 'error',
         text: 'GET /api failed',
-        timestamp: 3,
+        timestamp: 4,
       },
     });
 
-    const consoleMessages = await client.getConsoleMessages();
-    const pageErrors = await client.getPageErrors();
+    const snapshot = await client.getConsoleSnapshot({ settleMs: 0 });
     const screenshot = await client.takeScreenshot();
 
-    expect(consoleMessages).toHaveLength(2);
-    expect(pageErrors).toHaveLength(2);
+    expect(snapshot.consoleMessages).toHaveLength(3);
+    expect(snapshot.pageErrors).toHaveLength(2);
+    expect(snapshot.consoleMessages[1].level).toBe('error');
+    expect(snapshot.pageErrors[0].text).toBe('Boom');
     expect(screenshot).toBeTypeOf('string');
   });
 });

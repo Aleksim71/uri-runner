@@ -103,6 +103,56 @@ function selectPageTarget(targets, targetHint = {}) {
   );
 }
 
+function sleep(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function mapConsoleTypeToLevel(type = '') {
+  switch (type) {
+    case 'error':
+    case 'assert':
+      return 'error';
+    case 'warning':
+    case 'warn':
+      return 'warning';
+    case 'debug':
+      return 'debug';
+    case 'info':
+      return 'info';
+    default:
+      return 'log';
+  }
+}
+
+function normalizeConsoleEntry(entry = {}) {
+  return {
+    source: entry.source || 'runtime.console',
+    type: entry.type || 'log',
+    level: entry.level || mapConsoleTypeToLevel(entry.type),
+    text: typeof entry.text === 'string' ? entry.text : '',
+    args: Array.isArray(entry.args) ? entry.args : [],
+    url: entry.url || null,
+    timestamp: entry.timestamp || null,
+  };
+}
+
+function normalizePageError(entry = {}) {
+  return {
+    source: entry.source || 'runtime.exception',
+    type: entry.type || 'error',
+    level: entry.level || 'error',
+    text: typeof entry.text === 'string' ? entry.text : 'Unknown page error.',
+    url: entry.url || null,
+    lineNumber: Number.isFinite(entry.lineNumber) ? entry.lineNumber : null,
+    columnNumber: Number.isFinite(entry.columnNumber) ? entry.columnNumber : null,
+    timestamp: entry.timestamp || null,
+  };
+}
+
 function createBufferedClient(rawClient, target = {}, endpoint = '') {
   const Runtime = rawClient.Runtime || null;
   const Page = rawClient.Page || null;
@@ -113,46 +163,57 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
   if (Runtime && typeof Runtime.consoleAPICalled === 'function') {
     Runtime.consoleAPICalled((event = {}) => {
       const args = Array.isArray(event.args) ? event.args.map(serializeRemoteObject) : [];
-      consoleMessages.push({
-        source: 'Runtime.consoleAPICalled',
-        level: event.type || 'log',
-        text: args.filter((value) => value !== null).join(' '),
-        args,
-        timestamp: event.timestamp || null,
-      });
+      consoleMessages.push(
+        normalizeConsoleEntry({
+          source: 'runtime.console',
+          type: event.type || 'log',
+          text: args.filter((value) => value !== null).join(' '),
+          args,
+          timestamp: event.timestamp || null,
+        })
+      );
     });
   }
 
   if (Runtime && typeof Runtime.exceptionThrown === 'function') {
     Runtime.exceptionThrown((event = {}) => {
       const details = event.exceptionDetails || {};
-      pageErrors.push({
-        source: 'Runtime.exceptionThrown',
-        level: 'error',
-        text: details.text || details.exception?.description || 'Runtime exception thrown.',
-        url: details.url || null,
-        lineNumber: Number.isFinite(details.lineNumber) ? details.lineNumber : null,
-        columnNumber: Number.isFinite(details.columnNumber) ? details.columnNumber : null,
-        timestamp: event.timestamp || null,
-      });
+      pageErrors.push(
+        normalizePageError({
+          source: 'runtime.exception',
+          text: details.text || details.exception?.description || 'Runtime exception thrown.',
+          url: details.url || null,
+          lineNumber: Number.isFinite(details.lineNumber) ? details.lineNumber : null,
+          columnNumber: Number.isFinite(details.columnNumber) ? details.columnNumber : null,
+          timestamp: event.timestamp || null,
+        })
+      );
     });
   }
 
   if (Log && typeof Log.entryAdded === 'function') {
     Log.entryAdded((event = {}) => {
       const entry = event.entry || {};
-      const normalized = {
-        source: entry.source || 'Log.entryAdded',
+      const normalized = normalizeConsoleEntry({
+        source: 'log.entry',
+        type: entry.level || 'info',
         level: entry.level || 'info',
         text: entry.text || '',
         url: entry.url || null,
         timestamp: entry.timestamp || null,
-      };
+      });
 
       consoleMessages.push(normalized);
 
       if (normalized.level === 'error') {
-        pageErrors.push(normalized);
+        pageErrors.push(
+          normalizePageError({
+            source: 'log.entry',
+            text: normalized.text,
+            url: normalized.url,
+            timestamp: normalized.timestamp,
+          })
+        );
       }
     });
   }
@@ -186,11 +247,20 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
 
       return response && typeof response.data === 'string' ? response.data : null;
     },
-    async getConsoleMessages() {
-      return consoleMessages.slice();
+    async getConsoleSnapshot(options = {}) {
+      await sleep(options.settleMs);
+      return {
+        consoleMessages: consoleMessages.slice(),
+        pageErrors: pageErrors.slice(),
+      };
     },
-    async getPageErrors() {
-      return pageErrors.slice();
+    async getConsoleMessages(options = {}) {
+      const snapshot = await this.getConsoleSnapshot(options);
+      return snapshot.consoleMessages;
+    },
+    async getPageErrors(options = {}) {
+      const snapshot = await this.getConsoleSnapshot(options);
+      return snapshot.pageErrors;
     },
     async close() {
       if (typeof rawClient.close === 'function') {
