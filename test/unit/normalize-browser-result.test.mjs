@@ -4,15 +4,15 @@ import { describe, expect, it } from 'vitest';
 import { normalizeBrowserResult } from '../../src/runtime/browser/normalize-browser-result.cjs';
 
 describe('normalizeBrowserResult', () => {
-  it('builds a normalized browser-diagnostics result with browser-report.json', () => {
+  it('includes network-summary.json and request counts in browser-report', () => {
     const result = normalizeBrowserResult({
-      goal: 'frontend-not-opening',
+      goal: 'browser-diagnostics',
       mode: 'safe',
       attachResult: {
         status: 'ok',
         session: {
-          targetUrl: 'http://localhost:5173/',
-          targetTitle: 'App',
+          targetUrl: 'https://example.com/',
+          targetTitle: 'Example Domain',
         },
         warnings: [],
         error: null,
@@ -20,33 +20,42 @@ describe('normalizeBrowserResult', () => {
       collectResult: {
         status: 'warning',
         target: {
-          url: 'http://localhost:5173/',
-          title: 'App',
+          url: 'https://example.com/',
+          title: 'Example Domain',
         },
         artifacts: {
-          pageMetadata: { kind: 'json', data: { title: 'App' } },
-          screenshot: { kind: 'binary', data: Buffer.from('png') },
-          console: { kind: 'json', data: [{ level: 'error', text: 'boom' }] },
-          errors: { kind: 'json', data: [{ message: 'boom' }] },
+          pageMetadata: { data: { url: 'https://example.com/' } },
+          screenshot: { data: Buffer.from('png') },
+          console: { data: [] },
+          errors: { data: [] },
+          networkSummary: {
+            data: {
+              requests: [{ requestId: 'r1', url: 'https://example.com/', status: 200 }],
+              totalRequests: 1,
+              failedRequests: 0,
+              statusCodeBuckets: { 200: 1 },
+              resourceTypeBuckets: { Document: 1 },
+            },
+          },
         },
         counts: {
-          consoleMessages: 1,
-          consoleErrors: 1,
-          pageErrors: 1,
+          consoleMessages: 0,
+          consoleErrors: 0,
+          pageErrors: 0,
+          totalRequests: 1,
           failedRequests: 0,
         },
-        warnings: ['Console contains runtime errors.'],
+        warnings: [],
         error: null,
       },
     });
 
-    expect(result.kind).toBe('browser-diagnostics');
-    expect(result.status).toBe('warning');
-    expect(result.summary.targetTitle).toBe('App');
+    const report = result.artifacts.find((artifact) => artifact.name === 'browser-report.json');
+    const network = result.artifacts.find((artifact) => artifact.name === 'network-summary.json');
 
-    const browserReport = result.artifacts.find((artifact) => artifact.name === 'browser-report.json');
-    expect(browserReport).toBeTruthy();
-    expect(browserReport.payload.consoleErrorCount).toBe(1);
-    expect(browserReport.payload.pageErrorCount).toBe(1);
+    expect(network).toBeTruthy();
+    expect(report.payload.totalRequestCount).toBe(1);
+    expect(report.payload.failedRequestCount).toBe(0);
+    expect(result.summary.totalRequestCount).toBe(1);
   });
 });

@@ -16,6 +16,8 @@ function buildBrowserReport(input = {}) {
     targetTitle: summary.targetTitle || null,
     consoleErrorCount: Number.isFinite(summary.consoleErrorCount) ? summary.consoleErrorCount : 0,
     pageErrorCount: Number.isFinite(summary.pageErrorCount) ? summary.pageErrorCount : 0,
+    totalRequestCount: Number.isFinite(summary.totalRequestCount) ? summary.totalRequestCount : 0,
+    failedRequestCount: Number.isFinite(summary.failedRequestCount) ? summary.failedRequestCount : 0,
     artifactCount: artifacts.length,
     artifactNames: artifacts.map((artifact) => artifact.name),
     warnings: Array.isArray(input.warnings) ? input.warnings : [],
@@ -98,6 +100,10 @@ function normalizeBrowserResult(input = {}) {
     pushJsonArtifact(artifacts, 'errors.json', collectArtifacts.errors.data || []);
   }
 
+  if (collectArtifacts.networkSummary) {
+    pushJsonArtifact(artifacts, 'network-summary.json', collectArtifacts.networkSummary.data || {});
+  }
+
   const summary = {
     targetUrl,
     targetTitle,
@@ -106,6 +112,7 @@ function normalizeBrowserResult(input = {}) {
     consoleMessageCount: Number.isFinite(counts.consoleMessages) ? counts.consoleMessages : 0,
     consoleErrorCount: Number.isFinite(counts.consoleErrors) ? counts.consoleErrors : 0,
     pageErrorCount: Number.isFinite(counts.pageErrors) ? counts.pageErrors : 0,
+    totalRequestCount: Number.isFinite(counts.totalRequests) ? counts.totalRequests : 0,
     failedRequestCount: Number.isFinite(counts.failedRequests) ? counts.failedRequests : 0,
     artifactCount: artifacts.length,
   };

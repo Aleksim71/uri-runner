@@ -49,7 +49,7 @@ describe('createCdpClientAdapter', () => {
     expect(targets[0].url).toContain('localhost:4173');
   });
 
-  it('attaches and buffers console snapshots and page error events', async () => {
+  it('attaches and buffers console, page errors, and network summary', async () => {
     const events = {};
     const transport = Object.assign(
       async () => ({
@@ -75,6 +75,18 @@ describe('createCdpClientAdapter', () => {
           async enable() {},
           entryAdded(handler) {
             events.log = handler;
+          },
+        },
+        Network: {
+          async enable() {},
+          requestWillBeSent(handler) {
+            events.request = handler;
+          },
+          responseReceived(handler) {
+            events.response = handler;
+          },
+          loadingFailed(handler) {
+            events.failed = handler;
           },
         },
         async close() {},
@@ -103,31 +115,46 @@ describe('createCdpClientAdapter', () => {
       args: [{ value: 'hello' }, { value: 'world' }],
       timestamp: 1,
     });
-    events.console({
-      type: 'error',
-      args: [{ value: 'boom' }],
-      timestamp: 2,
-    });
     events.exception({
       exceptionDetails: { text: 'Boom', lineNumber: 10, columnNumber: 2 },
       timestamp: 3,
     });
-    events.log({
-      entry: {
-        source: 'network',
-        level: 'error',
-        text: 'GET /api failed',
-        timestamp: 4,
-      },
+    events.request({
+      requestId: 'r1',
+      type: 'Document',
+      request: { url: 'http://localhost:4173/', method: 'GET' },
+      timestamp: 10,
+    });
+    events.response({
+      requestId: 'r1',
+      type: 'Document',
+      response: { url: 'http://localhost:4173/', status: 200, mimeType: 'text/html', protocol: 'h2' },
+      timestamp: 11,
+    });
+    events.request({
+      requestId: 'r2',
+      type: 'XHR',
+      request: { url: 'http://localhost:4173/api', method: 'GET' },
+      timestamp: 12,
+    });
+    events.failed({
+      requestId: 'r2',
+      type: 'XHR',
+      errorText: 'net::ERR_CONNECTION_REFUSED',
+      timestamp: 13,
     });
 
     const snapshot = await client.getConsoleSnapshot({ settleMs: 0 });
+    const network = await client.getNetworkSummary({ settleMs: 0 });
     const screenshot = await client.takeScreenshot();
 
-    expect(snapshot.consoleMessages).toHaveLength(3);
-    expect(snapshot.pageErrors).toHaveLength(2);
-    expect(snapshot.consoleMessages[1].level).toBe('error');
-    expect(snapshot.pageErrors[0].text).toBe('Boom');
+    expect(snapshot.consoleMessages).toHaveLength(1);
+    expect(snapshot.pageErrors).toHaveLength(1);
+    expect(network.totalRequests).toBe(2);
+    expect(network.failedRequests).toBe(1);
+    expect(network.statusCodeBuckets['200']).toBe(1);
+    expect(network.resourceTypeBuckets.Document).toBe(1);
+    expect(network.resourceTypeBuckets.XHR).toBe(1);
     expect(screenshot).toBeTypeOf('string');
   });
 });

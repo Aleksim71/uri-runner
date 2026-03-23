@@ -17,6 +17,7 @@ function normalizeCollectOptions(options = {}) {
     },
     timeoutMs: Number.isFinite(options.timeoutMs) ? options.timeoutMs : 10_000,
     consoleSettleMs: Number.isFinite(options.consoleSettleMs) ? options.consoleSettleMs : 150,
+    networkSettleMs: Number.isFinite(options.networkSettleMs) ? options.networkSettleMs : 250,
   };
 }
 
@@ -37,6 +38,7 @@ function buildFailedResult(code, message, warnings = []) {
       consoleMessages: 0,
       consoleErrors: 0,
       pageErrors: 0,
+      totalRequests: 0,
       failedRequests: 0,
     },
     warnings: Array.isArray(warnings) ? warnings : [],
@@ -122,6 +124,40 @@ function normalizePageErrors(items) {
   }));
 }
 
+function normalizeNetworkSummary(summary) {
+  const safeSummary = summary && typeof summary === 'object' ? summary : {};
+  const requests = Array.isArray(safeSummary.requests) ? safeSummary.requests : [];
+
+  return {
+    requests: requests.map((request) => ({
+      requestId: request && request.requestId ? request.requestId : null,
+      url: request && typeof request.url === 'string' ? request.url : '',
+      method: request && request.method ? request.method : 'GET',
+      resourceType: request && request.resourceType ? request.resourceType : 'Other',
+      status: request && Number.isFinite(request.status) ? request.status : null,
+      mimeType: request && request.mimeType ? request.mimeType : null,
+      protocol: request && request.protocol ? request.protocol : null,
+      encodedDataLength:
+        request && Number.isFinite(request.encodedDataLength) ? request.encodedDataLength : null,
+      failed: Boolean(request && request.failed),
+      failureText: request && request.failureText ? request.failureText : null,
+      timestamp: request && request.timestamp ? request.timestamp : null,
+    })),
+    totalRequests: Number.isFinite(safeSummary.totalRequests)
+      ? safeSummary.totalRequests
+      : requests.length,
+    failedRequests: Number.isFinite(safeSummary.failedRequests) ? safeSummary.failedRequests : 0,
+    statusCodeBuckets:
+      safeSummary.statusCodeBuckets && typeof safeSummary.statusCodeBuckets === 'object'
+        ? safeSummary.statusCodeBuckets
+        : {},
+    resourceTypeBuckets:
+      safeSummary.resourceTypeBuckets && typeof safeSummary.resourceTypeBuckets === 'object'
+        ? safeSummary.resourceTypeBuckets
+        : {},
+  };
+}
+
 async function collectBrowserArtifacts(sessionResult, options = {}) {
   if (!sessionResult || sessionResult.status !== 'ok' || !sessionResult.session) {
     return buildFailedResult(
@@ -186,6 +222,7 @@ async function collectBrowserArtifacts(sessionResult, options = {}) {
 
     let consoleMessages = [];
     let pageErrors = [];
+    let networkSummary = null;
     const wantsConsoleData = normalizedOptions.collect.console || normalizedOptions.collect.errors;
 
     if (wantsConsoleData && !artifacts.pageMetadata) {
@@ -231,12 +268,31 @@ async function collectBrowserArtifacts(sessionResult, options = {}) {
       };
     }
 
+    if (normalizedOptions.collect.networkSummary) {
+      if (typeof client.getNetworkSummary !== 'function') {
+        warnings.push('Diagnostics client does not support getNetworkSummary().');
+      } else {
+        networkSummary = normalizeNetworkSummary(
+          await client.getNetworkSummary({ settleMs: normalizedOptions.networkSettleMs })
+        );
+        artifacts.networkSummary = {
+          kind: 'json',
+          data: networkSummary,
+        };
+      }
+    }
+
     const consoleData = artifacts.console ? artifacts.console.data : [];
     const errorsData = artifacts.errors ? artifacts.errors.data : [];
-    const failedRequests = 0;
+    const failedRequests = networkSummary ? networkSummary.failedRequests : 0;
+    const totalRequests = networkSummary ? networkSummary.totalRequests : 0;
 
     const status =
-      warnings.length > 0 || (Array.isArray(errorsData) && errorsData.length > 0) ? 'warning' : 'ok';
+      warnings.length > 0 ||
+      (Array.isArray(errorsData) && errorsData.length > 0) ||
+      failedRequests > 0
+        ? 'warning'
+        : 'ok';
 
     return {
       status,
@@ -251,6 +307,7 @@ async function collectBrowserArtifacts(sessionResult, options = {}) {
           ? consoleData.filter((item) => item && item.level === 'error').length
           : 0,
         pageErrors: Array.isArray(errorsData) ? errorsData.length : 0,
+        totalRequests,
         failedRequests,
       },
       warnings,

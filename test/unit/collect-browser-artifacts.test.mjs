@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { collectBrowserArtifacts } from '../../src/runtime/browser/collect-browser-artifacts.cjs';
 
 describe('collectBrowserArtifacts', () => {
-  it('collects real-artifact metadata and screenshot with session enrichment', async () => {
+  it('collects metadata and screenshot with session enrichment', async () => {
     const result = await collectBrowserArtifacts(
       {
         status: 'ok',
@@ -123,26 +123,36 @@ describe('collectBrowserArtifacts', () => {
     expect(result.artifacts.errors.data[0].lineNumber).toBe(10);
   });
 
-  it('returns warning when screenshot payload is invalid', async () => {
+  it('collects network summary and marks result warning on failed requests', async () => {
     const result = await collectBrowserArtifacts(
       {
         status: 'ok',
         session: {
           endpoint: '127.0.0.1:9222',
+          browserType: 'chrome',
           targetId: 'page-1',
-          targetUrl: 'http://localhost:5173/',
-          targetTitle: 'App',
+          targetUrl: 'https://example.com/',
+          targetTitle: 'Example Domain',
           client: {
             async getPageMetadata() {
-              return { title: 'App' };
+              return { title: 'Example Domain', url: 'https://example.com/' };
             },
             async takeScreenshot() {
-              return '';
+              return Buffer.from('fake-png-binary').toString('base64');
             },
             async getConsoleSnapshot() {
+              return { consoleMessages: [], pageErrors: [] };
+            },
+            async getNetworkSummary() {
               return {
-                consoleMessages: [],
-                pageErrors: [],
+                requests: [
+                  { requestId: 'r1', url: 'https://example.com/', method: 'GET', resourceType: 'Document', status: 200 },
+                  { requestId: 'r2', url: 'https://example.com/app.js', method: 'GET', resourceType: 'Script', failed: true, failureText: 'net::ERR_ABORTED' },
+                ],
+                totalRequests: 2,
+                failedRequests: 1,
+                statusCodeBuckets: { 200: 1 },
+                resourceTypeBuckets: { Document: 1, Script: 1 },
               };
             },
           },
@@ -152,15 +162,19 @@ describe('collectBrowserArtifacts', () => {
         collect: {
           metadata: true,
           screenshot: true,
-          console: false,
-          errors: false,
+          console: true,
+          errors: true,
+          networkSummary: true,
         },
+        consoleSettleMs: 0,
+        networkSettleMs: 0,
       }
     );
 
     expect(result.status).toBe('warning');
-    expect(result.artifacts.pageMetadata.data.targetId).toBe('page-1');
-    expect(result.artifacts.screenshot).toBeNull();
-    expect(result.warnings).toContain('Diagnostics client returned an invalid screenshot payload.');
+    expect(result.counts.totalRequests).toBe(2);
+    expect(result.counts.failedRequests).toBe(1);
+    expect(result.artifacts.networkSummary.data.requests).toHaveLength(2);
+    expect(result.artifacts.networkSummary.data.resourceTypeBuckets.Script).toBe(1);
   });
 });

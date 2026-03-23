@@ -153,12 +153,59 @@ function normalizePageError(entry = {}) {
   };
 }
 
+function normalizeNetworkRecord(record = {}) {
+  return {
+    requestId: record.requestId || null,
+    url: typeof record.url === 'string' ? record.url : '',
+    method: record.method || 'GET',
+    resourceType: record.resourceType || 'Other',
+    status: Number.isFinite(record.status) ? record.status : null,
+    mimeType: record.mimeType || null,
+    protocol: record.protocol || null,
+    encodedDataLength: Number.isFinite(record.encodedDataLength) ? record.encodedDataLength : null,
+    failed: Boolean(record.failed),
+    failureText: record.failureText || null,
+    timestamp: record.timestamp || null,
+  };
+}
+
+function buildNetworkSummary(networkRecords) {
+  const requests = Array.from(networkRecords.values()).map((record) => normalizeNetworkRecord(record));
+  const statusCodeBuckets = {};
+  const resourceTypeBuckets = {};
+  let failedRequests = 0;
+
+  for (const request of requests) {
+    const resourceType = request.resourceType || 'Other';
+    resourceTypeBuckets[resourceType] = (resourceTypeBuckets[resourceType] || 0) + 1;
+
+    if (Number.isFinite(request.status)) {
+      const bucket = String(request.status);
+      statusCodeBuckets[bucket] = (statusCodeBuckets[bucket] || 0) + 1;
+    }
+
+    if (request.failed) {
+      failedRequests += 1;
+    }
+  }
+
+  return {
+    requests,
+    totalRequests: requests.length,
+    failedRequests,
+    statusCodeBuckets,
+    resourceTypeBuckets,
+  };
+}
+
 function createBufferedClient(rawClient, target = {}, endpoint = '') {
   const Runtime = rawClient.Runtime || null;
   const Page = rawClient.Page || null;
   const Log = rawClient.Log || null;
+  const Network = rawClient.Network || null;
   const consoleMessages = [];
   const pageErrors = [];
+  const networkRecords = new Map();
 
   if (Runtime && typeof Runtime.consoleAPICalled === 'function') {
     Runtime.consoleAPICalled((event = {}) => {
@@ -218,6 +265,72 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
     });
   }
 
+  if (Network && typeof Network.requestWillBeSent === 'function') {
+    Network.requestWillBeSent((event = {}) => {
+      const requestId = event.requestId || null;
+      if (!requestId) {
+        return;
+      }
+
+      const previous = networkRecords.get(requestId) || {};
+      networkRecords.set(requestId, {
+        ...previous,
+        requestId,
+        url: event.request?.url || previous.url || '',
+        method: event.request?.method || previous.method || 'GET',
+        resourceType: event.type || previous.resourceType || 'Other',
+        timestamp: event.timestamp || previous.timestamp || null,
+      });
+    });
+  }
+
+  if (Network && typeof Network.responseReceived === 'function') {
+    Network.responseReceived((event = {}) => {
+      const requestId = event.requestId || null;
+      if (!requestId) {
+        return;
+      }
+
+      const previous = networkRecords.get(requestId) || {};
+      const response = event.response || {};
+      networkRecords.set(requestId, {
+        ...previous,
+        requestId,
+        url: response.url || previous.url || '',
+        method: previous.method || 'GET',
+        resourceType: event.type || previous.resourceType || 'Other',
+        status: Number.isFinite(response.status) ? response.status : previous.status,
+        mimeType: response.mimeType || previous.mimeType || null,
+        protocol: response.protocol || previous.protocol || null,
+        encodedDataLength: Number.isFinite(response.encodedDataLength)
+          ? response.encodedDataLength
+          : previous.encodedDataLength || null,
+        timestamp: event.timestamp || previous.timestamp || null,
+      });
+    });
+  }
+
+  if (Network && typeof Network.loadingFailed === 'function') {
+    Network.loadingFailed((event = {}) => {
+      const requestId = event.requestId || null;
+      if (!requestId) {
+        return;
+      }
+
+      const previous = networkRecords.get(requestId) || {};
+      networkRecords.set(requestId, {
+        ...previous,
+        requestId,
+        url: previous.url || event.url || '',
+        method: previous.method || 'GET',
+        resourceType: event.type || previous.resourceType || 'Other',
+        failed: true,
+        failureText: event.errorText || 'Request failed.',
+        timestamp: event.timestamp || previous.timestamp || null,
+      });
+    });
+  }
+
   return {
     rawClient,
     async getPageMetadata() {
@@ -261,6 +374,10 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
     async getPageErrors(options = {}) {
       const snapshot = await this.getConsoleSnapshot(options);
       return snapshot.pageErrors;
+    },
+    async getNetworkSummary(options = {}) {
+      await sleep(options.settleMs);
+      return buildNetworkSummary(networkRecords);
     },
     async close() {
       if (typeof rawClient.close === 'function') {
@@ -331,6 +448,7 @@ function createCdpClientAdapter(options = {}) {
         safeDomainCall(rawClient.Page, 'enable'),
         safeDomainCall(rawClient.Runtime, 'enable'),
         safeDomainCall(rawClient.Log, 'enable'),
+        safeDomainCall(rawClient.Network, 'enable'),
       ]);
 
       return createBufferedClient(rawClient, mapTarget(target), endpoint);
