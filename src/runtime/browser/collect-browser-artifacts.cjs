@@ -62,6 +62,36 @@ function ensureBuffer(value) {
   return null;
 }
 
+function enrichMetadata(rawMetadata, session = {}) {
+  const metadata = rawMetadata && typeof rawMetadata === 'object' ? { ...rawMetadata } : {};
+
+  if (!metadata.endpoint) {
+    metadata.endpoint = session.endpoint || null;
+  }
+
+  if (!metadata.targetId) {
+    metadata.targetId = session.targetId || null;
+  }
+
+  if (!metadata.url) {
+    metadata.url = session.targetUrl || null;
+  }
+
+  if (!metadata.title) {
+    metadata.title = session.targetTitle || null;
+  }
+
+  if (!metadata.type) {
+    metadata.type = session.targetType || 'page';
+  }
+
+  if (!metadata.browserType) {
+    metadata.browserType = session.browserType || 'unknown';
+  }
+
+  return metadata;
+}
+
 async function collectBrowserArtifacts(sessionResult, options = {}) {
   if (!sessionResult || sessionResult.status !== 'ok' || !sessionResult.session) {
     return buildFailedResult(
@@ -100,7 +130,7 @@ async function collectBrowserArtifacts(sessionResult, options = {}) {
         const metadata = await client.getPageMetadata();
         artifacts.pageMetadata = {
           kind: 'json',
-          data: metadata || {},
+          data: enrichMetadata(metadata, session),
         };
       }
     }
@@ -112,7 +142,7 @@ async function collectBrowserArtifacts(sessionResult, options = {}) {
         const screenshotData = await client.takeScreenshot({ fullPage: false });
         const buffer = ensureBuffer(screenshotData);
 
-        if (buffer) {
+        if (buffer && buffer.length > 0) {
           artifacts.screenshot = {
             kind: 'binary',
             ext: '.png',
@@ -127,6 +157,10 @@ async function collectBrowserArtifacts(sessionResult, options = {}) {
     let consoleMessages = [];
 
     if (normalizedOptions.collect.console) {
+      if (!artifacts.pageMetadata) {
+        warnings.push('Console collection is enabled before metadata was collected.');
+      }
+
       if (typeof client.getConsoleMessages !== 'function') {
         warnings.push('Diagnostics client does not support getConsoleMessages().');
       } else {

@@ -73,7 +73,37 @@ async function safeRuntimeEvaluate(Runtime, expression) {
   return serializeRemoteObject(result.result);
 }
 
-function createBufferedClient(rawClient, target = {}) {
+function selectPageTarget(targets, targetHint = {}) {
+  const safeTargets = Array.isArray(targets) ? targets.map(mapTarget).filter(Boolean) : [];
+  const pageTargets = safeTargets.filter((target) => target.type === 'page' || target.type === 'tab');
+  const candidates = pageTargets.length > 0 ? pageTargets : safeTargets;
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const { urlIncludes, titleIncludes, targetId } = targetHint || {};
+
+  if (targetId) {
+    const byId = candidates.find((target) => target.id === targetId);
+    if (byId) {
+      return byId;
+    }
+  }
+
+  return (
+    candidates.find((target) => {
+      const url = typeof target.url === 'string' ? target.url : '';
+      const title = typeof target.title === 'string' ? target.title : '';
+      const urlMatch = !urlIncludes || url.includes(urlIncludes);
+      const titleMatch = !titleIncludes || title.includes(titleIncludes);
+
+      return urlMatch && titleMatch;
+    }) || candidates[0]
+  );
+}
+
+function createBufferedClient(rawClient, target = {}, endpoint = '') {
   const Runtime = rawClient.Runtime || null;
   const Page = rawClient.Page || null;
   const Log = rawClient.Log || null;
@@ -136,6 +166,8 @@ function createBufferedClient(rawClient, target = {}) {
       const frameTree = await safeDomainCall(Page, 'getFrameTree');
 
       return {
+        endpoint,
+        targetId: target.id || null,
         url: target.url || null,
         title: target.title || null,
         type: target.type || 'page',
@@ -187,6 +219,18 @@ function createCdpClientAdapter(options = {}) {
       return Array.isArray(targets) ? targets.map(mapTarget) : [];
     },
 
+    async listPageTargets(endpoint, targetHint = {}) {
+      const targets = await this.listTargets(endpoint);
+      const pages = targets.filter((target) => target.type === 'page' || target.type === 'tab');
+
+      if (!targetHint || Object.keys(targetHint).length === 0) {
+        return pages;
+      }
+
+      const selected = selectPageTarget(pages, targetHint);
+      return selected ? [selected, ...pages.filter((target) => target.id !== selected.id)] : pages;
+    },
+
     async createTarget(endpoint, targetHint = {}) {
       const connection = normalizeCdpEndpoint(endpoint);
       const target = await transport.New({
@@ -219,7 +263,22 @@ function createCdpClientAdapter(options = {}) {
         safeDomainCall(rawClient.Log, 'enable'),
       ]);
 
-      return createBufferedClient(rawClient, mapTarget(target));
+      return createBufferedClient(rawClient, mapTarget(target), endpoint);
+    },
+
+    async connectToPageTarget(endpoint, targetHint = {}) {
+      const targets = await this.listPageTargets(endpoint, targetHint);
+      const target = selectPageTarget(targets, targetHint);
+
+      if (!target) {
+        throw new Error('No page target matched the provided targetHint.');
+      }
+
+      const client = await this.attachToTarget(endpoint, target);
+      return {
+        target,
+        client,
+      };
     },
   };
 }
@@ -227,4 +286,5 @@ function createCdpClientAdapter(options = {}) {
 module.exports = {
   createCdpClientAdapter,
   normalizeCdpEndpoint,
+  selectPageTarget,
 };
