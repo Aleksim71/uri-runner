@@ -13,6 +13,8 @@ const SUPPORTED_HEALTHCHECK_TYPES = new Set([
   "process_alive",
 ]);
 
+const SUPPORTED_BROWSER_SCENARIO_ACTIONS = new Set(["diagnostics.run"]);
+
 class PlanCompileError extends Error {
   constructor(code, message, details = undefined) {
     super(message);
@@ -470,17 +472,7 @@ function validateMaxSteps(steps, executableCtx) {
   }
 }
 
-function compileScenarioStep(step, index, executableCtx) {
-  if (!step || typeof step !== "object") {
-    throw createPlanCompileError(
-      ERROR_CODES.SCENARIO_INVALID,
-      "Scenario step is invalid: step must be an object",
-      {
-        stepIndex: index,
-      }
-    );
-  }
-
+function getScenarioStepId(step, index) {
   const stepId =
     typeof step.id === "string" && step.id.trim().length > 0
       ? step.id.trim()
@@ -495,6 +487,12 @@ function compileScenarioStep(step, index, executableCtx) {
       }
     );
   }
+
+  return stepId;
+}
+
+function compileCommandScenarioStep(step, index, executableCtx) {
+  const stepId = getScenarioStepId(step, index);
 
   const command =
     typeof step.command === "string" && step.command.trim().length > 0
@@ -554,6 +552,103 @@ function compileScenarioStep(step, index, executableCtx) {
     commandRoot,
     args,
   };
+}
+
+function compileBrowserScenarioStep(step, index) {
+  const stepId = getScenarioStepId(step, index);
+
+  const action =
+    typeof step.action === "string" && step.action.trim().length > 0
+      ? step.action.trim()
+      : null;
+
+  if (!action) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "Scenario browser step is invalid: action is required",
+      {
+        stepIndex: index,
+        stepId,
+        field: "action",
+      }
+    );
+  }
+
+  if (!SUPPORTED_BROWSER_SCENARIO_ACTIONS.has(action)) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "Scenario browser step is invalid: unsupported action",
+      {
+        stepIndex: index,
+        stepId,
+        field: "action",
+        action,
+        supportedActions: Array.from(SUPPORTED_BROWSER_SCENARIO_ACTIONS),
+      }
+    );
+  }
+
+  const payload =
+    step.payload && typeof step.payload === "object" && !Array.isArray(step.payload)
+      ? step.payload
+      : Object.prototype.hasOwnProperty.call(step || {}, "payload")
+        ? null
+        : {};
+
+  if (payload === null) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "Scenario browser step is invalid: payload must be an object",
+      {
+        stepIndex: index,
+        stepId,
+        field: "payload",
+      }
+    );
+  }
+
+  return {
+    kind: "browser",
+    stepId,
+    index,
+    action,
+    payload,
+  };
+}
+
+function compileScenarioStep(step, index, executableCtx) {
+  if (!step || typeof step !== "object" || Array.isArray(step)) {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      "Scenario step is invalid: step must be an object",
+      {
+        stepIndex: index,
+      }
+    );
+  }
+
+  const stepKind =
+    typeof step.kind === "string" && step.kind.trim().length > 0
+      ? step.kind.trim()
+      : "command";
+
+  if (stepKind === "browser") {
+    return compileBrowserScenarioStep(step, index);
+  }
+
+  if (stepKind !== "command") {
+    throw createPlanCompileError(
+      ERROR_CODES.SCENARIO_INVALID,
+      `Scenario step is invalid: unsupported kind ${stepKind}`,
+      {
+        stepIndex: index,
+        kind: stepKind,
+        supportedKinds: ["command", "browser"],
+      }
+    );
+  }
+
+  return compileCommandScenarioStep(step, index, executableCtx);
 }
 
 function compilePlan(params) {

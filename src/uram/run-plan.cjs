@@ -1,3 +1,4 @@
+// path: src/uram/run-plan.cjs
 "use strict";
 
 const fs = require("fs/promises");
@@ -303,10 +304,7 @@ async function runMaterializedPlan(normalizedPlan, params) {
         value = await executeProvideFileReadStep(step, executionContext);
       } else if (step.type === "check" && step.action === "goal.check") {
         value = await executeGoalCheckStep(step);
-      } else if (
-        step.type === "browser" &&
-        step.action === "diagnostics.run"
-      ) {
+      } else if (step.type === "browser" && step.action === "diagnostics.run") {
         value = await executeBrowserDiagnosticsStep(step, executionContext);
       } else {
         throw createPlanRunError(
@@ -457,6 +455,49 @@ function getScenarioRuntime(normalizedPlan) {
   };
 }
 
+function buildScenarioFailureResult({
+  normalizedPlan,
+  executionContext,
+  loadedCommands,
+  startedAt,
+  error,
+  failedStep,
+}) {
+  const finishedAt = new Date().toISOString();
+
+  return {
+    exitCode: 1,
+    outboxPayload: {
+      ok: false,
+      engine: normalizedPlan.engine,
+      project: normalizedPlan.project,
+      loaded_commands: loadedCommands,
+      result: {
+        results: executionContext.results,
+      },
+    },
+    meta: {
+      loadedCommands,
+      error: {
+        code: error?.code || ERROR_CODES.PIPELINE_INTERNAL_ERROR,
+        message: error?.message || "Step execution failed",
+        details:
+          error && error.details && typeof error.details === "object"
+            ? error.details
+            : {},
+      },
+      planRun: {
+        startedAt,
+        finishedAt,
+        executionStatus: "failed",
+        stepsTotal: normalizedPlan.steps.length,
+        stepsCompleted: executionContext.results.length,
+        failedStep,
+      },
+    },
+  };
+}
+
 async function runScenarioPlan(normalizedPlan, params) {
   const projectRoot = ensureProjectRoot(params.projectRoot);
 
@@ -494,10 +535,8 @@ async function runScenarioPlan(normalizedPlan, params) {
   const environmentPolicy = runtime.environment;
   const shouldResetBeforeRun =
     environmentPolicy &&
-    (
-      environmentPolicy.reset_before_run === true ||
-      environmentPolicy.resetBeforeRun === true
-    );
+    (environmentPolicy.reset_before_run === true ||
+      environmentPolicy.resetBeforeRun === true);
 
   if (shouldResetBeforeRun) {
     const environmentReset = await resetEnvironment({
@@ -513,6 +552,96 @@ async function runScenarioPlan(normalizedPlan, params) {
   let failedStep = null;
 
   for (const step of normalizedPlan.steps) {
+    if (step.kind === "browser") {
+      try {
+        let value;
+
+        if (step.action === "diagnostics.run") {
+          value = await executeBrowserDiagnosticsStep(step, executionContext);
+        } else {
+          throw createPlanRunError(
+            ERROR_CODES.SCENARIO_INVALID,
+            `Unsupported scenario browser action: ${step.action}`,
+            {
+              stepId: step.stepId || null,
+              kind: step.kind || null,
+              action: step.action || null,
+            }
+          );
+        }
+
+        executionContext.results.push({
+          stepId: step.stepId || null,
+          command: null,
+          kind: "browser",
+          action: step.action || null,
+          ok: true,
+          value: value === undefined ? null : value,
+        });
+      } catch (error) {
+        failedStep = step.stepId || null;
+
+        executionContext.results.push({
+          stepId: step.stepId || null,
+          command: null,
+          kind: "browser",
+          action: step.action || null,
+          ok: false,
+          error: {
+            code: error?.code || ERROR_CODES.PIPELINE_INTERNAL_ERROR,
+            message: error?.message || "Step execution failed",
+            details:
+              error && error.details && typeof error.details === "object"
+                ? error.details
+                : {},
+          },
+        });
+
+        return buildScenarioFailureResult({
+          normalizedPlan,
+          executionContext,
+          loadedCommands,
+          startedAt,
+          error,
+          failedStep,
+        });
+      }
+
+      continue;
+    }
+
+    if (step.kind && step.kind !== "command") {
+      const error = createPlanRunError(
+        ERROR_CODES.SCENARIO_INVALID,
+        `Unsupported scenario step kind: ${step.kind}`,
+        {
+          stepId: step.stepId || null,
+          kind: step.kind || null,
+        }
+      );
+
+      failedStep = step.stepId || null;
+      executionContext.results.push({
+        stepId: step.stepId || null,
+        command: step.command || null,
+        ok: false,
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details || {},
+        },
+      });
+
+      return buildScenarioFailureResult({
+        normalizedPlan,
+        executionContext,
+        loadedCommands,
+        startedAt,
+        error,
+        failedStep,
+      });
+    }
+
     const commandFn = commands[step.command];
 
     if (typeof commandFn !== "function") {
@@ -529,8 +658,6 @@ async function runScenarioPlan(normalizedPlan, params) {
       }
 
       failedStep = step.stepId || null;
-      const finishedAt = new Date().toISOString();
-
       executionContext.results.push({
         stepId: step.stepId || null,
         command: step.command || null,
@@ -542,34 +669,14 @@ async function runScenarioPlan(normalizedPlan, params) {
         },
       });
 
-      return {
-        exitCode: 1,
-        outboxPayload: {
-          ok: false,
-          engine: normalizedPlan.engine,
-          project: normalizedPlan.project,
-          loaded_commands: loadedCommands,
-          result: {
-            results: executionContext.results,
-          },
-        },
-        meta: {
-          loadedCommands,
-          error: {
-            code: notFoundError.code,
-            message: notFoundError.message,
-            details: notFoundError.details || {},
-          },
-          planRun: {
-            startedAt,
-            finishedAt,
-            executionStatus: "failed",
-            stepsTotal: normalizedPlan.steps.length,
-            stepsCompleted: executionContext.results.length,
-            failedStep,
-          },
-        },
-      };
+      return buildScenarioFailureResult({
+        normalizedPlan,
+        executionContext,
+        loadedCommands,
+        startedAt,
+        error: notFoundError,
+        failedStep,
+      });
     }
 
     try {
@@ -588,8 +695,6 @@ async function runScenarioPlan(normalizedPlan, params) {
       });
     } catch (error) {
       failedStep = step.stepId || null;
-      const finishedAt = new Date().toISOString();
-
       executionContext.results.push({
         stepId: step.stepId || null,
         command: step.command || null,
@@ -604,37 +709,14 @@ async function runScenarioPlan(normalizedPlan, params) {
         },
       });
 
-      return {
-        exitCode: 1,
-        outboxPayload: {
-          ok: false,
-          engine: normalizedPlan.engine,
-          project: normalizedPlan.project,
-          loaded_commands: loadedCommands,
-          result: {
-            results: executionContext.results,
-          },
-        },
-        meta: {
-          loadedCommands,
-          error: {
-            code: error?.code || ERROR_CODES.PIPELINE_INTERNAL_ERROR,
-            message: error?.message || "Step execution failed",
-            details:
-              error && error.details && typeof error.details === "object"
-                ? error.details
-                : {},
-          },
-          planRun: {
-            startedAt,
-            finishedAt,
-            executionStatus: "failed",
-            stepsTotal: normalizedPlan.steps.length,
-            stepsCompleted: executionContext.results.length,
-            failedStep,
-          },
-        },
-      };
+      return buildScenarioFailureResult({
+        normalizedPlan,
+        executionContext,
+        loadedCommands,
+        startedAt,
+        error,
+        failedStep,
+      });
     }
   }
 
@@ -666,33 +748,18 @@ async function runScenarioPlan(normalizedPlan, params) {
 }
 
 async function runPlan(params) {
-  const {
-    plan,
-    projectRoot,
-    runId = null,
-    workspaceDir = null,
-  } = params || {};
-
+  const { plan } = params || {};
   const normalizedPlan = assertPlanShape(plan);
 
   if (normalizedPlan.kind === PLAN_KIND_MATERIALIZED) {
-    return runMaterializedPlan(normalizedPlan, {
-      projectRoot,
-      runId,
-      workspaceDir,
-    });
+    return runMaterializedPlan(normalizedPlan, params || {});
   }
 
-  return runScenarioPlan(normalizedPlan, {
-    projectRoot,
-    runId,
-    workspaceDir,
-  });
+  return runScenarioPlan(normalizedPlan, params || {});
 }
 
 module.exports = {
   PlanRunError,
   createPlanRunError,
-  loadPlanCommands,
   runPlan,
 };
