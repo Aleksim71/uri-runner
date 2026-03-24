@@ -1,20 +1,25 @@
-'use strict';
+"use strict";
 
 // path: src/commands/browser.cjs
 
 const {
   normalizeBrowserRunInput,
-} = require('../runtime/browser/normalize-browser-run-input.cjs');
+} = require("../runtime/browser/normalize-browser-run-input.cjs");
 
 function getRunBrowserDiagnostics() {
-  const runtimeModule = require('../runtime/browser/run-browser-diagnostics.cjs');
-  if (typeof runtimeModule === 'function') {
+  const runtimeModule = require("../runtime/browser/run-browser-diagnostics.cjs");
+  if (typeof runtimeModule === "function") {
     return runtimeModule;
   }
-  if (runtimeModule && typeof runtimeModule.runBrowserDiagnostics === 'function') {
+  if (
+    runtimeModule &&
+    typeof runtimeModule.runBrowserDiagnostics === "function"
+  ) {
     return runtimeModule.runBrowserDiagnostics;
   }
-  throw new Error('run-browser-diagnostics.cjs does not export a runnable browser diagnostics function.');
+  throw new Error(
+    "run-browser-diagnostics.cjs does not export a runnable browser diagnostics function."
+  );
 }
 
 function normalizeBrowserCommandOptions(options = {}) {

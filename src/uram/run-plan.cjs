@@ -11,6 +11,9 @@ const {
 const {
   resetEnvironment,
 } = require("../runtime/environment/reset-environment.cjs");
+const {
+  executeBrowserDiagnosticsStep,
+} = require("./execute-browser-diagnostics-step.cjs");
 
 class PlanRunError extends Error {
   constructor(code, message, details = undefined) {
@@ -300,6 +303,11 @@ async function runMaterializedPlan(normalizedPlan, params) {
         value = await executeProvideFileReadStep(step, executionContext);
       } else if (step.type === "check" && step.action === "goal.check") {
         value = await executeGoalCheckStep(step);
+      } else if (
+        step.type === "browser" &&
+        step.action === "diagnostics.run"
+      ) {
+        value = await executeBrowserDiagnosticsStep(step, executionContext);
       } else {
         throw createPlanRunError(
           ERROR_CODES.SCENARIO_INVALID,

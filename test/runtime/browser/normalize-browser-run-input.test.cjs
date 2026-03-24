@@ -38,14 +38,14 @@ describe("normalizeBrowserRunInput", () => {
   });
 
   it("throws on invalid port", () => {
-    expect(() => normalizeBrowserRunInput({ port: "0" })).toThrow(
-      /positive integer/
-    );
+    expect(() =>
+      normalizeBrowserRunInput({ port: "0" })
+    ).toThrow(/positive integer/);
   });
 
   it("throws on invalid timeout", () => {
-    expect(() => normalizeBrowserRunInput({ timeoutMs: "-1" })).toThrow(
-      /positive integer/
-    );
+    expect(() =>
+      normalizeBrowserRunInput({ timeoutMs: "-1" })
+    ).toThrow(/positive integer/);
   });
 });

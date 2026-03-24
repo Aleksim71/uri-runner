@@ -260,6 +260,74 @@ function assertMaterializedPlanStep(step, index) {
     });
   }
 
+  if (type === "browser" && action === "diagnostics.run") {
+    if (
+      payload.host !== undefined &&
+      (typeof payload.host !== "string" || payload.host.trim().length === 0)
+    ) {
+      throw createPlanSchemaError(
+        "Materialized browser diagnostics step is invalid: payload.host must be a non-empty string",
+        {
+          stepIndex: index,
+          field: "payload.host",
+        }
+      );
+    }
+
+    if (
+      payload.target !== undefined &&
+      (typeof payload.target !== "string" || payload.target.trim().length === 0)
+    ) {
+      throw createPlanSchemaError(
+        "Materialized browser diagnostics step is invalid: payload.target must be a non-empty string",
+        {
+          stepIndex: index,
+          field: "payload.target",
+        }
+      );
+    }
+
+    if (
+      payload.artifactsDir !== undefined &&
+      (typeof payload.artifactsDir !== "string" ||
+        payload.artifactsDir.trim().length === 0)
+    ) {
+      throw createPlanSchemaError(
+        "Materialized browser diagnostics step is invalid: payload.artifactsDir must be a non-empty string",
+        {
+          stepIndex: index,
+          field: "payload.artifactsDir",
+        }
+      );
+    }
+
+    if (
+      payload.port !== undefined &&
+      (!Number.isInteger(payload.port) || payload.port <= 0)
+    ) {
+      throw createPlanSchemaError(
+        "Materialized browser diagnostics step is invalid: payload.port must be a positive integer",
+        {
+          stepIndex: index,
+          field: "payload.port",
+        }
+      );
+    }
+
+    if (
+      payload.timeoutMs !== undefined &&
+      (!Number.isInteger(payload.timeoutMs) || payload.timeoutMs <= 0)
+    ) {
+      throw createPlanSchemaError(
+        "Materialized browser diagnostics step is invalid: payload.timeoutMs must be a positive integer",
+        {
+          stepIndex: index,
+          field: "payload.timeoutMs",
+        }
+      );
+    }
+  }
+
   return {
     type,
     action,
