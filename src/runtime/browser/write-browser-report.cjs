@@ -23,7 +23,7 @@ async function writeBrowserReport(options) {
     throw new Error('writeBrowserReport baseDir is required.');
   }
 
-  const reportDir = path.join(baseDir, 'REPORT', 'browser');
+  const reportDir = baseDir;
   await ensureDir(reportDir);
 
   const artifacts = {};

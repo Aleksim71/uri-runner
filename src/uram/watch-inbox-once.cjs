@@ -715,6 +715,10 @@ async function runWatchCycle(loaded, options = {}) {
           reason: result.reason,
         });
       }
+    } else if (!result.accepted) {
+      printStatus(stdout, "ignored", {
+        reason: result.reason,
+      });
     }
 
     return result;

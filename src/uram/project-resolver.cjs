@@ -65,6 +65,8 @@ async function resolveProjectContext({ uramRoot, project }) {
         project,
         cwd: uramRoot,
         projectRoot: null,
+        contextDir: null,
+        logsDir: null,
         outboxDir: null,
         failedLogsDir: null,
         snapshotsDir: null,
@@ -84,30 +86,44 @@ async function resolveProjectContext({ uramRoot, project }) {
     : path.resolve(uramRoot, entry.cwd);
 
   const projectRoot =
-    resolveAbsolute(uramRoot, entry.project_root || entry.projectRoot) || null;
+    resolveAbsolute(uramRoot, entry.project_root || entry.projectRoot) || cwd;
 
   const baseDir = projectRoot || cwd;
+
+  const contextDir =
+    resolveAbsolute(baseDir, entry.context_dir || entry.contextDir) ||
+    path.join(baseDir, "context");
+
+  const logsDir =
+    resolveAbsolute(baseDir, entry.logs_dir || entry.logsDir) ||
+    path.join(baseDir, "logs");
+
+  const outboxDir =
+    resolveAbsolute(baseDir, entry.outbox_dir || entry.outboxDir) ||
+    path.join(baseDir, "outbox");
+
+  const snapshotsDir =
+    resolveAbsolute(baseDir, entry.snapshots_dir || entry.snapshotsDir) ||
+    path.join(baseDir, "snapshots");
 
   return {
     project,
     cwd,
     projectRoot,
-    outboxDir:
-      resolveAbsolute(baseDir, entry.outbox_dir || entry.outboxDir) ||
-      (projectRoot ? path.join(projectRoot, "Outbox") : null),
+    contextDir,
+    logsDir,
+    outboxDir,
     failedLogsDir:
       resolveAbsolute(
         baseDir,
         entry.failed_logs_dir || entry.failedLogsDir || entry.logs_failed_dir
-      ) || (projectRoot ? path.join(projectRoot, "Logs", "failed") : null),
-    snapshotsDir:
-      resolveAbsolute(baseDir, entry.snapshots_dir || entry.snapshotsDir) ||
-      (projectRoot ? path.join(projectRoot, "Snapshots") : null),
+      ) || path.join(logsDir, "failed"),
+    snapshotsDir,
     stateDir:
       resolveAbsolute(
         baseDir,
         entry.state_dir || entry.stateDir || entry.uri_state_dir
-      ) || (projectRoot ? path.join(projectRoot, ".uri") : null),
+      ) || path.join(contextDir, ".uri"),
   };
 }
 

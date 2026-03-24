@@ -1,66 +1,38 @@
 // path: src/runtime/browser/open-browser-page.cjs
 'use strict';
 
-const {
-  getBrowserSessionState,
-  updateBrowserSessionState
-} = require('./browser-session-store.cjs');
-
-function isNonEmptyString(value) {
-  return typeof value === 'string' && value.trim().length > 0;
+function isAbsoluteHttpUrl(value) {
+  return typeof value === 'string' && /^https?:\/\//i.test(value);
 }
 
-function buildPageUrl(baseUrl, pagePath) {
-  const url = new URL(baseUrl);
-
-  if (!isNonEmptyString(pagePath) || pagePath.trim() === '/') {
-    return url.toString();
+function resolvePageUrl({ url, baseUrl }) {
+  if (typeof url !== 'string' || url.trim() === '') {
+    throw new Error('browser.page.open requires a non-empty url.');
   }
 
-  url.pathname = pagePath.trim();
-  return url.toString();
+  if (isAbsoluteHttpUrl(url)) {
+    return url;
+  }
+
+  if (typeof baseUrl !== 'string' || baseUrl.trim() === '') {
+    throw new Error('baseUrl is required for relative browser.page.open url.');
+  }
+
+  return new URL(url, baseUrl).toString();
 }
 
-function openBrowserPage(options) {
-  if (!options || typeof options !== 'object') {
-    throw new Error('openBrowserPage options must be an object.');
-  }
-
-  const runtimeContext = options.runtimeContext;
-  const sessionId = options.sessionId;
-
-  if (!runtimeContext || typeof runtimeContext !== 'object') {
-    throw new Error('openBrowserPage runtimeContext is required.');
-  }
-
-  if (!isNonEmptyString(sessionId)) {
-    throw new Error('openBrowserPage sessionId is required.');
-  }
-
-  const session = getBrowserSessionState(runtimeContext, sessionId);
-  const pagePath = isNonEmptyString(options.path) ? options.path.trim() : '/';
-  const pageUrl = buildPageUrl(session.baseUrl, pagePath);
-  const openedAt = new Date().toISOString();
-
-  const nextState = updateBrowserSessionState(runtimeContext, sessionId, {
-    pageUrl,
-    runtime: {
-      openedAt,
-      pagePath
-    }
+async function openBrowserPage({ page, input, baseUrl }) {
+  const finalUrl = resolvePageUrl({
+    url: input.url,
+    baseUrl
   });
 
-  return {
-    ok: true,
-    sessionId: nextState.sessionId,
-    target: nextState.target,
-    pagePath,
-    pageUrl,
-    openedAt
-  };
+  await page.goto(finalUrl);
+  return { finalUrl };
 }
 
 module.exports = {
   openBrowserPage,
-  buildPageUrl
+  resolvePageUrl,
+  isAbsoluteHttpUrl
 };

@@ -1,37 +1,26 @@
 // path: src/runtime/browser/execute-browser-page-open-step.cjs
 'use strict';
 
-const {
-  openBrowserPage
-} = require('./open-browser-page.cjs');
+const { openBrowserPage } = require('./open-browser-page.cjs');
 
-function executeBrowserPageOpenStep(options) {
-  if (!options || typeof options !== 'object') {
-    throw new Error('executeBrowserPageOpenStep options must be an object.');
+async function executeBrowserPageOpenStep(ctx) {
+  const { page, input, runtime } = ctx;
+
+  const baseUrl = runtime?.baseUrl || process.env.BASE_URL;
+
+  if (!page) {
+    throw new Error('browser.page.open requires a page instance.');
   }
 
-  const runtimeContext = options.runtimeContext;
-  if (!runtimeContext || typeof runtimeContext !== 'object') {
-    throw new Error('executeBrowserPageOpenStep runtimeContext is required.');
-  }
-
-  const sessionId = options.sessionId;
-  const path = options.path;
-
-  const result = openBrowserPage({
-    runtimeContext,
-    sessionId,
-    path
+  const result = await openBrowserPage({
+    page,
+    input,
+    baseUrl
   });
 
   return {
     ok: true,
-    stepType: 'browser.page.open',
-    sessionId: result.sessionId,
-    target: result.target,
-    pagePath: result.pagePath,
-    pageUrl: result.pageUrl,
-    openedAt: result.openedAt
+    ...result
   };
 }
 
