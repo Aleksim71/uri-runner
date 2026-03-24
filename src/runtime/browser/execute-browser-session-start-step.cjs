@@ -1,5 +1,4 @@
 // path: src/runtime/browser/execute-browser-session-start-step.cjs
-
 "use strict";
 
 function resolveStartBrowserSession(mod) {
@@ -52,12 +51,30 @@ function buildFallbackEnvironment(params = {}) {
       : null) ||
     null;
 
+  const endpoint =
+    (typeof input.endpoint === "string" && input.endpoint.trim()) || null;
+
   return {
     target: "browser",
     kind: "scenario",
     source: "compiled-plan",
     baseUrl,
+    endpoint,
   };
+}
+
+function resolveSessionId(params = {}) {
+  if (typeof params.sessionId === "string" && params.sessionId.trim().length > 0) {
+    return params.sessionId.trim();
+  }
+
+  const input = params.input && typeof params.input === "object" ? params.input : {};
+
+  if (typeof input.sessionId === "string" && input.sessionId.trim().length > 0) {
+    return input.sessionId.trim();
+  }
+
+  return null;
 }
 
 async function executeBrowserSessionStartStep(params = {}) {
@@ -87,16 +104,11 @@ async function executeBrowserSessionStartStep(params = {}) {
           input,
         });
 
-  const sessionId =
-    typeof params.sessionId === "string" && params.sessionId.trim().length > 0
-      ? params.sessionId.trim()
-      : null;
-
   return startBrowserSession({
     runtimeContext,
     input,
     environment,
-    sessionId,
+    sessionId: resolveSessionId(params),
   });
 }
 
