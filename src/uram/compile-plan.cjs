@@ -1,6 +1,7 @@
 "use strict";
 
 const { ERROR_CODES } = require("./error-codes.cjs");
+const { compileBrowserFlow } = require('./compile-browser-flow.cjs');
 const {
   PLAN_VERSION,
   PLAN_KIND_SCENARIO,
@@ -443,18 +444,27 @@ function getRuntimeOptions(executableCtx) {
 
 function validateRunbookSteps(runbook) {
   const steps = runbook && runbook.steps;
+  const browserFlow =
+    runbook &&
+    runbook.browser &&
+    Array.isArray(runbook.browser.flow)
+      ? runbook.browser.flow
+      : null;
 
-  if (!Array.isArray(steps) || steps.length === 0) {
+  const hasSteps = Array.isArray(steps) && steps.length > 0;
+  const hasBrowserFlow = Array.isArray(browserFlow) && browserFlow.length > 0;
+
+  if (!hasSteps && !hasBrowserFlow) {
     throw createPlanCompileError(
       ERROR_CODES.SCENARIO_INVALID,
-      "Scenario runbook is invalid: steps must be a non-empty array",
+      "Scenario runbook is invalid: no executable steps source found (steps | browser.flow)",
       {
-        field: "steps",
+        fields: ["steps", "browser.flow"],
       }
     );
   }
 
-  return steps;
+  return hasSteps ? steps : [];
 }
 
 function validateMaxSteps(steps, executableCtx) {
@@ -673,13 +683,43 @@ function compilePlan(params) {
   assertScenarioEngine(executableCtx);
 
   const steps = validateRunbookSteps(runbook);
-  validateMaxSteps(steps, executableCtx);
+  const browserFlowSteps = compileBrowserFlow(runbook.browser || {});
 
-  const compiledSteps = steps.map((step, index) =>
+  validateMaxSteps([...steps, ...browserFlowSteps], executableCtx);
+
+  const compiledScenarioSteps = steps.map((step, index) =>
     compileScenarioStep(step, index, executableCtx)
   );
 
+  const compiledSteps = [
+    ...compiledScenarioSteps,
+    ...browserFlowSteps.map((step, i) => ({
+      kind: "command",
+      stepId: `browser-flow-${i}`,
+      index: compiledScenarioSteps.length + i,
+      command: step.name,
+      commandRoot: getCommandRoot(step.name) || "browser",
+      args:
+        step && step.input && typeof step.input === "object"
+          ? step.input
+          : {},
+    })),
+  ];
+
   const runtime = getRuntimeOptions(executableCtx);
+  const executableCommandRoots = Array.isArray(executableCtx?.commands?.roots)
+    ? executableCtx.commands.roots
+    : [];
+  const compiledCommandRoots = Array.from(
+    new Set([
+      ...executableCommandRoots,
+      ...compiledSteps
+        .map((step) =>
+          step && typeof step.commandRoot === "string" ? step.commandRoot : null
+        )
+        .filter(Boolean),
+    ])
+  );
 
   const draftPlan = {
     version: PLAN_VERSION,
@@ -689,7 +729,10 @@ function compilePlan(params) {
     runtime,
     executableCtxSnapshot: {
       engine: executableCtx?.engine || null,
-      commands: executableCtx?.commands || {},
+      commands: {
+        ...(executableCtx?.commands || {}),
+        roots: compiledCommandRoots,
+      },
       runtime: {
         ...(executableCtx?.runtime || {}),
         environment: runtime.environment,

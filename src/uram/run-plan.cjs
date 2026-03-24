@@ -120,6 +120,108 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
       for (const dirPath of getProjectCommandDirs(projectRoot)) {
         await tryLoadCommandDir(dirPath, "project", commands);
       }
+      continue;
+    }
+
+    if (root === "browser") {
+      const resolveBrowserSessionId = (context, args = {}) => {
+        if (args && typeof args.sessionId === "string" && args.sessionId.trim().length > 0) {
+          return args.sessionId.trim();
+        }
+
+        const results =
+          context && Array.isArray(context.results)
+            ? context.results
+            : [];
+
+        for (let index = results.length - 1; index >= 0; index -= 1) {
+          const item = results[index];
+          if (
+            item &&
+            item.ok === true &&
+            item.value &&
+            typeof item.value.sessionId === "string" &&
+            item.value.sessionId.trim().length > 0
+          ) {
+            return item.value.sessionId.trim();
+          }
+        }
+
+        return null;
+      };
+
+      commands["browser.session.start"] = async ({ args = {}, context }) => {
+        const { executeBrowserSessionStartStep } = require("../runtime/browser/execute-browser-session-start-step.cjs");
+        return executeBrowserSessionStartStep({
+          runtimeContext: context,
+          input: args,
+        });
+      };
+
+      commands["browser.page.open"] = async ({ args = {}, context }) => {
+        const { executeBrowserPageOpenStep } = require("../runtime/browser/execute-browser-page-open-step.cjs");
+        return executeBrowserPageOpenStep({
+          runtimeContext: context,
+          sessionId: resolveBrowserSessionId(context, args),
+          path:
+            typeof args.path === "string" && args.path.trim().length > 0
+              ? args.path.trim()
+              : typeof args.url === "string" && args.url.trim().length > 0
+                ? args.url.trim()
+                : null,
+        });
+      };
+
+      commands["browser.page.wait"] = async ({ args = {}, context }) => {
+        const { executeBrowserPageWaitStep } = require("../runtime/browser/execute-browser-page-wait-step.cjs");
+        return executeBrowserPageWaitStep({
+          runtimeContext: context,
+          sessionId: resolveBrowserSessionId(context, args),
+          strategy:
+            typeof args.waitUntil === "string" && args.waitUntil.trim().length > 0
+              ? args.waitUntil.trim()
+              : undefined,
+          waitedMs: Number.isInteger(args.timeoutMs) ? args.timeoutMs : undefined,
+        });
+      };
+
+      commands["browser.diagnostics.collect"] = async ({ args = {}, context }) => {
+        const path = require("path");
+        const { executeBrowserDiagnosticsCollectStep } = require("../runtime/browser/execute-browser-diagnostics-collect-step.cjs");
+
+        const fallbackBaseDir =
+          typeof context?.workspaceDir === "string" && context.workspaceDir.trim().length > 0
+            ? path.join(context.workspaceDir, "REPORT", "browser")
+            : typeof context?.projectRoot === "string" && context.projectRoot.trim().length > 0
+              ? path.join(context.projectRoot, ".tmp-a26", "REPORT", "browser")
+              : path.join(process.cwd(), ".tmp-a26", "REPORT", "browser");
+
+        return executeBrowserDiagnosticsCollectStep({
+          runtimeContext: context,
+          sessionId: resolveBrowserSessionId(context, args),
+          baseDir:
+            typeof args.baseDir === "string" && args.baseDir.trim().length > 0
+              ? args.baseDir.trim()
+              : fallbackBaseDir,
+          consoleEntries: Array.isArray(args.consoleEntries) ? args.consoleEntries : undefined,
+          networkEntries: Array.isArray(args.networkEntries) ? args.networkEntries : undefined,
+          pageTitle:
+            typeof args.pageTitle === "string" && args.pageTitle.trim().length > 0
+              ? args.pageTitle.trim()
+              : undefined,
+          screenshot: typeof args.screenshot === "boolean" ? args.screenshot : undefined,
+        });
+      };
+
+      commands["browser.session.stop"] = async ({ args = {}, context }) => {
+        const { executeBrowserSessionStopStep } = require("../runtime/browser/execute-browser-session-stop-step.cjs");
+        return executeBrowserSessionStopStep({
+          runtimeContext: context,
+          sessionId: resolveBrowserSessionId(context, args),
+        });
+      };
+
+      continue;
     }
   }
 
@@ -556,8 +658,45 @@ async function runScenarioPlan(normalizedPlan, params) {
       try {
         let value;
 
-        if (step.action === "diagnostics.run") {
-          value = await executeBrowserDiagnosticsStep(step, executionContext);
+        if (step.action === "session.start") {
+          const { executeBrowserSessionStartStep } = require("../runtime/browser/execute-browser-session-start-step.cjs");
+          value = await executeBrowserSessionStartStep({
+            runtimeContext: executionContext,
+            input: step.args || {},
+            environment: step.environment || null,
+            sessionId: step.sessionId || null,
+          });
+        } else if (step.action === "page.open") {
+          const { executeBrowserPageOpenStep } = require("../runtime/browser/execute-browser-page-open-step.cjs");
+          value = await executeBrowserPageOpenStep({
+            runtimeContext: executionContext,
+            input: step.args || {},
+            sessionId: step.sessionId || null,
+          });
+        } else if (step.action === "page.wait") {
+          const { executeBrowserPageWaitStep } = require("../runtime/browser/execute-browser-page-wait-step.cjs");
+          value = await executeBrowserPageWaitStep({
+            runtimeContext: executionContext,
+            input: step.args || {},
+            sessionId: step.sessionId || null,
+          });
+        } else if (
+          step.action === "diagnostics.collect" ||
+          step.action === "diagnostics.run"
+        ) {
+          const { executeBrowserDiagnosticsCollectStep } = require("../runtime/browser/execute-browser-diagnostics-collect-step.cjs");
+          value = await executeBrowserDiagnosticsCollectStep({
+            runtimeContext: executionContext,
+            input: step.args || {},
+            sessionId: step.sessionId || null,
+          });
+        } else if (step.action === "session.stop") {
+          const { executeBrowserSessionStopStep } = require("../runtime/browser/execute-browser-session-stop-step.cjs");
+          value = await executeBrowserSessionStopStep({
+            runtimeContext: executionContext,
+            input: step.args || {},
+            sessionId: step.sessionId || null,
+          });
         } else {
           throw createPlanRunError(
             ERROR_CODES.SCENARIO_INVALID,
@@ -569,7 +708,6 @@ async function runScenarioPlan(normalizedPlan, params) {
             }
           );
         }
-
         executionContext.results.push({
           stepId: step.stepId || null,
           command: null,
