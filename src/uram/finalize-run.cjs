@@ -268,11 +268,11 @@ async function finalizeRun({
 
   const isSuccess = exitCode === 0;
 
-  if (isSuccess) {
-    const latestZipPath = latestOutboxPath.endsWith(".zip")
-      ? latestOutboxPath
-      : `${latestOutboxPath}.zip`;
+  const latestZipPath = latestOutboxPath.endsWith(".zip")
+    ? latestOutboxPath
+    : `${latestOutboxPath}.zip`;
 
+  if (isSuccess) {
     const successOutbox = buildMinimalSuccessOutbox(payload);
 
     await buildZipArtifact({
@@ -293,8 +293,6 @@ async function finalizeRun({
       tmpProvidedDir,
     });
   } else {
-    await writeJson(latestOutboxPath, payload);
-
     const errorOutbox =
       looksLikeScenarioSummary(payload) && payload.error
         ? payload
@@ -311,6 +309,12 @@ async function finalizeRun({
               details: {},
             },
           };
+
+    await buildZipArtifact({
+      zipPath: latestZipPath,
+      outboxPayload: errorOutbox,
+      tmpProvidedDir,
+    });
 
     await buildZipArtifact({
       zipPath: historyOutboxPath,
