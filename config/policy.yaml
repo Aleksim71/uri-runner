@@ -1,0 +1,17 @@
+# path: config/policy.yaml
+
+profiles:
+  restricted:
+    system: deny
+    project: allow
+    browser: deny
+
+  soft:
+    system: ask
+    project: allow
+    browser: allow
+
+  isolated:
+    system: deny
+    project: allow
+    browser: allow
