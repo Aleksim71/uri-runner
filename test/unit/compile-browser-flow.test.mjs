@@ -16,14 +16,19 @@ describe('compileBrowserFlow', () => {
     };
 
     expect(compileBrowserFlow(browser)).toEqual([
-      { name: 'browser.session.start', input: {} },
-      { name: 'browser.page.open', input: { url: 'https://example.com' } },
+      { id: null, name: 'browser.session.start', input: {} },
       {
+        id: null,
+        name: 'browser.page.open',
+        input: { url: 'https://example.com' }
+      },
+      {
+        id: null,
         name: 'browser.page.wait',
         input: { waitUntil: 'networkidle', timeoutMs: 3000 }
       },
-      { name: 'browser.diagnostics.collect', input: {} },
-      { name: 'browser.session.stop', input: {} }
+      { id: null, name: 'browser.diagnostics.collect', input: {} },
+      { id: null, name: 'browser.session.stop', input: {} }
     ]);
   });
 
@@ -32,22 +37,22 @@ describe('compileBrowserFlow', () => {
     expect(compileBrowserFlow(null)).toEqual([]);
   });
 
-  test('returns empty array when browser flow is missing', () => {
+  test('returns empty array when browser flow key is missing', () => {
     expect(compileBrowserFlow({})).toEqual([]);
-    expect(compileBrowserFlow({ flow: undefined })).toEqual([]);
-    expect(compileBrowserFlow({ flow: null })).toEqual([]);
   });
 
   test('throws when browser flow is not an array', () => {
-    expect(() => compileBrowserFlow({ flow: {} })).toThrow('Browser flow must be an array.');
+    expect(() => compileBrowserFlow({ flow: {} })).toThrow('browser.flow must be an array.');
+    expect(() => compileBrowserFlow({ flow: undefined })).toThrow('browser.flow must be an array.');
+    expect(() => compileBrowserFlow({ flow: null })).toThrow('browser.flow must be an array.');
   });
 
-  test('throws on unknown browser action', () => {
+  test('throws on unsupported browser action', () => {
     expect(() =>
       compileBrowserFlow({
         flow: [{ action: 'page.click' }]
       })
-    ).toThrow('Browser flow item at index 0 has unknown action: page.click');
+    ).toThrow('Browser flow item at index 0 has unsupported action: page.click');
   });
 
   test('throws when page.open has no url', () => {
@@ -74,23 +79,31 @@ describe('compileBrowserFlow', () => {
     ).toThrow('Browser flow item at index 0 must include action.');
   });
 
-  test('throws when page.wait waitUntil is empty string', () => {
-    expect(() =>
+  test('keeps page.wait waitUntil as provided', () => {
+    expect(
       compileBrowserFlow({
         flow: [{ action: 'page.wait', waitUntil: '' }]
       })
-    ).toThrow(
-      'Browser flow item at index 0 with action page.wait must use a non-empty string waitUntil when provided.'
-    );
+    ).toEqual([
+      {
+        id: null,
+        name: 'browser.page.wait',
+        input: { waitUntil: '' }
+      }
+    ]);
   });
 
-  test('throws when page.wait timeoutMs is invalid', () => {
-    expect(() =>
+  test('keeps page.wait timeoutMs as provided', () => {
+    expect(
       compileBrowserFlow({
         flow: [{ action: 'page.wait', timeoutMs: -1 }]
       })
-    ).toThrow(
-      'Browser flow item at index 0 with action page.wait must use a non-negative integer timeoutMs when provided.'
-    );
+    ).toEqual([
+      {
+        id: null,
+        name: 'browser.page.wait',
+        input: { timeoutMs: -1 }
+      }
+    ]);
   });
 });

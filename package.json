@@ -10,8 +10,13 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run test/unit test/e2e",
     "test:watch": "vitest",
+    "test:unit": "vitest run test/unit",
+    "test:e2e": "vitest run test/e2e",
+    "test:scenarios": "vitest run test/scenarios",
+    "test:cli": "vitest run test/cli",
+    "test:audit": "vitest run test/audit.smoke.test.mjs",
     "lint": "node -c src/cli.cjs && node -c src/lib/audit.cjs && node -c src/lib/runbook.cjs"
   },
   "dependencies": {
@@ -26,6 +31,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "fflate": "^0.8.2",
     "vitest": "^2.1.8"
   }
 }

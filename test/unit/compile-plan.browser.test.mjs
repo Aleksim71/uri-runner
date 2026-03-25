@@ -3,17 +3,6 @@
 import { describe, expect, test } from 'vitest';
 import { compileBrowserFlow } from '../../src/uram/compile-browser-flow.cjs';
 
-/**
- * NOTE:
- * This test file is intentionally self-contained and uses a local helper
- * that reflects the expected A25 integration contract:
- *
- *   const browserSteps = compileBrowserFlow(runbook.browser);
- *   plan.steps.push(...browserSteps);
- *
- * Replace the helper below with the real compilePlan import after the
- * current project-specific compile-plan.cjs signature is wired.
- */
 function compilePlanForBrowserOnly(runbook = {}) {
   const plan = {
     steps: []
@@ -48,6 +37,7 @@ describe('compile plan browser integration contract', () => {
     ]);
 
     expect(plan.steps[1]).toEqual({
+      id: null,
       name: 'browser.page.open',
       input: { url: 'https://example.com' }
     });
