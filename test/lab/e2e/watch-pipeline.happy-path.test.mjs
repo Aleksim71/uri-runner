@@ -4,17 +4,17 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { createTempWatcherEnv } from './helpers/watch-test-env.mjs';
-import { createZipFromEntries } from './helpers/inbox-zip-builder.mjs';
-import { extractZip, assertFileText, assertFileJson } from './helpers/zip-assertions.mjs';
-import { runWatcherOnce } from './helpers/watcher-runner.mjs';
+import { createTempWatcherEnv } from '../../e2e/helpers/watch-test-env.mjs';
+import { createZipFromEntries } from '../../e2e/helpers/inbox-zip-builder.mjs';
+import { extractZip, assertFileText, assertFileJson } from '../../e2e/helpers/zip-assertions.mjs';
+import { runWatcherOnce } from '../../e2e/helpers/watcher-runner.mjs';
 import {
   buildValidInboxEntries,
   getProvidedArtifactRoot,
   getReportedSuccess,
   listZipCandidates,
   readOutboxReport,
-} from './helpers/watch-contract-adapter.mjs';
+} from '../../e2e/helpers/watch-contract-adapter.mjs';
 
 async function writeRequestedFixtures(fixturesDir) {
   const nestedDir = path.join(fixturesDir, 'nested');
