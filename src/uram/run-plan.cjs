@@ -525,9 +525,20 @@ function getScenarioRuntime(normalizedPlan) {
       ? normalizedPlan.executableCtxSnapshot.runtime
       : {};
 
+  const policyMode =
+    typeof runtime.policyMode === "string" && runtime.policyMode.trim().length > 0
+      ? runtime.policyMode.trim()
+      : typeof snapshotRuntime.policy_mode === "string" &&
+        snapshotRuntime.policy_mode.trim().length > 0
+        ? snapshotRuntime.policy_mode.trim()
+        : runtime.strictCommands === true || snapshotRuntime.strict_commands === true
+          ? "strict"
+          : "safe";
+
   const strictCommands =
     runtime.strictCommands === true ||
-    snapshotRuntime.strict_commands === true;
+    snapshotRuntime.strict_commands === true ||
+    policyMode === "strict";
 
   const maxSteps = Number.isFinite(runtime.maxSteps)
     ? runtime.maxSteps
@@ -552,6 +563,7 @@ function getScenarioRuntime(normalizedPlan) {
 
   return {
     strictCommands,
+    policyMode,
     maxSteps,
     environment: Object.keys(environment).length > 0 ? environment : null,
   };

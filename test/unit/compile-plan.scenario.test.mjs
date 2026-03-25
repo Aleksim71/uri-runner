@@ -57,6 +57,8 @@ describe("compile-plan scenario", () => {
 
     expect(plan.runtime.strictCommands).toBe(true);
     expect(plan.runtime.maxSteps).toBe(100);
+    expect(plan.runtime.policyMode).toBe("strict");
+    expect(plan.executableCtxSnapshot.runtime.policy_mode).toBe("strict");
 
     expect(plan.steps).toHaveLength(2);
 
@@ -180,6 +182,8 @@ describe("compile-plan scenario", () => {
     expect(plan.project).toBe("demo-from-runbook");
     expect(plan.runtime.strictCommands).toBe(false);
     expect(plan.runtime.maxSteps).toBe(100);
+    expect(plan.runtime.policyMode).toBe("safe");
+    expect(plan.executableCtxSnapshot.runtime.policy_mode).toBe("safe");
   });
 
   it("creates empty args object when args are missing", () => {
@@ -214,4 +218,42 @@ describe("compile-plan scenario", () => {
 
     expect(plan.steps[0].args).toEqual({});
   });
+
+
+  it("keeps explicit policy_mode from executable context", () => {
+    const runbook = {
+      version: 1,
+      project: "demo",
+      steps: [
+        {
+          id: "step_echo_1",
+          command: "system.echo",
+        },
+      ],
+    };
+
+    const executableCtx = {
+      engine: "scenario",
+      commands: {
+        roots: ["system"],
+      },
+      runtime: {
+        max_steps: 100,
+        strict_commands: false,
+        policy_mode: "full",
+      },
+    };
+
+    const plan = compilePlan({
+      runbook,
+      project: "demo",
+      executionKind: "scenario",
+      executableCtx,
+    });
+
+    expect(plan.runtime.strictCommands).toBe(false);
+    expect(plan.runtime.policyMode).toBe("full");
+    expect(plan.executableCtxSnapshot.runtime.policy_mode).toBe("full");
+  });
+
 });

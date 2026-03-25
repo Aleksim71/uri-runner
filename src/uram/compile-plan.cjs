@@ -435,9 +435,19 @@ function getRuntimeOptions(executableCtx) {
       ? executableCtx.runtime
       : {};
 
+  const strictCommands = runtime.strict_commands === true;
+
+  const policyMode =
+    typeof runtime.policy_mode === "string" && runtime.policy_mode.trim().length > 0
+      ? runtime.policy_mode.trim()
+      : strictCommands
+        ? "strict"
+        : "safe";
+
   return {
     maxSteps: Number.isFinite(runtime.max_steps) ? runtime.max_steps : null,
-    strictCommands: runtime.strict_commands === true,
+    strictCommands,
+    policyMode,
     environment: validateEnvironmentPolicy(executableCtx),
   };
 }
@@ -735,6 +745,8 @@ function compilePlan(params) {
       },
       runtime: {
         ...(executableCtx?.runtime || {}),
+        strict_commands: runtime.strictCommands,
+        policy_mode: runtime.policyMode,
         environment: runtime.environment,
       },
     },

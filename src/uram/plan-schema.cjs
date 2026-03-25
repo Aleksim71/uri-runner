@@ -3,6 +3,7 @@
 const PLAN_VERSION = 1;
 const PLAN_KIND_SCENARIO = "scenario-plan";
 const PLAN_KIND_MATERIALIZED = "materialized-plan";
+const POLICY_MODES = new Set(["strict", "safe", "full"]);
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -85,13 +86,41 @@ function assertRuntimeShape(runtime) {
     );
   }
 
+  if (
+    normalized.policyMode !== undefined &&
+    normalized.policyMode !== null
+  ) {
+    const mode = assertNonEmptyString(
+      normalized.policyMode,
+      "runtime.policyMode",
+      { field: "runtime.policyMode" }
+    );
+
+    if (!POLICY_MODES.has(mode)) {
+      throw createPlanSchemaError(
+        "Plan runtime is invalid: policyMode must be one of strict|safe|full",
+        { field: "runtime.policyMode", value: mode }
+      );
+    }
+  }
+
+  const strictCommands =
+    normalized.strictCommands === undefined
+      ? false
+      : normalized.strictCommands;
+
+  const policyMode =
+    normalized.policyMode === undefined || normalized.policyMode === null
+      ? strictCommands
+        ? "strict"
+        : "safe"
+      : normalized.policyMode.trim();
+
   return {
     maxSteps:
       normalized.maxSteps === undefined ? null : normalized.maxSteps,
-    strictCommands:
-      normalized.strictCommands === undefined
-        ? false
-        : normalized.strictCommands,
+    strictCommands,
+    policyMode,
   };
 }
 
@@ -514,6 +543,7 @@ module.exports = {
   PLAN_VERSION,
   PLAN_KIND_SCENARIO,
   PLAN_KIND_MATERIALIZED,
+  POLICY_MODES,
   isPlainObject,
   createPlanSchemaError,
   assertPlanShape,

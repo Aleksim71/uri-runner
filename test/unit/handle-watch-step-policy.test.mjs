@@ -1,7 +1,11 @@
 // test/unit/handle-watch-step-policy.test.mjs
 import { describe, it, expect } from "vitest";
 import { PassThrough } from "node:stream";
-import { handleWatchStepPolicy } from "../../src/runtime/terminal/handle-watch-step-policy.cjs";
+import {
+  handleWatchStepPolicy,
+  normalizePolicyMode,
+  resolvePolicyDecision,
+} from "../../src/runtime/terminal/handle-watch-step-policy.cjs";
 
 function createFakeIO(answer) {
   const input = new PassThrough();
@@ -45,6 +49,44 @@ const askStep = {
 };
 
 describe("handleWatchStepPolicy", () => {
+  it("normalizes policy mode to safe by default", () => {
+    expect(normalizePolicyMode({})).toBe("safe");
+    expect(normalizePolicyMode({ policyMode: "strict" })).toBe("strict");
+    expect(normalizePolicyMode({ policyMode: "full" })).toBe("full");
+    expect(normalizePolicyMode({ policyMode: "weird" })).toBe("safe");
+  });
+
+  it("respects explicit policyDecision over policyMode", () => {
+    expect(resolvePolicyDecision({ policyMode: "full", policyDecision: "deny" })).toBe("deny");
+    expect(resolvePolicyDecision({ policyMode: "strict", policyDecision: "auto" })).toBe("auto");
+  });
+
+  it("maps strict mode to ask when policyDecision is missing", () => {
+    expect(resolvePolicyDecision({ policyMode: "strict" })).toBe("ask");
+  });
+
+  it("maps safe mode to ask when policyDecision is missing", () => {
+    expect(resolvePolicyDecision({ policyMode: "safe" })).toBe("ask");
+  });
+
+  it("maps full mode to auto when policyDecision is missing", async () => {
+    const result = await handleWatchStepPolicy({
+      id: "full-01",
+      policyMode: "full",
+    });
+
+    expect(result).toEqual({
+      stepId: "full-01",
+      policyMode: "full",
+      policyDecision: "auto",
+      watchState: "auto_approved",
+      userDecision: "auto",
+      shouldExecute: false,
+      blocked: false,
+      prompt: "",
+    });
+  });
+
   it("returns auto branch result without prompt", async () => {
     const result = await handleWatchStepPolicy({
       id: "auto-01",
@@ -53,6 +95,7 @@ describe("handleWatchStepPolicy", () => {
 
     expect(result).toEqual({
       stepId: "auto-01",
+      policyMode: "safe",
       policyDecision: "auto",
       watchState: "auto_approved",
       userDecision: "auto",
@@ -70,6 +113,7 @@ describe("handleWatchStepPolicy", () => {
 
     expect(result).toEqual({
       stepId: "deny-01",
+      policyMode: "safe",
       policyDecision: "deny",
       watchState: "blocked_by_policy",
       userDecision: "denied_by_policy",
@@ -87,6 +131,7 @@ describe("handleWatchStepPolicy", () => {
     });
 
     expect(result.stepId).toBe("step-10");
+    expect(result.policyMode).toBe("safe");
     expect(result.policyDecision).toBe("ask");
     expect(result.userDecision).toBe("approve");
     expect(result.watchState).toBe("approved");
