@@ -10,6 +10,11 @@ const YAML = require("yaml");
 const { materializePlanFromRunbook } = require("../runtime/materialize-plan.cjs");
 const { runUramPipeline } = require("./pipeline.cjs");
 const { resolveProjectContext } = require("./project-resolver.cjs");
+const { handleIntakeDecision } = require("./watch/intake-decision.cjs");
+const { getFileFingerprint } = require("./watch/file-fingerprint.cjs");
+const { DedupeCache } = require("./watch/dedupe-cache.cjs");
+
+const seenSourceInboxes = new DedupeCache();
 
 function pickFirst(...values) {
   for (const value of values) {
@@ -518,11 +523,20 @@ async function handleInboxZip(fullPath, options) {
   const inspection = await inspectInboxZip(fullPath);
 
   if (!inspection.accepted) {
+    const decision = handleIntakeDecision({
+      sourceFile: fullPath,
+      decision: "ignored",
+      reason: inspection.reason,
+      log: (line) => writeLine(stdout, line),
+    });
+
     return {
-      handled: false,
+      handled: decision.action !== "dedupe_skip",
       accepted: false,
       reason: inspection.reason,
       status: inspection.reason,
+      deduped: decision.action === "dedupe_skip",
+      alreadyLogged: true,
       sourceZipPath: fullPath,
     };
   }
@@ -687,6 +701,12 @@ async function runWatchCycle(loaded, options = {}) {
       continue;
     }
 
+    const sourceFp = getFileFingerprint(fullPath);
+    if (seenSourceInboxes.isDuplicate(sourceFp)) {
+      continue;
+    }
+    seenSourceInboxes.remember(sourceFp);
+
     printStatus(stdout, "inbox.zip detected");
 
     const result = await handleInboxZip(fullPath, {
@@ -710,12 +730,12 @@ async function runWatchCycle(loaded, options = {}) {
           plan: result.planPath,
           archivedSource: result.archivedSourcePath || undefined,
         });
-      } else {
+      } else if (!result.alreadyLogged) {
         printStatus(stdout, "ignored", {
           reason: result.reason,
         });
       }
-    } else if (!result.accepted) {
+    } else if (!result.accepted && !result.alreadyLogged) {
       printStatus(stdout, "ignored", {
         reason: result.reason,
       });
