@@ -331,7 +331,12 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
     await zipFiles(outboxPath, outEntries);
     step("outbox.write", true, { path: outboxPath });
 
-    return { exitCode: exitCodeFinal, runId };
+    return {
+      exitCode: exitCodeFinal,
+      runId,
+      status,
+      error: null,
+    };
   } catch (e) {
     if (startedServer) {
       try {
@@ -385,7 +390,29 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       step("outbox.write", true, { path: outboxPath, best_effort: true });
     } catch {}
 
-    return { exitCode, runId };
+    const lastError =
+      Array.isArray(status.errors) && status.errors.length > 0
+        ? status.errors[status.errors.length - 1]
+        : null;
+
+    return {
+      exitCode,
+      runId,
+      status,
+      error: lastError
+        ? {
+            name: "AuditError",
+            code: lastError.code || "UNKNOWN",
+            message: lastError.message || "Audit failed",
+            details: {},
+          }
+        : {
+            name: "AuditError",
+            code: "UNKNOWN",
+            message: "Audit failed",
+            details: {},
+          },
+    };
   }
 }
 

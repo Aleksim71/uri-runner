@@ -98,6 +98,25 @@ async function ensureDir(p) {
 }
 
 function assertEngineAllowed(executionKind, executableCtx) {
+  const configuredEngines = Array.isArray(executableCtx?.engines)
+    ? executableCtx.engines.filter((value) => typeof value === "string" && value.trim())
+    : [];
+
+  if (configuredEngines.length > 0) {
+    if (!configuredEngines.includes(executionKind)) {
+      throw new UramRuntimeError(
+        `[uri] engine not allowed by executable context: requested=${executionKind}, configured=${configuredEngines.join(",")}`,
+        ERROR_CODES.ENGINE_NOT_ALLOWED,
+        {
+          requested: executionKind,
+          configured: configuredEngines,
+        }
+      );
+    }
+
+    return;
+  }
+
   const configuredEngine = executableCtx?.engine;
 
   if (!configuredEngine) {
@@ -840,6 +859,12 @@ async function runUramPipeline({
     });
 
     await fsp.writeFile(
+      "/tmp/uri-final-outbox-payload.json",
+      JSON.stringify(finalOutboxPayload, null, 2),
+      "utf-8"
+    );
+
+    await fsp.writeFile(
       tmpOutboxPath,
       JSON.stringify(finalOutboxPayload, null, 2),
       "utf-8"
@@ -899,6 +924,12 @@ async function runUramPipeline({
     return toPipelineReturn(runtimeResult);
   } catch (err) {
     const normalizedResult = normalizeEngineError(err, executionKind);
+
+    await fsp.writeFile(
+      "/tmp/uri-normalized-error-result.json",
+      JSON.stringify(normalizedResult, null, 2),
+      "utf-8"
+    );
 
     if (project !== "unknown") {
       try {

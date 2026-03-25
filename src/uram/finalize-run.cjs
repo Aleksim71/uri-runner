@@ -294,8 +294,21 @@ async function finalizeRun({
     });
   } else {
     const errorOutbox =
-      looksLikeScenarioSummary(payload) && payload.error
-        ? payload
+      looksLikeScenarioSummary(payload)
+        ? {
+            ...payload,
+            runId: payload.runId || runId,
+            project: payload.project || project,
+            engine: payload.engine || executionKind,
+            exitCode: Number.isInteger(payload.exitCode) ? payload.exitCode : exitCode,
+            ok: payload.ok === true ? true : false,
+            error: payload.error || {
+              name: "Error",
+              code: "RUNTIME_ERROR",
+              message: "Runtime failed",
+              details: {},
+            },
+          }
         : {
             runId,
             project,

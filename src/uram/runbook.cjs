@@ -36,7 +36,22 @@ function getProjectName(runbook) {
 }
 
 function resolveExecutionKind(runbook) {
-  if (runbook?.meta?.context_kind === "audit_context") return "audit";
+  if (runbook?.meta?.context_kind === "audit_context") {
+    return "audit";
+  }
+
+  if (runbook?.profile === "audit") {
+    return "audit";
+  }
+
+  if (
+    runbook?.audit &&
+    Array.isArray(runbook.audit.checks) &&
+    runbook.audit.checks.length > 0
+  ) {
+    return "audit";
+  }
+
   return "scenario";
 }
 
