@@ -121,6 +121,11 @@ async function main(argv = process.argv.slice(2)) {
       return debugRunbook(...subArgs);
     }
 
+    if (subcommand === "step") {
+      const { debugStepCommand } = require("./commands/debug-step.cjs");
+      return debugStepCommand(...subArgs);
+    }
+
     throw new Error(`Unknown debug command: ${subcommand}`);
   }
 
@@ -194,6 +199,7 @@ function parseBrowserArgs(args = []) {
 function printHelp() {
   console.log("\nURI CLI\n────────────────────────\nAvailable commands:");
   console.log("  browser [--host <host>] [--port <port>] [--target <matcher>] [--artifacts-dir <path>] [--timeout-ms <ms>] [--json]");
+  console.log('  debug step <browser.step> [--input \'{"url":"https://example.com"}\']');
   console.log("  compile <inbox.zip> <output-plan.json>");
   console.log("  debug commands <inbox.zip>");
   console.log("  debug plan <inbox.zip>");
