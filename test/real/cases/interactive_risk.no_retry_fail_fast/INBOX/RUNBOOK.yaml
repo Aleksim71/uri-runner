@@ -1,0 +1,9 @@
+version: 1
+receiver: uri
+project: uri-runner
+profile: audit
+cwd: .
+audit:
+  checks:
+    - name: interactive_no_retry_fail_fast
+      cmd: node test/real/fixtures/interactive/prompt-wait.js

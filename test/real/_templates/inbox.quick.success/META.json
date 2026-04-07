@@ -1,0 +1,8 @@
+{
+  "task_id": "real-test-quick-success-basic",
+  "project": "uri-runner-next",
+  "profile": "quick",
+  "created_at": "2026-03-26T00:00:00.000Z",
+  "source": "chatgpt",
+  "description": "Real test template for quick.success.basic"
+}

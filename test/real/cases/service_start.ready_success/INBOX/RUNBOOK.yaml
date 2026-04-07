@@ -1,0 +1,22 @@
+version: 1
+receiver: uri
+project: uri-runner
+profile: audit
+cwd: .
+audit:
+  server:
+    cmd: node
+    args:
+      - test/real/fixtures/service/http-ready-server.js
+    base_url: http://127.0.0.1:3010
+    readiness:
+      type: http
+      path: /health
+      timeout_ms: 1500
+      interval_ms: 200
+  checks:
+    - name: smoke
+      cmd: node
+      args:
+        - -e
+        - console.log('service profile smoke')

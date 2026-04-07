@@ -1,0 +1,23 @@
+# path: test/real/_templates/inbox.quick.success/RUNBOOK.yaml
+version: 1
+project: uri-runner-next
+profile: quick
+cwd: /ABSOLUTE/PATH/TO/PROJECT
+scenario:
+  name: quick.success.basic
+  executor: terminal
+  step:
+    profile: quick
+    command: node -e "console.log('ok')"
+    timeout_ms: 5000
+    retry:
+      max_retries: 0
+expected:
+  status: success
+  attempts: 1
+  step:
+    profile: quick
+    exit_code: 0
+    stop_reason: null
+  stdout_contains:
+    - ok

@@ -1,0 +1,9 @@
+version: 1
+receiver: uri
+project: uri-runner
+cwd: .
+profile: audit
+audit:
+  checks:
+    - name: db_migration_case
+      cmd: node test/real/fixtures/db/migration-stall.js

@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest run test/unit",
     "test:e2e": "vitest run test/e2e",
+    "test:real": "vitest run test/real",
     "test:scenarios": "vitest run test/scenarios",
     "test:cli": "vitest run test/cli",
     "test:audit": "vitest run test/audit.smoke.test.mjs",

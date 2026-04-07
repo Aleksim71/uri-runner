@@ -1,0 +1,9 @@
+version: 1
+receiver: uri
+project: uri-runner
+profile: audit
+cwd: .
+audit:
+  checks:
+    - name: db_query_fail
+      cmd: node test/real/fixtures/db/query-fail.js

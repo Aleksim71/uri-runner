@@ -1,0 +1,12 @@
+version: 1
+receiver: uri
+project: uri-runner
+profile: audit
+cwd: .
+audit:
+  checks:
+    - name: quick_success_basic
+      cmd: node
+      args:
+        - -e
+        - console.log('ok')

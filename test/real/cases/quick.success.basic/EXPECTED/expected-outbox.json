@@ -1,0 +1,12 @@
+{
+  "status": "success",
+  "attempts": 1,
+  "hasStatusJson": true,
+  "hasSnapshot": true,
+  "hasReportDir": true,
+  "snapshotHints": {
+    "hasRunId": true,
+    "hasResultWord": true,
+    "hasNodeWord": true
+  }
+}

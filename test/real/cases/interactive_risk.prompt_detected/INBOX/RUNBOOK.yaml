@@ -1,0 +1,9 @@
+version: 1
+receiver: uri
+project: uri-runner
+profile: audit
+cwd: .
+audit:
+  checks:
+    - name: interactive_prompt_detected
+      cmd: node test/real/fixtures/interactive/prompt-wait.js

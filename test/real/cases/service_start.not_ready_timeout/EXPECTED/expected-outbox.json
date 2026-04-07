@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "stopReason": "service_not_ready_timeout",
+  "hasSnapshot": true,
+  "reportFilesIncludes": []
+}
