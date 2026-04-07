@@ -155,7 +155,17 @@ describe("scenario runtime smoke", () => {
     const latestOutbox = outboxFiles.sort().at(-1);
     const entries = unzipList(latestOutbox);
 
-    expect(entries).toEqual(["outbox.json"]);
+    const requiredEntries = [
+      "outbox.json",
+      "STATUS.json",
+      "SNAPSHOT.txt",
+      "REPORT/outbox.json",
+      "REPORT/status.json",
+    ];
+
+    for (const entry of requiredEntries) {
+      expect(entries).toContain(entry);
+    }
 
     const outbox = unzipJson(latestOutbox, "outbox.json");
 

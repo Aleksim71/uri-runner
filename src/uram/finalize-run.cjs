@@ -101,6 +101,82 @@ function buildMinimalSuccessOutbox(summary) {
   return outbox;
 }
 
+function buildStatusPayload(outboxPayload) {
+  const payload = {
+    status:
+      typeof outboxPayload?.status === "string" && outboxPayload.status.trim()
+        ? outboxPayload.status
+        : "unknown",
+  };
+
+  if (Number.isInteger(outboxPayload?.attempts) && outboxPayload.attempts > 0) {
+    payload.attempts = outboxPayload.attempts;
+  }
+
+  if (typeof outboxPayload?.runId === "string" && outboxPayload.runId.trim()) {
+    payload.runId = outboxPayload.runId;
+  }
+
+  if (typeof outboxPayload?.project === "string" && outboxPayload.project.trim()) {
+    payload.project = outboxPayload.project;
+  }
+
+  if (typeof outboxPayload?.engine === "string" && outboxPayload.engine.trim()) {
+    payload.engine = outboxPayload.engine;
+  }
+
+  if (
+    typeof outboxPayload?.executionKind === "string" &&
+    outboxPayload.executionKind.trim()
+  ) {
+    payload.executionKind = outboxPayload.executionKind;
+  }
+
+  if (typeof outboxPayload?.stage === "string" && outboxPayload.stage.trim()) {
+    payload.stage = outboxPayload.stage;
+  }
+
+  if (typeof outboxPayload?.ok === "boolean") {
+    payload.ok = outboxPayload.ok;
+  }
+
+  return payload;
+}
+
+function buildSnapshotText(statusPayload) {
+  const lines = [`status: ${statusPayload.status}`];
+
+  if (Number.isInteger(statusPayload.attempts)) {
+    lines.push(`attempts: ${statusPayload.attempts}`);
+  }
+
+  if (typeof statusPayload.runId === "string") {
+    lines.push(`runId: ${statusPayload.runId}`);
+  }
+
+  if (typeof statusPayload.engine === "string") {
+    lines.push(`engine: ${statusPayload.engine}`);
+  }
+
+  if (typeof statusPayload.executionKind === "string") {
+    lines.push(`executionKind: ${statusPayload.executionKind}`);
+  }
+
+  if (typeof statusPayload.stage === "string") {
+    lines.push(`stage: ${statusPayload.stage}`);
+  }
+
+  if (typeof statusPayload.project === "string") {
+    lines.push(`project: ${statusPayload.project}`);
+  }
+
+  if (typeof statusPayload.ok === "boolean") {
+    lines.push(`ok: ${statusPayload.ok ? "true" : "false"}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
 async function copyDirRecursive(srcDir, destDir) {
   await ensureDir(destDir);
 
@@ -133,7 +209,17 @@ async function buildZipArtifact({
   await fsp.rm(zipPath, { force: true });
   await ensureDir(stagingRoot);
 
+  const statusPayload = buildStatusPayload(outboxPayload);
+
   await writeJson(path.join(stagingRoot, "outbox.json"), outboxPayload);
+  await writeJson(path.join(stagingRoot, "STATUS.json"), statusPayload);
+  await fsp.writeFile(
+    path.join(stagingRoot, "SNAPSHOT.txt"),
+    buildSnapshotText(statusPayload),
+    "utf8"
+  );
+  await writeJson(path.join(stagingRoot, "REPORT", "outbox.json"), outboxPayload);
+  await writeJson(path.join(stagingRoot, "REPORT", "status.json"), statusPayload);
 
   if (tmpProvidedDir) {
     const providedSrc = path.join(tmpProvidedDir, "provided");

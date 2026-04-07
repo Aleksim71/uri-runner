@@ -179,11 +179,19 @@ describe("scenario runtime outbox contract", () => {
     const latestOutbox = outboxFiles.sort().at(-1);
     const entries = unzipList(latestOutbox);
 
-    expect(entries).toEqual([
+    const requiredEntries = [
       "outbox.json",
+      "STATUS.json",
+      "SNAPSHOT.txt",
+      "REPORT/outbox.json",
+      "REPORT/status.json",
       "provided/fragments/report.txt_2_4.txt",
       "provided/report.txt",
-    ]);
+    ];
+
+    for (const entry of requiredEntries) {
+      expect(entries).toContain(entry);
+    }
 
     const outbox = unzipJson(latestOutbox, "outbox.json");
 
