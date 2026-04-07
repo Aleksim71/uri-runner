@@ -1,0 +1,10 @@
+version: 1
+commands:
+  - id: shell.bash.inline
+    group: shell
+    profile: instant
+    notes: Add bash -lc to the audit registry for A28.1d
+    match:
+      cmd: bash
+      args_prefix:
+        - -lc

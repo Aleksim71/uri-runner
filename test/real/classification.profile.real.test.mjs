@@ -65,4 +65,23 @@ describe('real profile: classification', () => {
       'classification request must mention the unknown command'
     );
   }, 120000);
+
+  it('classification_response.applies_and_executes', async () => {
+    const caseName = 'classification_response.applies_and_executes';
+    const result = await runUriRealCase({ caseName });
+
+    assert.ok(
+      result.normalizedOutbox,
+      `outbox was not produced: ${result.runResult?.errorMessage || 'unknown error'}`
+    );
+
+    await assertCurrentOutbox(result.normalizedOutbox, readExpected(caseName));
+
+    const outboxJsonPath = path.join(result.outboxDir, 'outbox.json');
+    assert.ok(fs.existsSync(outboxJsonPath), 'outbox.json must exist');
+
+    const outbox = readJson(outboxJsonPath);
+    assert.equal(outbox.status, 'success', 'final outbox status must be success');
+    assert.ok(outbox.exitCode == null || outbox.exitCode === 0, 'final outbox exitCode must be 0 when present');
+  }, 120000);
 });

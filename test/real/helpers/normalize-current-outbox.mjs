@@ -76,6 +76,10 @@ function deriveStatus({ statusJson, outboxJson }) {
     return outboxJson.exitCode === 0 ? 'success' : 'failed';
   }
 
+  if (Number.isInteger(statusJson?.exitCode)) {
+    return statusJson.exitCode === 0 ? 'success' : 'failed';
+  }
+
   if (explicitStatus === 'error') {
     return 'failed';
   }
@@ -102,17 +106,34 @@ function deriveStopReason({ statusJson, outboxJson }) {
   return null;
 }
 
+function deriveExitCode({ statusJson, outboxJson, status }) {
+  if (Number.isInteger(outboxJson?.exitCode)) {
+    return outboxJson.exitCode;
+  }
+
+  if (Number.isInteger(statusJson?.exitCode)) {
+    return statusJson.exitCode;
+  }
+
+  if (status === 'success') {
+    return 0;
+  }
+
+  return null;
+}
+
 export async function normalizeCurrentOutbox(outboxDir) {
   const statusJson = await readJsonIfExists(path.join(outboxDir, 'STATUS.json'));
   const outboxJson = await readJsonIfExists(path.join(outboxDir, 'outbox.json'));
   const reportFiles = await listFiles(path.join(outboxDir, 'REPORT'));
   const providedFiles = await listFiles(path.join(outboxDir, 'provided'));
+  const status = deriveStatus({ statusJson, outboxJson });
 
   return {
-    status: deriveStatus({ statusJson, outboxJson }),
+    status,
     attempts: Number(outboxJson?.attempts ?? statusJson?.attempts ?? 1),
     stopReason: deriveStopReason({ statusJson, outboxJson }),
-    exitCode: Number.isInteger(outboxJson?.exitCode) ? outboxJson.exitCode : null,
+    exitCode: deriveExitCode({ statusJson, outboxJson, status }),
     hasSnapshot: await fileExists(path.join(outboxDir, 'SNAPSHOT.txt')),
     reportFiles: Array.from(new Set([...reportFiles, ...providedFiles])).sort(),
     providedFiles,

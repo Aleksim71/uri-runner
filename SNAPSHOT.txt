@@ -1,9 +1,5 @@
-A28.1c fix3
+A28.1d fix4
 
 Included:
-- restore backward-compatible real test status normalization
-- preserve special handling for classification_required
-- keep provided/ files visible through normalized reportFiles
-
-Purpose:
-- fix regression where generic runtime failures were normalized as error instead of failed
+- normalize-current-outbox: derive exitCode=0 for success outbox without explicit exitCode
+- keep classification_required priority and provided/ files support

@@ -16,6 +16,12 @@ const { preflightAuditRunbook } = require("../../runtime/command-registry/prefli
 const {
   defaultRegistryPath,
 } = require("../../runtime/command-registry/load-command-registry.cjs");
+const {
+  readClassificationResponse,
+} = require("../../runtime/command-registry/read-classification-response.cjs");
+const {
+  applyClassificationResponse,
+} = require("../../runtime/command-registry/apply-classification-response.cjs");
 
 function isoNow() {
   return new Date().toISOString();
@@ -108,6 +114,25 @@ async function writeClassificationRequestFiles(reportDir, classificationRequest)
   };
 }
 
+async function writeClassificationResponseApplyFiles(reportDir, applyReport) {
+  if (!applyReport || typeof applyReport !== "object") {
+    return {};
+  }
+
+  await fs.ensureDir(reportDir);
+
+  const yamlPath = path.join(reportDir, "classification-response.apply.yaml");
+  const jsonPath = path.join(reportDir, "classification-response.apply.json");
+
+  await fs.writeFile(yamlPath, YAML.stringify(applyReport), "utf8");
+  await fs.writeJson(jsonPath, applyReport, { spaces: 2 });
+
+  return {
+    yamlPath,
+    jsonPath,
+  };
+}
+
 async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegistry }) {
   const runId = makeRunId();
   const workRoot = path.join(workspaceDir, runId);
@@ -128,6 +153,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
   }
 
   let startedServer = null;
+  let classificationResponseApplyReport = null;
 
   try {
     // 1) inbox exists
@@ -162,6 +188,33 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
     await fs.ensureDir(reportDir);
 
     if (registryOptions.enabled) {
+      const classificationResponse = await readClassificationResponse(inboxDir);
+
+      if (classificationResponse) {
+        classificationResponseApplyReport = await applyClassificationResponse({
+          registryPath: registryOptions.registryPath,
+          response: classificationResponse.value,
+          sourcePath: classificationResponse.filePath,
+          reportDir,
+        });
+
+        status.classification_response = {
+          applied: true,
+          registry: classificationResponseApplyReport.registryPath,
+          source: classificationResponse.filePath,
+          added: classificationResponseApplyReport.added,
+          replaced: classificationResponseApplyReport.replaced,
+          skipped: classificationResponseApplyReport.skipped,
+        };
+
+        step("command_registry.apply_response", true, {
+          registry: classificationResponseApplyReport.registryPath,
+          added: classificationResponseApplyReport.added,
+          replaced: classificationResponseApplyReport.replaced,
+          skipped: classificationResponseApplyReport.skipped,
+        });
+      }
+
       const preflight = preflightAuditRunbook({
         runbook,
         registryPath: registryOptions.registryPath,
@@ -180,6 +233,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
         err.code = "CLASSIFICATION_REQUIRED";
         err.classificationRequest = preflight.classificationRequest;
         err.registryPath = preflight.registryPath;
+        err.classificationResponseApplyReport = classificationResponseApplyReport;
         throw err;
       }
 
@@ -366,6 +420,14 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
       "REPORT/tree.txt": treePath,
     };
 
+    if (classificationResponseApplyReport?.reportYamlPath && (await fs.pathExists(classificationResponseApplyReport.reportYamlPath))) {
+      outEntries["REPORT/classification-response.apply.yaml"] = classificationResponseApplyReport.reportYamlPath;
+    }
+
+    if (classificationResponseApplyReport?.reportJsonPath && (await fs.pathExists(classificationResponseApplyReport.reportJsonPath))) {
+      outEntries["REPORT/classification-response.apply.json"] = classificationResponseApplyReport.reportJsonPath;
+    }
+
     if (serverOutAbs && (await fs.pathExists(serverOutAbs))) {
       outEntries["REPORT/server.out.log"] = serverOutAbs;
     }
@@ -408,6 +470,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
       runId,
       status,
       error: null,
+      classificationResponseApplyReport,
     };
   } catch (e) {
     if (startedServer) {
@@ -429,11 +492,17 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
       status.classification_request = e.classificationRequest;
     }
 
+    if (e?.classificationResponseApplyReport && typeof e.classificationResponseApplyReport === "object") {
+      classificationResponseApplyReport = e.classificationResponseApplyReport;
+    }
+
     let exitCode = 20;
     if (code === "INBOX_MISSING") exitCode = 10;
     if (code === "RUNBOOK_MISSING") exitCode = 11;
     if (code === "RUNBOOK_INVALID") exitCode = 12;
     if (code === "CLASSIFICATION_REQUIRED") exitCode = 13;
+    if (code === "CLASSIFICATION_RESPONSE_INVALID") exitCode = 14;
+    if (code === "CLASSIFICATION_RESPONSE_APPLY_FAILED") exitCode = 15;
 
     try {
       await fs.ensureDir(path.dirname(outboxPath));
@@ -481,8 +550,22 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
         }
       }
 
-      await zipFiles(outboxPath, outEntries);
+      if (classificationResponseApplyReport) {
+        const applyFiles = await writeClassificationResponseApplyFiles(
+          reportDir,
+          classificationResponseApplyReport
+        );
 
+        if (applyFiles.yamlPath && (await fs.pathExists(applyFiles.yamlPath))) {
+          outEntries["REPORT/classification-response.apply.yaml"] = applyFiles.yamlPath;
+        }
+
+        if (applyFiles.jsonPath && (await fs.pathExists(applyFiles.jsonPath))) {
+          outEntries["REPORT/classification-response.apply.json"] = applyFiles.jsonPath;
+        }
+      }
+
+      await zipFiles(outboxPath, outEntries);
       step("outbox.write", true, { path: outboxPath, best_effort: true });
     } catch {}
 
@@ -496,6 +579,7 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
       runId,
       status,
       classificationRequest: e?.classificationRequest || null,
+      classificationResponseApplyReport,
       error: lastError
         ? {
             name: "AuditError",
@@ -506,7 +590,11 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegis
                 ? {
                     unknown_commands: e.classificationRequest.unknown_commands || [],
                   }
-                : {},
+                : classificationResponseApplyReport
+                  ? {
+                      classification_response: classificationResponseApplyReport,
+                    }
+                  : {},
           }
         : {
             name: "AuditError",
