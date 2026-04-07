@@ -1,0 +1,20 @@
+# docs/runtime/examples/classification-request.example.yaml
+version: 1
+status: classification_required
+scenario_id: scenario-001
+generated_at: '2026-04-07T12:00:00Z'
+unknown_commands:
+  - step_id: step-2
+    cmd: npm
+    args: [run, lint]
+    cwd: /workspace/project
+    project: uri-runner-next
+    fingerprint: npm|run|lint
+    raw_step:
+      receiver: uri
+      cmd: npm
+      args: [run, lint]
+      cwd: /workspace/project
+    suggested_group: test
+    suggested_profile: short_wait
+    notes: "Похоже на dev-команду, но в реестре matcher отсутствует"

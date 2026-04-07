@@ -1,0 +1,14 @@
+# docs/runtime/examples/preflight-result-known.example.yaml
+version: 1
+status: ready_to_execute
+scenario_id: scenario-known-001
+known_commands:
+  - step_id: step-1
+    registry_id: inspect.pwd
+    group: inspect
+    profile: instant
+  - step_id: step-2
+    registry_id: test.npm.test
+    group: test
+    profile: short_wait
+unknown_commands: []

@@ -1,0 +1,15 @@
+PROJECT: uri-runner-next
+BRANCH: feat/runtime-safety
+PACKAGE: inbox.zip
+CONTENT:
+- docs/runtime/command-registry-spec.md
+- docs/runtime/classification-protocol-spec.md
+- config/command-registry.yaml
+- docs/runtime/examples/classification-request.example.yaml
+- docs/runtime/examples/classification-response.example.yaml
+- docs/runtime/examples/preflight-result-known.example.yaml
+- docs/runtime/examples/preflight-result-classification-required.example.yaml
+PURPOSE:
+- A28.1a canonical protocol/spec for command registry + preflight classification cycle
+BASIS:
+- Piligrim 2026-04-07: next step is registry of URI commands, split by profiles, then expand truth coverage

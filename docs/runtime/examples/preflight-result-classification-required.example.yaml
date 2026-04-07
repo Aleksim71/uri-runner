@@ -1,0 +1,14 @@
+# docs/runtime/examples/preflight-result-classification-required.example.yaml
+version: 1
+status: classification_required
+scenario_id: scenario-unknown-001
+known_commands:
+  - step_id: step-1
+    registry_id: inspect.pwd
+    group: inspect
+    profile: instant
+unknown_commands:
+  - step_id: step-2
+    cmd: npm
+    args: [run, lint]
+    fingerprint: npm|run|lint

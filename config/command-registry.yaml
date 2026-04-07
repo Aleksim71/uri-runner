@@ -1,0 +1,92 @@
+# config/command-registry.yaml
+version: 1
+
+defaults:
+  on_unknown: classification_required
+  generate_request: true
+  execute_unknown: false
+
+profiles:
+  instant:
+    description: "Команда должна быстро завершиться сама"
+    timeout_ms: 4000
+    expect_exit: true
+    expect_readiness: false
+
+  short_wait:
+    description: "Команда завершается сама, но может потребовать больше времени"
+    timeout_ms: 20000
+    expect_exit: true
+    expect_readiness: false
+
+  readiness:
+    description: "Команда запускает сервис и требует проверки готовности"
+    timeout_ms: 30000
+    expect_exit: false
+    expect_readiness: true
+
+  browser_scenario:
+    description: "Команда/сценарий исполняется через browser runtime"
+    timeout_ms: 120000
+    expect_exit: true
+    expect_readiness: false
+
+commands:
+  - id: inspect.pwd
+    group: inspect
+    profile: instant
+    notes: "Текущая рабочая директория"
+    match:
+      cmd: pwd
+      args_exact: []
+
+  - id: inspect.ls
+    group: inspect
+    profile: instant
+    notes: "Быстрый список файлов"
+    match:
+      cmd: ls
+
+  - id: git.status.short
+    group: inspect
+    profile: instant
+    notes: "Проверка состояния git без модификации репозитория"
+    match:
+      cmd: git
+      args_prefix: [status, --short]
+
+  - id: test.npm.test
+    group: test
+    profile: short_wait
+    notes: "Запуск тестов через npm test"
+    match:
+      cmd: npm
+      args_prefix: [test]
+
+  - id: server.npm.run.dev
+    group: server
+    profile: readiness
+    notes: "Dev-server через npm run dev"
+    match:
+      cmd: npm
+      args_prefix: [run, dev]
+    readiness:
+      required: true
+      path: /healthz
+      interval_ms: 1000
+      timeout_ms: 30000
+
+  - id: db.psql.inline.query
+    group: db-query
+    profile: instant
+    notes: "Быстрый SQL-запрос через psql -c"
+    match:
+      cmd: psql
+      args_contains: [-c]
+
+  - id: browser.scenario.default
+    group: browser
+    profile: browser_scenario
+    notes: "Browser scenario entry"
+    match:
+      cmd: browser

@@ -1,0 +1,11 @@
+# docs/runtime/examples/classification-response.example.yaml
+version: 1
+scenario_id: scenario-001
+classifications:
+  - fingerprint: npm|run|lint
+    group: test
+    profile: short_wait
+    notes: "Lint для проекта считаем короткой завершаемой командой"
+    match:
+      cmd: npm
+      args_prefix: [run, lint]
