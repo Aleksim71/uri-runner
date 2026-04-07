@@ -1,0 +1,18 @@
+version: 1
+status: classification_required
+generated_at: 2026-04-07T17:33:16.315Z
+profile: audit
+project: null
+registry_path: /tmp/uri-real-repo-by3qeP/config/command-registry.yaml
+unknown_commands:
+  - source: audit.checks[0]
+    kind: check
+    name: unknown_dev_command
+    cmd: totally-unknown-dev-command
+    args:
+      - --smoke
+    preview: totally-unknown-dev-command --smoke
+    suggested_match:
+      cmd: totally-unknown-dev-command
+      args_prefix:
+        - --smoke

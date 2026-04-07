@@ -1,6 +1,5 @@
 // path: test/real/helpers/assert-current-outbox.mjs
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import assert from 'node:assert/strict';
 
 async function loadExpected(expectedOrPath) {
@@ -43,6 +42,16 @@ export async function assertCurrentOutbox(actual, expectedOrPath) {
       assert.ok(
         actualArtifacts.includes(requiredArtifact),
         `missing required artifact: ${requiredArtifact}`
+      );
+    }
+  }
+
+  if (Array.isArray(expected.requiredReportFiles)) {
+    const actualReportFiles = Array.isArray(actual.reportFiles) ? actual.reportFiles : [];
+    for (const requiredReportFile of expected.requiredReportFiles) {
+      assert.ok(
+        actualReportFiles.includes(requiredReportFile),
+        `missing required report file: ${requiredReportFile}`
       );
     }
   }

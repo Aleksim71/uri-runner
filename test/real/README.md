@@ -65,3 +65,20 @@ URI_REAL_CLI="uri audit" npm run test:real
 - key report files
 
 а не жёстко привязываться к каждому внутреннему полю outbox.
+
+
+## Overlay для кейсов, которым нужен свой executable context
+
+Если кейсу нужен отдельный `contexts/system/executable.yaml` или другие проектные файлы, он может положить их в:
+
+```text
+test/real/cases/<caseName>/PROJECT/
+```
+
+Helper `run-uri-real-case.mjs` в таком случае:
+- создаёт временную копию репозитория,
+- накладывает поверх неё `PROJECT/`,
+- запускает watcher/CLI из этой временной копии,
+- после теста удаляет её.
+
+Это нужно для truth-кейсов вроде `classification_required`, где нельзя портить живой `contexts/system/executable.yaml` в основном репозитории.

@@ -20,9 +20,9 @@ async function fileExists(filePath) {
   }
 }
 
-async function listReportFiles(reportDir) {
+async function listFiles(dirPath) {
   try {
-    const names = await fs.readdir(reportDir);
+    const names = await fs.readdir(dirPath);
     return names.sort();
   } catch {
     return [];
@@ -41,10 +41,24 @@ function deriveStatus({ statusJson, outboxJson }) {
     'PIPELINE_INTERNAL_ERROR',
   ]);
 
-  const errorCode =
-    outboxJson?.error?.code ||
-    statusJson?.error?.code ||
-    null;
+  const errorCode = outboxJson?.error?.code || statusJson?.error?.code || null;
+
+  if (
+    explicitStatus === 'classification_required' ||
+    source.classification_required === true ||
+    outboxJson?.audit?.classification_required === true ||
+    statusJson?.classification_required === true
+  ) {
+    return 'classification_required';
+  }
+
+  if (explicitStatus === 'success' || explicitStatus === 'ok') {
+    return 'success';
+  }
+
+  if (explicitStatus === 'failed') {
+    return 'failed';
+  }
 
   if (errorCode && hardErrorCodes.has(errorCode)) {
     return 'error';
@@ -62,12 +76,8 @@ function deriveStatus({ statusJson, outboxJson }) {
     return outboxJson.exitCode === 0 ? 'success' : 'failed';
   }
 
-  if (explicitStatus === 'ok') {
-    return 'success';
-  }
-
-  if (explicitStatus === 'success' || explicitStatus === 'failed' || explicitStatus === 'error') {
-    return explicitStatus;
+  if (explicitStatus === 'error') {
+    return 'failed';
   }
 
   return 'unknown';
@@ -95,7 +105,8 @@ function deriveStopReason({ statusJson, outboxJson }) {
 export async function normalizeCurrentOutbox(outboxDir) {
   const statusJson = await readJsonIfExists(path.join(outboxDir, 'STATUS.json'));
   const outboxJson = await readJsonIfExists(path.join(outboxDir, 'outbox.json'));
-  const reportFiles = await listReportFiles(path.join(outboxDir, 'REPORT'));
+  const reportFiles = await listFiles(path.join(outboxDir, 'REPORT'));
+  const providedFiles = await listFiles(path.join(outboxDir, 'provided'));
 
   return {
     status: deriveStatus({ statusJson, outboxJson }),
@@ -103,6 +114,7 @@ export async function normalizeCurrentOutbox(outboxDir) {
     stopReason: deriveStopReason({ statusJson, outboxJson }),
     exitCode: Number.isInteger(outboxJson?.exitCode) ? outboxJson.exitCode : null,
     hasSnapshot: await fileExists(path.join(outboxDir, 'SNAPSHOT.txt')),
-    reportFiles,
+    reportFiles: Array.from(new Set([...reportFiles, ...providedFiles])).sort(),
+    providedFiles,
   };
 }

@@ -1,0 +1,8 @@
+{
+  "status": "classification_required",
+  "attempts": 1,
+  "requiredReportFiles": [
+    "classification-request.json",
+    "classification-request.yaml"
+  ]
+}

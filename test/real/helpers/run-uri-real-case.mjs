@@ -16,16 +16,27 @@ async function fileExists(filePath) {
   }
 }
 
-async function copyDirRecursive(srcDir, destDir) {
+async function copyDirRecursive(srcDir, destDir, options = {}) {
+  const {
+    shouldSkip = () => false,
+    srcRoot = srcDir,
+  } = options;
+
   await fs.mkdir(destDir, { recursive: true });
   const entries = await fs.readdir(srcDir, { withFileTypes: true });
 
   for (const entry of entries) {
     const srcPath = path.join(srcDir, entry.name);
+    const relPath = path.relative(srcRoot, srcPath).replaceAll('\\', '/');
+
+    if (shouldSkip(relPath, entry)) {
+      continue;
+    }
+
     const destPath = path.join(destDir, entry.name);
 
     if (entry.isDirectory()) {
-      await copyDirRecursive(srcPath, destPath);
+      await copyDirRecursive(srcPath, destPath, { shouldSkip, srcRoot });
       continue;
     }
 
@@ -136,6 +147,60 @@ async function pickFirstExisting(paths) {
   return null;
 }
 
+async function createCaseRepoRoot({ repoRoot, caseDir }) {
+  const overlayRoot = path.join(caseDir, 'PROJECT');
+  if (!(await fileExists(overlayRoot))) {
+    return {
+      repoRoot,
+      cleanup: async () => {},
+    };
+  }
+
+  const tempRepoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'uri-real-repo-'));
+  const skipNames = new Set([
+    '.git',
+    'node_modules',
+    'dist',
+    'coverage',
+    '.tmp-inspect-a28',
+  ]);
+
+  await copyDirRecursive(repoRoot, tempRepoRoot, {
+    srcRoot: repoRoot,
+    shouldSkip: (relPath, entry) => {
+      if (!relPath) {
+        return false;
+      }
+
+      const firstSegment = relPath.split('/')[0];
+      if (skipNames.has(firstSegment)) {
+        return true;
+      }
+
+      if (entry.isDirectory() && entry.name === '.tmp-outbox') {
+        return true;
+      }
+
+      return false;
+    },
+  });
+
+  const repoNodeModules = path.join(repoRoot, 'node_modules');
+  const tempNodeModules = path.join(tempRepoRoot, 'node_modules');
+  if (await fileExists(repoNodeModules)) {
+    await fs.symlink(repoNodeModules, tempNodeModules, 'dir');
+  }
+
+  await copyDirRecursive(overlayRoot, tempRepoRoot);
+
+  return {
+    repoRoot: tempRepoRoot,
+    cleanup: async () => {
+      await fs.rm(tempRepoRoot, { recursive: true, force: true });
+    },
+  };
+}
+
 export async function runUriRealCase({
   caseName,
   repoRoot = process.cwd(),
@@ -153,11 +218,13 @@ export async function runUriRealCase({
   await fs.rm(outboxDir, { recursive: true, force: true });
 
   const env = await createTempWatcherEnv();
+  const caseRepo = await createCaseRepoRoot({ repoRoot, caseDir });
+  const effectiveRepoRoot = caseRepo.repoRoot;
 
   try {
     await patchWatchConfigDownloads(env.watchConfigPath, env.sourceDir);
     await writeProjectsConfig(path.join(env.projectDir, 'config'), {
-      repoRoot,
+      repoRoot: effectiveRepoRoot,
       outboxDir: env.outboxDir,
     });
 
@@ -165,13 +232,14 @@ export async function runUriRealCase({
     await prepareInboxZip({
       caseDir,
       inboxZipPath,
-      workspaceDir: repoRoot,
+      workspaceDir: effectiveRepoRoot,
     });
 
     const runResult = await runWatcherOnce({
       cwd: env.projectDir,
       configPath: env.watchConfigPath,
       timeoutMs,
+      repoRoot: effectiveRepoRoot,
     });
 
     const candidateZip = await pickFirstExisting([
@@ -200,6 +268,7 @@ export async function runUriRealCase({
       inboxZip: inboxZipPath,
       outboxZip,
       outboxDir,
+      repoRoot: effectiveRepoRoot,
       exitCode: runResult.exitCode,
       stdout: runResult.stdout,
       stderr: runResult.stderr,
@@ -213,5 +282,6 @@ export async function runUriRealCase({
     };
   } finally {
     await env.cleanup();
+    await caseRepo.cleanup();
   }
 }

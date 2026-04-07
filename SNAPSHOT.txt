@@ -1,13 +1,9 @@
-A28.1c exact patch (based on inspected project files)
+A28.1c fix3
 
 Included:
-- audit command-registry preflight (opt-in)
-- classification_required flow for unknown audit terminal commands
-- REPORT/classification-request.{yaml,json} in direct audit outbox
-- tmpProvidedDir attachment for pipeline/final outbox via audit-engine
-- unit + audit tests
-- implementation notes doc
+- restore backward-compatible real test status normalization
+- preserve special handling for classification_required
+- keep provided/ files visible through normalized reportFiles
 
-Important:
-- activation is opt-in through executable context runtime.command_registry.enabled: true
-- scenario-engine named commands are intentionally untouched in this package
+Purpose:
+- fix regression where generic runtime failures were normalized as error instead of failed

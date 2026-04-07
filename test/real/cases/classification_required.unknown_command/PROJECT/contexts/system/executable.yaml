@@ -1,0 +1,10 @@
+version: 1
+
+engine: audit
+
+commands:
+  roots: []
+
+runtime:
+  command_registry:
+    enabled: true

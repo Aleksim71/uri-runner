@@ -1,0 +1,113 @@
+{
+  "runId": "2026-04-07T17-33-16-288Z_224bfd",
+  "project": "uri-runner",
+  "engine": "audit",
+  "exitCode": 13,
+  "ok": false,
+  "executableCtx": {
+    "version": 1,
+    "engine": "audit",
+    "commands": {
+      "roots": []
+    },
+    "runtime": {
+      "command_registry": {
+        "enabled": true
+      }
+    }
+  },
+  "loadedCommands": [],
+  "status": "classification_required",
+  "attempts": 1,
+  "audit": {
+    "ok": false,
+    "run_id": "2026-04-07T17-33-16-303Z_99a17c",
+    "profile": "audit",
+    "steps": [
+      {
+        "name": "inbox.exists",
+        "ok": true
+      },
+      {
+        "name": "inbox.extract",
+        "ok": true,
+        "dir": "/tmp/uri-watch-e2e-11f39X/project/runtime/watch/tmp/2026-04-07T17-33-16-303Z_99a17c/inbox"
+      },
+      {
+        "name": "runbook.read",
+        "ok": true
+      },
+      {
+        "name": "command_registry.preflight",
+        "ok": false,
+        "unknown": 1,
+        "registry": "/tmp/uri-real-repo-by3qeP/config/command-registry.yaml"
+      },
+      {
+        "name": "outbox.write",
+        "ok": true,
+        "path": "/tmp/uri-watch-e2e-11f39X/project/uri-runnerBox/.tmp.outbox.2026-04-07T17-33-16-288Z_224bfd.json",
+        "best_effort": true
+      }
+    ],
+    "errors": [
+      {
+        "code": "CLASSIFICATION_REQUIRED",
+        "message": "Audit preflight requires command classification: 1 unknown command(s)"
+      }
+    ],
+    "classification_required": true,
+    "classification_request": {
+      "version": 1,
+      "status": "classification_required",
+      "generated_at": "2026-04-07T17:33:16.315Z",
+      "profile": "audit",
+      "project": null,
+      "registry_path": "/tmp/uri-real-repo-by3qeP/config/command-registry.yaml",
+      "unknown_commands": [
+        {
+          "source": "audit.checks[0]",
+          "kind": "check",
+          "name": "unknown_dev_command",
+          "cmd": "totally-unknown-dev-command",
+          "args": [
+            "--smoke"
+          ],
+          "preview": "totally-unknown-dev-command --smoke",
+          "suggested_match": {
+            "cmd": "totally-unknown-dev-command",
+            "args_prefix": [
+              "--smoke"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "error": {
+    "name": "AuditError",
+    "code": "CLASSIFICATION_REQUIRED",
+    "message": "Audit preflight requires command classification: 1 unknown command(s)",
+    "details": {
+      "unknown_commands": [
+        {
+          "source": "audit.checks[0]",
+          "kind": "check",
+          "name": "unknown_dev_command",
+          "cmd": "totally-unknown-dev-command",
+          "args": [
+            "--smoke"
+          ],
+          "preview": "totally-unknown-dev-command --smoke",
+          "suggested_match": {
+            "cmd": "totally-unknown-dev-command",
+            "args_prefix": [
+              "--smoke"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "tmpProvidedDir": "/tmp/uri-classification-cnra6O"
+}
