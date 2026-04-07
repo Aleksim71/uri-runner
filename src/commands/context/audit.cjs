@@ -1,7 +1,9 @@
+/* path: src/commands/context/audit.cjs */
 /* Minimal audit: validates inbox + produces outbox with SNAPSHOT/STATUS */
 const fs = require("fs-extra");
 const path = require("path");
 const os = require("os");
+const YAML = require("yaml");
 
 const { runCmd } = require("../system/exec.cjs");
 const { runChecks } = require("../test/checks.cjs");
@@ -10,6 +12,10 @@ const { runUrlChecksPublic } = require("../system/urls.cjs");
 
 const { unzipToDir, zipFiles } = require("../file/zip.cjs");
 const { readRunbook } = require("./runbook.cjs");
+const { preflightAuditRunbook } = require("../../runtime/command-registry/preflight-audit-runbook.cjs");
+const {
+  defaultRegistryPath,
+} = require("../../runtime/command-registry/load-command-registry.cjs");
 
 function isoNow() {
   return new Date().toISOString();
@@ -66,10 +72,48 @@ function writeSnapshot({ cwd, runId, ok, exitCode, system, git, treeLineCount })
   return lines.join("\n");
 }
 
-async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
+function resolveCommandRegistryOptions(commandRegistry) {
+  if (!commandRegistry || typeof commandRegistry !== "object") {
+    return {
+      enabled: false,
+      registryPath: defaultRegistryPath(),
+    };
+  }
+
+  return {
+    enabled: commandRegistry.enabled === true,
+    registryPath:
+      typeof commandRegistry.registryPath === "string" && commandRegistry.registryPath.trim()
+        ? commandRegistry.registryPath.trim()
+        : defaultRegistryPath(),
+  };
+}
+
+async function writeClassificationRequestFiles(reportDir, classificationRequest) {
+  if (!classificationRequest || typeof classificationRequest !== "object") {
+    return {};
+  }
+
+  await fs.ensureDir(reportDir);
+
+  const yamlPath = path.join(reportDir, "classification-request.yaml");
+  const jsonPath = path.join(reportDir, "classification-request.json");
+
+  await fs.writeFile(yamlPath, YAML.stringify(classificationRequest), "utf8");
+  await fs.writeJson(jsonPath, classificationRequest, { spaces: 2 });
+
+  return {
+    yamlPath,
+    jsonPath,
+  };
+}
+
+async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir, commandRegistry }) {
   const runId = makeRunId();
   const workRoot = path.join(workspaceDir, runId);
   const inboxDir = path.join(workRoot, "inbox");
+  const reportDir = path.join(workRoot, "report");
+  const registryOptions = resolveCommandRegistryOptions(commandRegistry);
 
   const status = {
     ok: false,
@@ -115,8 +159,36 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
     step("runbook.read", true);
 
     // 4) prepare report files
-    const reportDir = path.join(workRoot, "report");
     await fs.ensureDir(reportDir);
+
+    if (registryOptions.enabled) {
+      const preflight = preflightAuditRunbook({
+        runbook,
+        registryPath: registryOptions.registryPath,
+        generatedAt: isoNow(),
+      });
+
+      if (preflight.status === "classification_required") {
+        step("command_registry.preflight", false, {
+          unknown: preflight.unknownCommands.length,
+          registry: preflight.registryPath,
+        });
+
+        const err = new Error(
+          `Audit preflight requires command classification: ${preflight.unknownCommands.length} unknown command(s)`
+        );
+        err.code = "CLASSIFICATION_REQUIRED";
+        err.classificationRequest = preflight.classificationRequest;
+        err.registryPath = preflight.registryPath;
+        throw err;
+      }
+
+      step("command_registry.preflight", true, {
+        matched: preflight.matchedCommands.length,
+        unknown: preflight.unknownCommands.length,
+        registry: preflight.registryPath,
+      });
+    }
 
     // 4a) system report
     const systemJsonPath = path.join(reportDir, "system.json");
@@ -352,14 +424,21 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       message: String(e && e.message ? e.message : e),
     });
 
+    if (code === "CLASSIFICATION_REQUIRED" && e?.classificationRequest) {
+      status.classification_required = true;
+      status.classification_request = e.classificationRequest;
+    }
+
     let exitCode = 20;
     if (code === "INBOX_MISSING") exitCode = 10;
     if (code === "RUNBOOK_MISSING") exitCode = 11;
     if (code === "RUNBOOK_INVALID") exitCode = 12;
+    if (code === "CLASSIFICATION_REQUIRED") exitCode = 13;
 
     try {
       await fs.ensureDir(path.dirname(outboxPath));
       await fs.ensureDir(workRoot);
+      await fs.ensureDir(reportDir);
 
       const snapshotText = writeSnapshot({
         cwd,
@@ -382,10 +461,27 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       const statusPath = path.join(workRoot, "STATUS.json");
       await fs.writeJson(statusPath, status, { spaces: 2 });
 
-      await zipFiles(outboxPath, {
+      const outEntries = {
         "SNAPSHOT.txt": snapshotPath,
         "STATUS.json": statusPath,
-      });
+      };
+
+      if (code === "CLASSIFICATION_REQUIRED" && e?.classificationRequest) {
+        const classificationFiles = await writeClassificationRequestFiles(
+          reportDir,
+          e.classificationRequest
+        );
+
+        if (classificationFiles.yamlPath && (await fs.pathExists(classificationFiles.yamlPath))) {
+          outEntries["REPORT/classification-request.yaml"] = classificationFiles.yamlPath;
+        }
+
+        if (classificationFiles.jsonPath && (await fs.pathExists(classificationFiles.jsonPath))) {
+          outEntries["REPORT/classification-request.json"] = classificationFiles.jsonPath;
+        }
+      }
+
+      await zipFiles(outboxPath, outEntries);
 
       step("outbox.write", true, { path: outboxPath, best_effort: true });
     } catch {}
@@ -399,12 +495,18 @@ async function runAudit({ cwd, inboxPath, outboxPath, workspaceDir }) {
       exitCode,
       runId,
       status,
+      classificationRequest: e?.classificationRequest || null,
       error: lastError
         ? {
             name: "AuditError",
             code: lastError.code || "UNKNOWN",
             message: lastError.message || "Audit failed",
-            details: {},
+            details:
+              e?.classificationRequest
+                ? {
+                    unknown_commands: e.classificationRequest.unknown_commands || [],
+                  }
+                : {},
           }
         : {
             name: "AuditError",
