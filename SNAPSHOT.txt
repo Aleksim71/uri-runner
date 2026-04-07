@@ -3,3 +3,23 @@ A28.1d fix4
 Included:
 - normalize-current-outbox: derive exitCode=0 for success outbox without explicit exitCode
 - keep classification_required priority and provided/ files support
+
+
+A28.1e status
+
+Done:
+- audit command-registry preflight classification
+- classification_required real pipeline coverage
+- classification-response -> apply registry -> rerun preflight -> execute
+- full regression green:
+  - test/real = 8 files, 15 tests passed
+  - test/audit* + test/unit = 39 files, 146 tests passed
+
+Decision:
+- keep classification-cycle in audit only for now
+- do not port the same mechanism to scenario yet
+- scenario needs a separate named-command registry design
+
+Next:
+- update Piligrim / docs with this status
+- later design scenario command classification as a separate track
