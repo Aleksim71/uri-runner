@@ -18,6 +18,15 @@ const {
 const {
   preflightScenarioPlan,
 } = require("../runtime/scenario-command-registry/preflight-scenario-plan.cjs");
+const {
+  loadScenarioCommandRegistry,
+} = require("../runtime/scenario-command-registry/load-scenario-command-registry.cjs");
+const {
+  readScenarioClassificationResponse,
+} = require("../runtime/scenario-command-registry/read-scenario-classification-response.cjs");
+const {
+  applyScenarioClassificationResponse,
+} = require("../runtime/scenario-command-registry/apply-scenario-classification-response.cjs");
 
 class PlanRunError extends Error {
   constructor(code, message, details = undefined) {
@@ -583,6 +592,9 @@ function buildScenarioClassificationRequiredResult({
     },
     meta: {
       loadedCommands,
+      ...(executionContext.classificationResponse
+        ? { classificationResponse: executionContext.classificationResponse }
+        : {}),
       error: {
         code: "CLASSIFICATION_REQUIRED",
         message: `Scenario preflight requires command classification: ${unknownSteps.length} unknown step(s)`,
@@ -752,20 +764,49 @@ async function runScenarioPlan(normalizedPlan, params) {
   const startedAt = new Date().toISOString();
 
   if (scenarioRegistry.enabled) {
+    let registry = loadScenarioCommandRegistry(
+      scenarioRegistry.registryPath || undefined
+    );
+    const classificationResponse = readScenarioClassificationResponse({
+      normalizedPlan,
+      projectRoot,
+    });
+    let classificationResponseReport = null;
+
+    if (classificationResponse) {
+      const applied = applyScenarioClassificationResponse({
+        registry,
+        response: classificationResponse,
+      });
+      registry = applied.registry;
+      classificationResponseReport = applied.report;
+    }
+
     const preflight = preflightScenarioPlan({
       plan: normalizedPlan,
-      registryPath: scenarioRegistry.registryPath || undefined,
+      registryPath: registry.registryPath || scenarioRegistry.registryPath || undefined,
+      registry,
       generatedAt: startedAt,
     });
 
     if (preflight.status === "classification_required") {
-      return buildScenarioClassificationRequiredResult({
+      const result = buildScenarioClassificationRequiredResult({
         normalizedPlan,
         executionContext,
         loadedCommands,
         startedAt,
         preflight,
       });
+
+      if (classificationResponseReport) {
+        result.meta.classificationResponse = classificationResponseReport;
+      }
+
+      return result;
+    }
+
+    if (classificationResponseReport) {
+      executionContext.classificationResponse = classificationResponseReport;
     }
   }
 
@@ -1007,6 +1048,9 @@ async function runScenarioPlan(normalizedPlan, params) {
     },
     meta: {
       loadedCommands,
+      ...(executionContext.classificationResponse
+        ? { classificationResponse: executionContext.classificationResponse }
+        : {}),
       planRun: {
         startedAt,
         finishedAt,

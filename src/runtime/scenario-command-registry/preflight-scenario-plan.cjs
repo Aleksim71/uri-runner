@@ -15,13 +15,17 @@ const {
 function preflightScenarioPlan({
   plan,
   registryPath = defaultScenarioRegistryPath(),
+  registry: providedRegistry = null,
   generatedAt,
 } = {}) {
   if (!plan || typeof plan !== "object") {
     throw new Error("preflightScenarioPlan: plan is required");
   }
 
-  const registry = loadScenarioCommandRegistry(registryPath);
+  const registry =
+    providedRegistry && typeof providedRegistry === "object"
+      ? providedRegistry
+      : loadScenarioCommandRegistry(registryPath);
   const steps = Array.isArray(plan.steps) ? plan.steps : [];
   const matchedSteps = [];
   const unknownSteps = [];
