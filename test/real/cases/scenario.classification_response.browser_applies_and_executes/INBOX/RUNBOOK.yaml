@@ -1,0 +1,21 @@
+version: 1
+receiver: uri
+project: uri-runner-next
+cwd: .
+profile: scenario
+
+browser:
+  flow:
+    - id: start-browser-session
+      action: session.start
+      headless: true
+      baseUrl: https://example.com
+    - id: open-browser-page
+      action: page.open
+      url: https://example.com
+    - id: collect-browser-diagnostics
+      action: diagnostics.collect
+      includeConsole: true
+      includeNetwork: true
+    - id: stop-browser-session
+      action: session.stop

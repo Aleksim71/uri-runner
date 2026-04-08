@@ -1,5 +1,5 @@
 {
-  "runId": "2026-04-08T09-59-32-251Z_95d4fe",
+  "runId": "2026-04-08T10-50-52-754Z_98a98e",
   "project": "uri-runner-next",
   "engine": "scenario",
   "exitCode": 1,
@@ -51,7 +51,7 @@
     "version": 1,
     "status": "classification_required",
     "engine": "scenario",
-    "generated_at": "2026-04-08T09:59:32.268Z",
+    "generated_at": "2026-04-08T10:50:52.771Z",
     "project": "uri-runner-next",
     "registry_path": "/home/aleksim/uri-runner-next/config/scenario-command-registry.yaml",
     "unknown_steps": [
@@ -92,7 +92,7 @@
     }
   },
   "plan": {
-    "path": "history/plans/2026-04-08T09-59-32-251Z_95d4fe.plan.json"
+    "path": "history/plans/2026-04-08T10-50-52-754Z_98a98e.plan.json"
   },
   "tmpProvidedDir": null
 }

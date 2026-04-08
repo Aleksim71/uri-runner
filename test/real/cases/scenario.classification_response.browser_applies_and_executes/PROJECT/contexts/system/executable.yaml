@@ -1,0 +1,37 @@
+version: 1
+
+engine: scenario
+engines:
+  - scenario
+  - audit
+
+commands:
+  roots:
+    - system
+    - project
+
+runtime:
+  max_steps: 100
+  strict_commands: true
+  scenario_command_registry:
+    enabled: true
+    path: config/scenario-command-registry.browser-response.yaml
+    classification_response:
+      classifications:
+        - id: browser.diagnostics.collect
+          group: browser
+          profile: browser_diagnostics
+          match:
+            command: browser.diagnostics.collect
+          args_schema:
+            required: []
+            optional: [includeConsole, includeNetwork]
+  environment:
+    reset_before_run: false
+    managed_processes: []
+    startup:
+      command: ""
+      healthcheck:
+        type: http_ok
+        url: "http://127.0.0.1:3000/health"
+        timeoutSec: 30

@@ -1,5 +1,5 @@
 {
-  "runId": "2026-04-08T10-50-52-754Z_98a98e",
+  "runId": "2026-04-08T10-50-54-209Z_0a5c59",
   "project": "uri-runner-next",
   "engine": "scenario",
   "exitCode": 1,
@@ -22,7 +22,7 @@
       "strict_commands": true,
       "scenario_command_registry": {
         "enabled": true,
-        "path": "/home/aleksim/uri-runner-next/config/scenario-command-registry.yaml"
+        "path": "config/scenario-command-registry.browser-unknown.yaml"
       },
       "environment": {
         "reset_before_run": false,
@@ -39,31 +39,42 @@
     }
   },
   "loadedCommands": [
-    "project.local-hello",
+    "browser.diagnostics.collect",
+    "browser.page.open",
+    "browser.page.wait",
+    "browser.session.start",
+    "browser.session.stop",
     "system.echo"
   ],
   "status": "classification_required",
   "loaded_commands": [
-    "project.local-hello",
+    "browser.diagnostics.collect",
+    "browser.page.open",
+    "browser.page.wait",
+    "browser.session.start",
+    "browser.session.stop",
     "system.echo"
   ],
   "classification_request": {
     "version": 1,
     "status": "classification_required",
     "engine": "scenario",
-    "generated_at": "2026-04-08T10:50:52.771Z",
+    "generated_at": "2026-04-08T10:50:54.226Z",
     "project": "uri-runner-next",
-    "registry_path": "/home/aleksim/uri-runner-next/config/scenario-command-registry.yaml",
+    "registry_path": "/tmp/uri-real-repo-ydQ8V2/config/scenario-command-registry.browser-unknown.yaml",
     "unknown_steps": [
       {
         "source": "steps[0]",
-        "step_id": "step_local_1",
+        "step_id": "browser-flow-0",
         "kind": "command",
-        "command": "project.local-hello",
-        "command_root": "project",
-        "args_keys": [],
+        "command": "browser.diagnostics.collect",
+        "command_root": "browser",
+        "args_keys": [
+          "includeConsole",
+          "includeNetwork"
+        ],
         "suggested_match": {
-          "command": "project.local-hello"
+          "command": "browser.diagnostics.collect"
         }
       }
     ]
@@ -79,20 +90,23 @@
       "unknown_steps": [
         {
           "source": "steps[0]",
-          "step_id": "step_local_1",
+          "step_id": "browser-flow-0",
           "kind": "command",
-          "command": "project.local-hello",
-          "command_root": "project",
-          "args_keys": [],
+          "command": "browser.diagnostics.collect",
+          "command_root": "browser",
+          "args_keys": [
+            "includeConsole",
+            "includeNetwork"
+          ],
           "suggested_match": {
-            "command": "project.local-hello"
+            "command": "browser.diagnostics.collect"
           }
         }
       ]
     }
   },
   "plan": {
-    "path": "history/plans/2026-04-08T10-50-52-754Z_98a98e.plan.json"
+    "path": "history/plans/2026-04-08T10-50-54-209Z_0a5c59.plan.json"
   },
   "tmpProvidedDir": null
 }

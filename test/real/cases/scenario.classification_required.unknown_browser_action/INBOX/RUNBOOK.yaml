@@ -1,0 +1,12 @@
+version: 1
+receiver: uri
+project: uri-runner-next
+profile: scenario
+engine: scenario
+cwd: .
+browser:
+  flow:
+    - id: browser_diag_1
+      action: diagnostics.collect
+      includeConsole: false
+      includeNetwork: false

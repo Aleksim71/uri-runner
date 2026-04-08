@@ -1,0 +1,48 @@
+version: 1
+
+defaults:
+  on_unknown: classification_required
+  generate_request: true
+  execute_unknown: false
+
+profiles:
+  browser_session:
+    description: "Browser session"
+  browser_navigation:
+    description: "Browser navigation"
+
+named_commands:
+  - id: system.echo
+    group: system
+    profile: instant
+    match:
+      command: system.echo
+
+  - id: browser.session.start
+    group: browser
+    profile: browser_session
+    match:
+      command: browser.session.start
+    args_schema:
+      required: []
+      optional: [headless, endpoint, host, port, baseUrl]
+
+  - id: browser.page.open
+    group: browser
+    profile: browser_navigation
+    match:
+      command: browser.page.open
+    args_schema:
+      required: [url]
+      optional: [waitUntil, timeoutMs]
+
+  - id: browser.session.stop
+    group: browser
+    profile: browser_session
+    match:
+      command: browser.session.stop
+    args_schema:
+      required: []
+      optional: [sessionId]
+
+browser_actions: []

@@ -1,0 +1,20 @@
+version: 1
+
+defaults:
+  on_unknown: classification_required
+  generate_request: true
+  execute_unknown: false
+
+profiles:
+  browser_navigation:
+    description: "Навигация и ожидание страницы"
+
+browser_actions:
+  - id: browser.page.open
+    group: browser
+    profile: browser_navigation
+    match:
+      action: page.open
+    args_schema:
+      required: [url]
+      optional: [waitUntil, timeoutMs]

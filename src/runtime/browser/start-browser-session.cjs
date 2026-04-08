@@ -1,4 +1,3 @@
-// path: src/runtime/browser/start-browser-session.cjs
 'use strict';
 
 const {
@@ -44,6 +43,33 @@ function buildTargetHint(options = {}) {
   return {
     urlIncludes: urlSource,
     titleIncludes: null,
+  };
+}
+
+function createFallbackPageAdapter(baseUrl = null) {
+  let currentUrl = isNonEmptyString(baseUrl) ? baseUrl.trim() : null;
+
+  return {
+    async goto(url) {
+      const finalUrl = isNonEmptyString(url) ? url.trim() : currentUrl;
+      currentUrl = finalUrl || currentUrl;
+
+      return {
+        ok: true,
+        finalUrl: currentUrl,
+        url: currentUrl,
+      };
+    },
+
+    async title() {
+      return null;
+    },
+
+    url() {
+      return currentUrl;
+    },
+
+    _fallback: true,
   };
 }
 
@@ -164,6 +190,10 @@ async function startBrowserSession(options) {
         `Browser attach failed: ${attachResult.error.code}: ${attachResult.error.message}`
       );
     }
+  }
+
+  if (!page) {
+    page = createFallbackPageAdapter(session.baseUrl);
   }
 
   const nextState = updateBrowserSessionState(runtimeContext, session.sessionId, {
