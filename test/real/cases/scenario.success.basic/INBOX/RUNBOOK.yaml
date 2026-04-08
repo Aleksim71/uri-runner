@@ -1,0 +1,25 @@
+version: 1
+receiver: uri
+project: uri-runner-next
+profile: scenario
+engine: scenario
+cwd: .
+steps:
+  - id: step_echo_1
+    stepId: step_echo_1
+    kind: command
+    index: 0
+    command: system.echo
+    commandRoot: system
+    args:
+      message: "hello from real scenario"
+scenario:
+  steps:
+    - id: step_echo_1
+      stepId: step_echo_1
+      kind: command
+      index: 0
+      command: system.echo
+      commandRoot: system
+      args:
+        message: "hello from real scenario"

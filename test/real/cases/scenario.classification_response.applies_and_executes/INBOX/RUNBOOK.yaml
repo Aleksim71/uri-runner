@@ -1,0 +1,23 @@
+version: 1
+receiver: uri
+project: uri-runner-next
+profile: scenario
+engine: scenario
+cwd: .
+steps:
+  - id: step_local_1
+    stepId: step_local_1
+    kind: command
+    index: 0
+    command: project.local-hello
+    commandRoot: project
+    args: {}
+scenario:
+  steps:
+    - id: step_local_1
+      stepId: step_local_1
+      kind: command
+      index: 0
+      command: project.local-hello
+      commandRoot: project
+      args: {}

@@ -1,0 +1,98 @@
+{
+  "runId": "2026-04-08T09-59-32-251Z_95d4fe",
+  "project": "uri-runner-next",
+  "engine": "scenario",
+  "exitCode": 1,
+  "ok": false,
+  "executableCtx": {
+    "version": 1,
+    "engine": "scenario",
+    "engines": [
+      "scenario",
+      "audit"
+    ],
+    "commands": {
+      "roots": [
+        "system",
+        "project"
+      ]
+    },
+    "runtime": {
+      "max_steps": 100,
+      "strict_commands": true,
+      "scenario_command_registry": {
+        "enabled": true,
+        "path": "/home/aleksim/uri-runner-next/config/scenario-command-registry.yaml"
+      },
+      "environment": {
+        "reset_before_run": false,
+        "managed_processes": [],
+        "startup": {
+          "command": "",
+          "healthcheck": {
+            "type": "http_ok",
+            "url": "http://127.0.0.1:3000/health",
+            "timeoutSec": 30
+          }
+        }
+      }
+    }
+  },
+  "loadedCommands": [
+    "project.local-hello",
+    "system.echo"
+  ],
+  "status": "classification_required",
+  "loaded_commands": [
+    "project.local-hello",
+    "system.echo"
+  ],
+  "classification_request": {
+    "version": 1,
+    "status": "classification_required",
+    "engine": "scenario",
+    "generated_at": "2026-04-08T09:59:32.268Z",
+    "project": "uri-runner-next",
+    "registry_path": "/home/aleksim/uri-runner-next/config/scenario-command-registry.yaml",
+    "unknown_steps": [
+      {
+        "source": "steps[0]",
+        "step_id": "step_local_1",
+        "kind": "command",
+        "command": "project.local-hello",
+        "command_root": "project",
+        "args_keys": [],
+        "suggested_match": {
+          "command": "project.local-hello"
+        }
+      }
+    ]
+  },
+  "result": {
+    "results": []
+  },
+  "attempts": 1,
+  "error": {
+    "code": "CLASSIFICATION_REQUIRED",
+    "message": "Scenario preflight requires command classification: 1 unknown step(s)",
+    "details": {
+      "unknown_steps": [
+        {
+          "source": "steps[0]",
+          "step_id": "step_local_1",
+          "kind": "command",
+          "command": "project.local-hello",
+          "command_root": "project",
+          "args_keys": [],
+          "suggested_match": {
+            "command": "project.local-hello"
+          }
+        }
+      ]
+    }
+  },
+  "plan": {
+    "path": "history/plans/2026-04-08T09-59-32-251Z_95d4fe.plan.json"
+  },
+  "tmpProvidedDir": null
+}

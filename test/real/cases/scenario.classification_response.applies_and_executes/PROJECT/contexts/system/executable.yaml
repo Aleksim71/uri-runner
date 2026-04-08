@@ -1,0 +1,36 @@
+version: 1
+
+engine: scenario
+engines:
+  - scenario
+  - audit
+
+commands:
+  roots:
+    - system
+    - project
+
+runtime:
+  max_steps: 100
+  strict_commands: true
+  scenario_command_registry:
+    enabled: true
+    path: /home/aleksim/uri-runner-next/config/scenario-command-registry.yaml
+    classification_response:
+      classifications:
+        - id: project.local-hello
+          group: project
+          profile: instant
+          match:
+            command: project.local-hello
+          args_schema:
+            required: []
+  environment:
+    reset_before_run: false
+    managed_processes: []
+    startup:
+      command: ""
+      healthcheck:
+        type: http_ok
+        url: "http://127.0.0.1:3000/health"
+        timeoutSec: 30
