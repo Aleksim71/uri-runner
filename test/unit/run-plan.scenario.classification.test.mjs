@@ -146,4 +146,84 @@ describe("run-plan scenario classification preflight", () => {
     expect(result.outboxPayload.ok).toBe(true);
     expect(result.outboxPayload.status ?? "success").toBe("success");
   });
+
+  it("blocks the whole scenario before execution when an unknown browser action is present", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "uri-run-plan-scenario-classification-"));
+    const projectRoot = path.join(root, "project");
+    await mkdir(projectRoot, { recursive: true });
+
+    const registryPath = path.join(root, "scenario-command-registry.yaml");
+    await writeFile(registryPath, buildRegistryYaml(), "utf8");
+
+    const plan = {
+      version: PLAN_VERSION,
+      kind: PLAN_KIND_SCENARIO,
+      engine: "scenario",
+      project: "demo",
+      runtime: {
+        strictCommands: true,
+        maxSteps: 100,
+      },
+      executableCtxSnapshot: {
+        engine: "scenario",
+        commands: {
+          roots: ["system", "browser"],
+        },
+        runtime: {
+          max_steps: 100,
+          strict_commands: true,
+          scenario_command_registry: {
+            enabled: true,
+            path: registryPath,
+          },
+        },
+      },
+      steps: [
+        {
+          kind: "command",
+          index: 0,
+          stepId: "step_echo_1",
+          command: "system.echo",
+          commandRoot: "system",
+          args: {
+            message: "must not execute before classification",
+          },
+        },
+        {
+          kind: "browser",
+          index: 1,
+          stepId: "step_browser_unknown_1",
+          command: "browser.page.capture",
+          commandRoot: "browser",
+          action: "page.capture",
+          args: {
+            fullPage: true,
+          },
+        },
+      ],
+    };
+
+    const result = await runPlan({
+      plan,
+      projectRoot,
+      runId: "test-run-id",
+      workspaceDir: path.join(root, "workspace"),
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.outboxPayload.status).toBe("classification_required");
+    expect(result.outboxPayload.result.results).toEqual([]);
+    expect(result.meta.error).toMatchObject({
+      code: "CLASSIFICATION_REQUIRED",
+    });
+    expect(result.outboxPayload.classification_request).toMatchObject({
+      status: "classification_required",
+      unknown_steps: [
+        expect.objectContaining({
+          kind: "browser",
+          action: "page.capture",
+        }),
+      ],
+    });
+  });
 });

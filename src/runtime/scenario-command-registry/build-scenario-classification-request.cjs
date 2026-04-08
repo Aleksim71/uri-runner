@@ -9,18 +9,36 @@ function getStepArgs(step) {
   return {};
 }
 
+function getBrowserAction(step) {
+  if (!step || typeof step !== "object") {
+    return null;
+  }
+
+  if (typeof step.action === "string" && step.action.trim().length > 0) {
+    return step.action.trim();
+  }
+
+  if (typeof step.command === "string" && step.command.startsWith("browser.")) {
+    return step.command.slice("browser.".length).trim() || null;
+  }
+
+  return null;
+}
+
 function buildUnknownStepDescriptor(step, index) {
   const args = getStepArgs(step);
 
   if (step && step.kind === "browser") {
+    const action = getBrowserAction(step);
+
     return {
       source: `steps[${index}]`,
       step_id: step.stepId || null,
       kind: "browser",
-      action: step.action || null,
+      action,
       args_keys: Object.keys(args).sort(),
       suggested_match: {
-        action: step.action || null,
+        action,
       },
     };
   }

@@ -1,16 +1,11 @@
 PROJECT: uri-runner-next
 BRANCH: feat/runtime-safety
-PACKAGE: inbox.zip
+PACKAGE: a29_1c_browser-action-normalization-fix.zip
 CONTENT:
-- src/uram/run-plan.cjs
-- src/runtime/scenario-command-registry/load-scenario-command-registry.cjs
 - src/runtime/scenario-command-registry/match-scenario-registry-entry.cjs
 - src/runtime/scenario-command-registry/build-scenario-classification-request.cjs
-- src/runtime/scenario-command-registry/preflight-scenario-plan.cjs
-- test/unit/scenario-command-registry.preflight.test.mjs
-- test/unit/run-plan.scenario.classification.test.mjs
-- docs/runtime/a29-scenario-preflight-notes.md
 PURPOSE:
-- A29.1b scenario registry loader + preflight without executing unknown named commands or browser actions
+- A29.1c fix: normalize browser action from either step.action or step.command
+- preserve classification_request.action for browser steps in scenario preflight
 BASIS:
-- inspection of src/uram/run-plan.cjs and current scenario/browser compile/run tests
+- failing scenario classification unit test returned action: null for browser.page.capture

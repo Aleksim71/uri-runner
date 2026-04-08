@@ -104,4 +104,51 @@ describe("scenario command registry preflight", () => {
       action: "page.magic",
     });
   });
+
+  it("preserves matched steps while requesting classification only for unknown browser action", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "uri-scenario-registry-"));
+    const registryPath = path.join(root, "scenario-command-registry.yaml");
+    await writeFile(registryPath, buildRegistryYaml(), "utf8");
+
+    const result = preflightScenarioPlan({
+      plan: {
+        project: "demo",
+        steps: [
+          {
+            kind: "command",
+            stepId: "step_echo_1",
+            command: "system.echo",
+            args: { message: "hello" },
+          },
+          {
+            kind: "browser",
+            stepId: "step_browser_unknown_1",
+            action: "page.capture",
+            args: { fullPage: true, path: "shot.png" },
+          },
+        ],
+      },
+      registryPath,
+      generatedAt: "2026-04-08T00:00:00.000Z",
+    });
+
+    expect(result.status).toBe("classification_required");
+    expect(result.matchedSteps).toHaveLength(1);
+    expect(result.matchedSteps[0]).toMatchObject({
+      kind: "command",
+      command: "system.echo",
+      registryId: "system.echo",
+    });
+    expect(result.unknownSteps).toHaveLength(1);
+    expect(result.classificationRequest.unknown_steps).toEqual([
+      expect.objectContaining({
+        kind: "browser",
+        action: "page.capture",
+        args_keys: ["fullPage", "path"],
+        suggested_match: {
+          action: "page.capture",
+        },
+      }),
+    ]);
+  });
 });
