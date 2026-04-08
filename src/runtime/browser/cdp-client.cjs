@@ -60,7 +60,7 @@ async function safeDomainCall(domain, methodName, ...args) {
   return domain[methodName](...args);
 }
 
-async function safeRuntimeEvaluate(Runtime, expression) {
+async function safeRuntimeEvaluateFromDomain(Runtime, expression) {
   const result = await safeDomainCall(Runtime, 'evaluate', {
     expression,
     returnByValue: true,
@@ -109,6 +109,22 @@ function sleep(ms) {
   }
 
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTimeout(promise, label, ms = 3_000) {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return Promise.resolve(promise);
+  }
+
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_, reject) => {
+      const timer = setTimeout(() => {
+        clearTimeout(timer);
+        reject(new Error(`${label} timeout after ${ms}ms`));
+      }, ms);
+    }),
+  ]);
 }
 
 function mapConsoleTypeToLevel(type = '') {
@@ -198,7 +214,20 @@ function buildNetworkSummary(networkRecords) {
   };
 }
 
-function createBufferedClient(rawClient, target = {}, endpoint = '') {
+async function safeRuntimeEvaluate(send, expression) {
+  const result = await send('Runtime.evaluate', {
+    expression,
+    returnByValue: true,
+  });
+
+  if (!result || !result.result) {
+    return null;
+  }
+
+  return serializeRemoteObject(result.result);
+}
+
+function createBufferedClientLegacy(rawClient, target = {}, endpoint = '') {
   const Runtime = rawClient.Runtime || null;
   const Page = rawClient.Page || null;
   const Log = rawClient.Log || null;
@@ -228,7 +257,7 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
       pageErrors.push(
         normalizePageError({
           source: 'runtime.exception',
-          text: details.text || details.exception?.description || 'Runtime exception thrown.',
+          text: details.text || (details.exception && details.exception.description) || 'Runtime exception thrown.',
           url: details.url || null,
           lineNumber: Number.isFinite(details.lineNumber) ? details.lineNumber : null,
           columnNumber: Number.isFinite(details.columnNumber) ? details.columnNumber : null,
@@ -276,8 +305,8 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
       networkRecords.set(requestId, {
         ...previous,
         requestId,
-        url: event.request?.url || previous.url || '',
-        method: event.request?.method || previous.method || 'GET',
+        url: (event.request && event.request.url) || previous.url || '',
+        method: (event.request && event.request.method) || previous.method || 'GET',
         resourceType: event.type || previous.resourceType || 'Other',
         timestamp: event.timestamp || previous.timestamp || null,
       });
@@ -334,16 +363,18 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
   return {
     rawClient,
     async getPageMetadata() {
-      const userAgent = await safeRuntimeEvaluate(Runtime, 'navigator.userAgent');
-      const readyState = await safeRuntimeEvaluate(Runtime, 'document.readyState');
+      const userAgent = await safeRuntimeEvaluateFromDomain(Runtime, 'navigator.userAgent');
+      const readyState = await safeRuntimeEvaluateFromDomain(Runtime, 'document.readyState');
+      const runtimeUrl = await safeRuntimeEvaluateFromDomain(Runtime, 'location.href');
+      const runtimeTitle = await safeRuntimeEvaluateFromDomain(Runtime, 'document.title');
       const layoutMetrics = await safeDomainCall(Page, 'getLayoutMetrics');
       const frameTree = await safeDomainCall(Page, 'getFrameTree');
 
       return {
         endpoint,
         targetId: target.id || null,
-        url: target.url || null,
-        title: target.title || null,
+        url: runtimeUrl || target.url || null,
+        title: runtimeTitle || target.title || null,
         type: target.type || 'page',
         userAgent,
         readyState,
@@ -387,8 +418,366 @@ function createBufferedClient(rawClient, target = {}, endpoint = '') {
   };
 }
 
+function attachEventCollectors(browserClient, sessionId) {
+  const consoleMessages = [];
+  const pageErrors = [];
+  const networkRecords = new Map();
+  const listeners = [];
+
+  const onEvent = (message = {}) => {
+    if (!message || message.sessionId !== sessionId || typeof message.method !== 'string') {
+      return;
+    }
+
+    const params = message.params || {};
+
+    switch (message.method) {
+      case 'Runtime.consoleAPICalled': {
+        const args = Array.isArray(params.args) ? params.args.map(serializeRemoteObject) : [];
+        consoleMessages.push(
+          normalizeConsoleEntry({
+            source: 'runtime.console',
+            type: params.type || 'log',
+            text: args.filter((value) => value !== null).join(' '),
+            args,
+            timestamp: params.timestamp || null,
+          })
+        );
+        break;
+      }
+
+      case 'Runtime.exceptionThrown': {
+        const details = params.exceptionDetails || {};
+        pageErrors.push(
+          normalizePageError({
+            source: 'runtime.exception',
+            text: details.text || (details.exception && details.exception.description) || 'Runtime exception thrown.',
+            url: details.url || null,
+            lineNumber: Number.isFinite(details.lineNumber) ? details.lineNumber : null,
+            columnNumber: Number.isFinite(details.columnNumber) ? details.columnNumber : null,
+            timestamp: params.timestamp || null,
+          })
+        );
+        break;
+      }
+
+      case 'Log.entryAdded': {
+        const entry = params.entry || {};
+        const normalized = normalizeConsoleEntry({
+          source: 'log.entry',
+          type: entry.level || 'info',
+          level: entry.level || 'info',
+          text: entry.text || '',
+          url: entry.url || null,
+          timestamp: entry.timestamp || null,
+        });
+
+        consoleMessages.push(normalized);
+
+        if (normalized.level === 'error') {
+          pageErrors.push(
+            normalizePageError({
+              source: 'log.entry',
+              text: normalized.text,
+              url: normalized.url,
+              timestamp: normalized.timestamp,
+            })
+          );
+        }
+        break;
+      }
+
+      case 'Network.requestWillBeSent': {
+        const requestId = params.requestId || null;
+        if (!requestId) break;
+
+        const previous = networkRecords.get(requestId) || {};
+        networkRecords.set(requestId, {
+          ...previous,
+          requestId,
+          url: (params.request && params.request.url) || previous.url || '',
+          method: (params.request && params.request.method) || previous.method || 'GET',
+          resourceType: params.type || previous.resourceType || 'Other',
+          timestamp: params.timestamp || previous.timestamp || null,
+        });
+        break;
+      }
+
+      case 'Network.responseReceived': {
+        const requestId = params.requestId || null;
+        if (!requestId) break;
+
+        const previous = networkRecords.get(requestId) || {};
+        const response = params.response || {};
+        networkRecords.set(requestId, {
+          ...previous,
+          requestId,
+          url: response.url || previous.url || '',
+          method: previous.method || 'GET',
+          resourceType: params.type || previous.resourceType || 'Other',
+          status: Number.isFinite(response.status) ? response.status : previous.status,
+          mimeType: response.mimeType || previous.mimeType || null,
+          protocol: response.protocol || previous.protocol || null,
+          encodedDataLength: Number.isFinite(response.encodedDataLength)
+            ? response.encodedDataLength
+            : previous.encodedDataLength || null,
+          timestamp: params.timestamp || previous.timestamp || null,
+        });
+        break;
+      }
+
+      case 'Network.loadingFailed': {
+        const requestId = params.requestId || null;
+        if (!requestId) break;
+
+        const previous = networkRecords.get(requestId) || {};
+        networkRecords.set(requestId, {
+          ...previous,
+          requestId,
+          url: previous.url || params.url || '',
+          method: previous.method || 'GET',
+          resourceType: params.type || previous.resourceType || 'Other',
+          failed: true,
+          failureText: params.errorText || 'Request failed.',
+          timestamp: params.timestamp || previous.timestamp || null,
+        });
+        break;
+      }
+
+      default:
+        break;
+    }
+  };
+
+  if (browserClient && typeof browserClient.on === 'function') {
+    browserClient.on('event', onEvent);
+    listeners.push(['event', onEvent]);
+  }
+
+  return {
+    consoleMessages,
+    pageErrors,
+    networkRecords,
+    detach() {
+      if (!browserClient || typeof browserClient.removeListener !== 'function') {
+        return;
+      }
+
+      for (const [name, listener] of listeners) {
+        browserClient.removeListener(name, listener);
+      }
+    },
+  };
+}
+
+async function createFlatSession(transport, endpoint, target = {}, options = {}) {
+  const connection = normalizeCdpEndpoint(endpoint);
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 3_000;
+  const initialUrl = typeof target.url === 'string' && target.url ? target.url : 'about:blank';
+
+  const version = await withTimeout(
+    transport.Version({
+      host: connection.host,
+      port: connection.port,
+      secure: connection.secure,
+    }),
+    'CDP.Version',
+    timeoutMs
+  );
+
+  const browserWebSocketUrl =
+    (version && version.webSocketDebuggerUrl) || connection.websocketUrl || null;
+
+  if (!browserWebSocketUrl) {
+    throw new Error('Browser websocket debugger URL is not available.');
+  }
+
+  const browserClient = await withTimeout(
+    transport({ target: browserWebSocketUrl }),
+    'CDP(browser websocket)',
+    timeoutMs
+  );
+
+  const freshTarget = await withTimeout(
+    transport.New({
+      host: connection.host,
+      port: connection.port,
+      secure: connection.secure,
+      url: initialUrl,
+    }),
+    'CDP.New',
+    timeoutMs
+  );
+
+  const freshTargetId = freshTarget && (freshTarget.id || freshTarget.targetId || freshTarget.targetID);
+
+  if (!freshTargetId) {
+    try {
+      await browserClient.close();
+    } catch (_) {}
+    throw new Error('CDP.New did not return a target id.');
+  }
+
+  let sessionId = null;
+
+  try {
+    const attachResult = await withTimeout(
+      browserClient.Target.attachToTarget({
+        targetId: freshTargetId,
+        flatten: true,
+      }),
+      'Target.attachToTarget',
+      timeoutMs
+    );
+
+    sessionId = attachResult && attachResult.sessionId;
+
+    if (!sessionId) {
+      throw new Error('Target.attachToTarget did not return a session id.');
+    }
+
+    const send = (method, params = {}, perCallTimeoutMs = timeoutMs) =>
+      withTimeout(browserClient.send(method, params, sessionId), method, perCallTimeoutMs);
+
+    await send('Page.enable');
+    await send('Runtime.enable');
+    await send('Log.enable');
+    await send('Network.enable');
+
+    return {
+      connection,
+      browserClient,
+      sessionId,
+      targetId: freshTargetId,
+      version,
+      send,
+      cleanup: async () => {
+        try {
+          if (sessionId) {
+            await withTimeout(
+              browserClient.Target.detachFromTarget({ sessionId }),
+              'Target.detachFromTarget',
+              Math.min(timeoutMs, 1_500)
+            );
+          }
+        } catch (_) {}
+
+        try {
+          await withTimeout(
+            transport.Close({
+              host: connection.host,
+              port: connection.port,
+              secure: connection.secure,
+              id: freshTargetId,
+            }),
+            'CDP.Close',
+            Math.min(timeoutMs, 1_500)
+          );
+        } catch (_) {}
+
+        try {
+          await withTimeout(browserClient.close(), 'client.close', Math.min(timeoutMs, 1_500));
+        } catch (_) {}
+      },
+    };
+  } catch (error) {
+    try {
+      if (sessionId) {
+        await withTimeout(
+          browserClient.Target.detachFromTarget({ sessionId }),
+          'Target.detachFromTarget',
+          Math.min(timeoutMs, 1_500)
+        );
+      }
+    } catch (_) {}
+
+    try {
+      await withTimeout(
+        transport.Close({
+          host: connection.host,
+          port: connection.port,
+          secure: connection.secure,
+          id: freshTargetId,
+        }),
+        'CDP.Close',
+        Math.min(timeoutMs, 1_500)
+      );
+    } catch (_) {}
+
+    try {
+      await withTimeout(browserClient.close(), 'client.close', Math.min(timeoutMs, 1_500));
+    } catch (_) {}
+
+    throw error;
+  }
+}
+
+async function createBufferedClientForFlat(transport, target = {}, endpoint = '', options = {}) {
+  const mappedTarget = mapTarget(target);
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 3_000;
+  const session = await createFlatSession(transport, endpoint, mappedTarget, { timeoutMs });
+  const events = attachEventCollectors(session.browserClient, session.sessionId);
+
+  return {
+    rawClient: session.browserClient,
+    async getPageMetadata() {
+      const userAgent = await safeRuntimeEvaluate(session.send, 'navigator.userAgent');
+      const readyState = await safeRuntimeEvaluate(session.send, 'document.readyState');
+      const runtimeUrl = await safeRuntimeEvaluate(session.send, 'location.href');
+      const runtimeTitle = await safeRuntimeEvaluate(session.send, 'document.title');
+      const layoutMetrics = await session.send('Page.getLayoutMetrics');
+      const frameTree = await session.send('Page.getFrameTree');
+
+      return {
+        endpoint,
+        targetId: session.targetId || mappedTarget.id || null,
+        url: runtimeUrl || mappedTarget.url || null,
+        title: runtimeTitle || mappedTarget.title || null,
+        type: mappedTarget.type || 'page',
+        userAgent,
+        readyState,
+        layoutMetrics: layoutMetrics || null,
+        frameTree: frameTree || null,
+      };
+    },
+    async takeScreenshot(options = {}) {
+      const fullPage = Boolean(options.fullPage);
+      const response = await session.send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: fullPage,
+      });
+
+      return response && typeof response.data === 'string' ? response.data : null;
+    },
+    async getConsoleSnapshot(options = {}) {
+      await sleep(options.settleMs);
+      return {
+        consoleMessages: events.consoleMessages.slice(),
+        pageErrors: events.pageErrors.slice(),
+      };
+    },
+    async getConsoleMessages(options = {}) {
+      const snapshot = await this.getConsoleSnapshot(options);
+      return snapshot.consoleMessages;
+    },
+    async getPageErrors(options = {}) {
+      const snapshot = await this.getConsoleSnapshot(options);
+      return snapshot.pageErrors;
+    },
+    async getNetworkSummary(options = {}) {
+      await sleep(options.settleMs);
+      return buildNetworkSummary(events.networkRecords);
+    },
+    async close() {
+      events.detach();
+      await session.cleanup();
+    },
+  };
+}
+
 function createCdpClientAdapter(options = {}) {
   const transport = options.transport || CDP;
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 3_000;
 
   if (typeof transport !== 'function') {
     throw new Error('CDP transport must be a callable function.');
@@ -431,11 +820,17 @@ function createCdpClientAdapter(options = {}) {
     },
 
     async attachToTarget(endpoint, target = {}) {
+      const mappedTarget = mapTarget(target);
+
+      if (typeof transport.Version === 'function' && typeof transport.New === 'function') {
+        return createBufferedClientForFlat(transport, mappedTarget, endpoint, { timeoutMs });
+      }
+
       const connection = normalizeCdpEndpoint(endpoint);
       const targetDescriptor =
-        typeof target.webSocketDebuggerUrl === 'string' && target.webSocketDebuggerUrl
-          ? target.webSocketDebuggerUrl
-          : target.id;
+        mappedTarget && mappedTarget.id
+          ? mappedTarget
+          : (typeof target.id === 'string' && target.id ? target.id : null);
 
       const rawClient = await transport({
         host: connection.host,
@@ -451,7 +846,7 @@ function createCdpClientAdapter(options = {}) {
         safeDomainCall(rawClient.Network, 'enable'),
       ]);
 
-      return createBufferedClient(rawClient, mapTarget(target), endpoint);
+      return createBufferedClientLegacy(rawClient, mappedTarget, endpoint);
     },
 
     async connectToPageTarget(endpoint, targetHint = {}) {

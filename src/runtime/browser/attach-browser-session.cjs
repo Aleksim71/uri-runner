@@ -75,8 +75,29 @@ function resolveAdapter(input = {}) {
   return createCdpClientAdapter();
 }
 
+function resolveEndpoint(input = {}) {
+  const endpoint =
+    typeof input.endpoint === 'string' ? input.endpoint.trim() : '';
+
+  if (endpoint) {
+    return endpoint;
+  }
+
+  const host = typeof input.host === 'string' ? input.host.trim() : '';
+  const port =
+    input.port === undefined || input.port === null
+      ? ''
+      : String(input.port).trim();
+
+  if (host && port) {
+    return `http://${host}:${port}`;
+  }
+
+  return '';
+}
+
 async function attachBrowserSession(input = {}) {
-  const endpoint = typeof input.endpoint === 'string' ? input.endpoint.trim() : '';
+  const endpoint = resolveEndpoint(input);
   const browserType =
     typeof input.browserType === 'string' && input.browserType.trim()
       ? input.browserType.trim()
