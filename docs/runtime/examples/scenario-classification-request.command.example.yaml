@@ -1,0 +1,11 @@
+version: 1
+status: classification_required
+engine: scenario
+generated_at: 2026-04-08T10:00:00.000Z
+unknown_steps:
+  - source: steps[0]
+    kind: command
+    command: system.not_classified
+    args_keys: [message]
+    suggested_match:
+      command: system.not_classified

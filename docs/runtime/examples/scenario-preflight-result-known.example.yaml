@@ -1,0 +1,6 @@
+version: 1
+status: ok
+engine: scenario
+matched_named_commands: 1
+matched_browser_actions: 2
+unknown_steps: []

@@ -1,0 +1,88 @@
+# config/scenario-command-registry.yaml
+version: 1
+
+defaults:
+  on_unknown: classification_required
+  generate_request: true
+  execute_unknown: false
+
+profiles:
+  instant:
+    description: "Шаг должен завершиться сразу"
+  browser_session:
+    description: "Управление browser session"
+  browser_navigation:
+    description: "Навигация и ожидание страницы"
+  browser_diagnostics:
+    description: "Сбор browser diagnostics"
+
+named_commands:
+  - id: system.echo
+    group: system
+    profile: instant
+    notes: "Базовая встроенная команда system.echo"
+    match:
+      command: system.echo
+    args_schema:
+      required: [message]
+
+browser_actions:
+  - id: browser.session.start
+    group: browser
+    profile: browser_session
+    notes: "Старт browser session"
+    match:
+      action: session.start
+    args_schema:
+      required: []
+      optional: [headless, endpoint, host, port]
+
+  - id: browser.page.open
+    group: browser
+    profile: browser_navigation
+    notes: "Открыть страницу"
+    match:
+      action: page.open
+    args_schema:
+      required: [url]
+      optional: [waitUntil, timeoutMs]
+
+  - id: browser.page.wait
+    group: browser
+    profile: browser_navigation
+    notes: "Подождать состояние страницы"
+    match:
+      action: page.wait
+    args_schema:
+      required: []
+      optional: [waitUntil, timeoutMs]
+
+  - id: browser.diagnostics.collect
+    group: browser
+    profile: browser_diagnostics
+    notes: "Собрать diagnostics"
+    match:
+      action: diagnostics.collect
+    args_schema:
+      required: []
+      optional: [includeConsole, includeNetwork]
+
+  - id: browser.diagnostics.run
+    group: browser
+    profile: browser_diagnostics
+    notes: "Синоним diagnostics.collect"
+    match:
+      action: diagnostics.run
+    args_schema:
+      required: []
+      optional: [includeConsole, includeNetwork]
+
+  - id: browser.session.stop
+    group: browser
+    profile: browser_session
+    notes: "Остановить browser session"
+    match:
+      action: session.stop
+    args_schema:
+      required: []
+      optional: [sessionId]

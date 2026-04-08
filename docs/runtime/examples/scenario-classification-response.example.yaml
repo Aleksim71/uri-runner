@@ -1,0 +1,18 @@
+version: 1
+named_commands:
+  - id: system.not_classified
+    group: system
+    profile: instant
+    match:
+      command: system.not_classified
+    args_schema:
+      required: [message]
+
+browser_actions:
+  - id: browser.page.capture
+    group: browser
+    profile: browser_diagnostics
+    match:
+      action: page.capture
+    args_schema:
+      required: [path]
