@@ -21,6 +21,15 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function readJsonFromZip(zipPath, entryName) {
+  return JSON.parse(
+    execFileSync("unzip", ["-p", zipPath, entryName], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+  );
+}
+
 function zipSingleFile(zipPath, filePath) {
   fs.mkdirSync(path.dirname(zipPath), { recursive: true });
   execFileSync("zip", ["-j", zipPath, filePath], {
@@ -133,7 +142,7 @@ steps:
     expect(processedFiles.length).toBe(1);
     expect(processedFiles[0]).toContain(`__${projectName}__${result.runId}.inbox.zip`);
 
-    const latest = readJson(latestOutboxPath);
+    const latest = readJsonFromZip(latestOutboxPath, "outbox.json");
     expect(latest.ok).toBe(false);
     expect(latest.engine).toBe("scenario");
     expect(latest.error).toBeDefined();
