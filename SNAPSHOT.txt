@@ -1,15 +1,16 @@
 PROJECT: uri-runner-next
 BRANCH: feat/runtime-safety
-PACKAGE: a29_1a_scenario_registry_spec.zip
+PACKAGE: inbox.zip
 CONTENT:
-- docs/runtime/scenario-command-registry-spec.md
-- docs/runtime/a29-scenario-layer-notes.md
-- config/scenario-command-registry.yaml
-- docs/runtime/examples/scenario-classification-request.command.example.yaml
-- docs/runtime/examples/scenario-classification-request.browser.example.yaml
-- docs/runtime/examples/scenario-classification-response.example.yaml
-- docs/runtime/examples/scenario-preflight-result-known.example.yaml
+- src/uram/run-plan.cjs
+- src/runtime/scenario-command-registry/load-scenario-command-registry.cjs
+- src/runtime/scenario-command-registry/match-scenario-registry-entry.cjs
+- src/runtime/scenario-command-registry/build-scenario-classification-request.cjs
+- src/runtime/scenario-command-registry/preflight-scenario-plan.cjs
+- test/unit/scenario-command-registry.preflight.test.mjs
+- test/unit/run-plan.scenario.classification.test.mjs
+- docs/runtime/a29-scenario-preflight-notes.md
 PURPOSE:
-- A29.1a exact spec for scenario named-command registry and browser-action registry
+- A29.1b scenario registry loader + preflight without executing unknown named commands or browser actions
 BASIS:
-- inspection of src/uram/run-plan.cjs, src/commands/load-commands.cjs, src/commands/command-registry.cjs, src/uram/compile-browser-flow.cjs
+- inspection of src/uram/run-plan.cjs and current scenario/browser compile/run tests

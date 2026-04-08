@@ -15,6 +15,9 @@ const {
 const {
   executeBrowserDiagnosticsStep,
 } = require("./execute-browser-diagnostics-step.cjs");
+const {
+  preflightScenarioPlan,
+} = require("../runtime/scenario-command-registry/preflight-scenario-plan.cjs");
 
 class PlanRunError extends Error {
   constructor(code, message, details = undefined) {
@@ -395,7 +398,6 @@ async function runMaterializedPlan(normalizedPlan, params) {
     results: [],
   };
 
-  const startedAt = new Date().toISOString();
   let failedStep = null;
 
   for (const step of normalizedPlan.steps) {
@@ -504,6 +506,106 @@ async function runMaterializedPlan(normalizedPlan, params) {
         stepsTotal: normalizedPlan.steps.length,
         stepsCompleted: executionContext.results.length,
         failedStep: null,
+      },
+    },
+  };
+}
+
+
+function resolveScenarioCommandRegistry(normalizedPlan) {
+  const snapshotRuntime =
+    normalizedPlan &&
+    normalizedPlan.executableCtxSnapshot &&
+    normalizedPlan.executableCtxSnapshot.runtime &&
+    typeof normalizedPlan.executableCtxSnapshot.runtime === "object"
+      ? normalizedPlan.executableCtxSnapshot.runtime
+      : {};
+
+  const registry =
+    snapshotRuntime.scenario_command_registry &&
+    typeof snapshotRuntime.scenario_command_registry === "object"
+      ? snapshotRuntime.scenario_command_registry
+      : snapshotRuntime.scenarioCommandRegistry &&
+        typeof snapshotRuntime.scenarioCommandRegistry === "object"
+        ? snapshotRuntime.scenarioCommandRegistry
+        : null;
+
+  if (!registry) {
+    return {
+      enabled: false,
+      registryPath: null,
+    };
+  }
+
+  return {
+    enabled: registry.enabled === true,
+    registryPath:
+      typeof registry.path === "string" && registry.path.trim().length > 0
+        ? registry.path.trim()
+        : typeof registry.registry_path === "string" &&
+          registry.registry_path.trim().length > 0
+          ? registry.registry_path.trim()
+          : null,
+  };
+}
+
+function buildScenarioClassificationRequiredResult({
+  normalizedPlan,
+  executionContext,
+  loadedCommands,
+  startedAt,
+  preflight,
+}) {
+  const finishedAt = new Date().toISOString();
+  const unknownSteps = Array.isArray(preflight?.unknownSteps) ? preflight.unknownSteps : [];
+  const classificationRequest =
+    preflight && preflight.classificationRequest && typeof preflight.classificationRequest === "object"
+      ? preflight.classificationRequest
+      : null;
+  const firstUnknown = unknownSteps[0] || null;
+  const failedStep =
+    firstUnknown && typeof firstUnknown.stepId === "string" && firstUnknown.stepId.trim().length > 0
+      ? firstUnknown.stepId.trim()
+      : null;
+
+  return {
+    exitCode: 1,
+    outboxPayload: {
+      ok: false,
+      status: "classification_required",
+      engine: normalizedPlan.engine,
+      project: normalizedPlan.project,
+      loaded_commands: loadedCommands,
+      classification_request: classificationRequest,
+      result: {
+        results: executionContext.results,
+      },
+    },
+    meta: {
+      loadedCommands,
+      error: {
+        code: "CLASSIFICATION_REQUIRED",
+        message: `Scenario preflight requires command classification: ${unknownSteps.length} unknown step(s)`,
+        details: {
+          unknown_steps:
+            classificationRequest && Array.isArray(classificationRequest.unknown_steps)
+              ? classificationRequest.unknown_steps
+              : [],
+        },
+      },
+      planRun: {
+        startedAt,
+        finishedAt,
+        executionStatus: "classification_required",
+        stepsTotal: normalizedPlan.steps.length,
+        stepsCompleted: executionContext.results.length,
+        failedStep,
+      },
+      preflight: {
+        status: preflight?.status || "classification_required",
+        registryPath: preflight?.registryPath || null,
+        matchedSteps: Array.isArray(preflight?.matchedSteps) ? preflight.matchedSteps.length : 0,
+        unknownSteps: unknownSteps.length,
       },
     },
   };
@@ -646,6 +748,27 @@ async function runScenarioPlan(normalizedPlan, params) {
     results: [],
   };
 
+  const scenarioRegistry = resolveScenarioCommandRegistry(normalizedPlan);
+  const startedAt = new Date().toISOString();
+
+  if (scenarioRegistry.enabled) {
+    const preflight = preflightScenarioPlan({
+      plan: normalizedPlan,
+      registryPath: scenarioRegistry.registryPath || undefined,
+      generatedAt: startedAt,
+    });
+
+    if (preflight.status === "classification_required") {
+      return buildScenarioClassificationRequiredResult({
+        normalizedPlan,
+        executionContext,
+        loadedCommands,
+        startedAt,
+        preflight,
+      });
+    }
+  }
+
   const environmentPolicy = runtime.environment;
   const shouldResetBeforeRun =
     environmentPolicy &&
@@ -662,7 +785,6 @@ async function runScenarioPlan(normalizedPlan, params) {
     executionContext.environmentReset = environmentReset;
   }
 
-  const startedAt = new Date().toISOString();
   let failedStep = null;
 
   for (const step of normalizedPlan.steps) {
