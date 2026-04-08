@@ -13,6 +13,9 @@ commands:
 runtime:
   max_steps: 100
   strict_commands: true
+  scenario_command_registry:
+    enabled: true
+    path: /home/aleksim/uri-runner-next/config/scenario-command-registry.yaml
   environment:
     reset_before_run: false
     managed_processes: []

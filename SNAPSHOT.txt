@@ -1,15 +1,10 @@
-PROJECT: uri-runner-next
-BRANCH: feat/runtime-safety
-PACKAGE: a29_1d_scenario_classification_response.zip
-CONTENT:
-- src/runtime/scenario-command-registry/read-scenario-classification-response.cjs
-- src/runtime/scenario-command-registry/apply-scenario-classification-response.cjs
-- src/runtime/scenario-command-registry/preflight-scenario-plan.cjs
-- src/uram/run-plan.cjs
-- test/unit/scenario-command-registry.apply-classification-response.test.mjs
-- test/unit/run-plan.scenario.classification-response.test.mjs
-- docs/runtime/a29-scenario-classification-response-notes.md
-PURPOSE:
-- A29.1d scenario classification-response -> apply registry -> rerun preflight -> execute
-BASIS:
-- inspection of current scenario registry preflight in run-plan and runtime helpers
+A29.1e live bug fix
+
+Included:
+- preserve non-success scenario outboxPayload status in runScenarioPhases
+- do not overwrite scenario classification_required with success during final scenario pipeline assembly
+
+Expected:
+- live scenario watch run with unknown step keeps:
+  status: classification_required
+  error.code: CLASSIFICATION_REQUIRED

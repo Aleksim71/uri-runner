@@ -683,10 +683,33 @@ async function runScenarioPhases({
     };
     engineResult.meta.tmpProvidedDir = tmpProvidedDir || null;
     engineResult.meta.fileDeliveryReport = fileDeliveryReport || null;
-    engineResult.outboxPayload = buildSuccessOutboxPayload({
-      provided,
-      fileDeliveryReport,
-    });
+
+    const existingOutboxPayload =
+      engineResult.outboxPayload && typeof engineResult.outboxPayload === "object"
+        ? engineResult.outboxPayload
+        : {};
+
+    if (engineResult.exitCode === 0) {
+      engineResult.outboxPayload = {
+        ...buildSuccessOutboxPayload({
+          provided,
+          fileDeliveryReport,
+        }),
+        ...existingOutboxPayload,
+      };
+    } else {
+      engineResult.outboxPayload = {
+        ...existingOutboxPayload,
+      };
+
+      if (Array.isArray(provided) && provided.length > 0) {
+        engineResult.outboxPayload.provided = provided;
+      }
+
+      if (fileDeliveryReport && typeof fileDeliveryReport === "object") {
+        engineResult.outboxPayload.fileDeliveryReport = fileDeliveryReport;
+      }
+    }
 
     return engineResult;
   } catch (error) {
