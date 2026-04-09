@@ -1,5 +1,7 @@
 version: 1
-
 projects:
   uri-runner:
     cwd: /home/aleksim/uri-runner-next
+  tempasi:
+    cwd: /home/aleksim/tempasi
+    outbox_dir: /home/aleksim/workspace/projects/tempasi/Outbox
