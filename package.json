@@ -1,6 +1,6 @@
 {
   "name": "uri-runner",
-  "version": "0.0.0",
+  "version": "0.2.0",
   "description": "URI Runner (CLI: uri) — automation tool to reduce dev routine",
   "type": "commonjs",
   "bin": {
