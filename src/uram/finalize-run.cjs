@@ -98,19 +98,44 @@ function buildMinimalSuccessOutbox(summary) {
     outbox.fileDeliveryReport = summary.fileDeliveryReport;
   }
 
-  
-  // persist last run (safe, post-execution)
-  try {
-    if (runId && typeof runId === "string" && runId.trim()) {
-      const fs = require("fs");
-      const path = require("path");
-      const lastRunPath = path.join(root, "runtime", "watch", "last_run.txt");
-      fs.mkdirSync(path.dirname(lastRunPath), { recursive: true });
-      fs.writeFileSync(lastRunPath, runId.trim(), "utf-8");
-    }
-  } catch (_) {}
-
   return outbox;
+}
+
+function detectFailureFromPayload(payload, exitCode) {
+  if (Number.isInteger(exitCode) && exitCode !== 0) {
+    return true;
+  }
+
+  if (!isObject(payload)) {
+    return false;
+  }
+
+  if (payload.ok === false) {
+    return true;
+  }
+
+  if (Number.isInteger(payload.exitCode) && payload.exitCode !== 0) {
+    return true;
+  }
+
+  const status =
+    typeof payload.status === "string" && payload.status.trim()
+      ? payload.status.trim().toLowerCase()
+      : "";
+
+  if (status && !["success", "ok", "completed"].includes(status)) {
+    return true;
+  }
+
+  if (isObject(payload.error)) {
+    return true;
+  }
+
+  if (Array.isArray(payload.trace) && payload.trace.length > 0) {
+    return true;
+  }
+
+  return false;
 }
 
 function buildStatusPayload(outboxPayload) {
@@ -364,7 +389,7 @@ async function finalizeRun({
     throw new Error("tmp outbox payload is missing or invalid");
   }
 
-  const isSuccess = exitCode === 0;
+  const isSuccess = !detectFailureFromPayload(payload, exitCode);
 
   const latestZipPath = latestOutboxPath.endsWith(".zip")
     ? latestOutboxPath

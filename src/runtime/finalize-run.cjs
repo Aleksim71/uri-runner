@@ -19,6 +19,8 @@ function toPipelineReturn(result) {
     executableCtx: runtimeResult.executableCtx,
     loadedCommands: runtimeResult.loadedCommands,
     fileDeliveryReport: runtimeResult.fileDeliveryReport,
+    error: runtimeResult.error,
+    outboxPayload: runtimeResult.outboxPayload,
     ...(runtimeResult.meta || {}),
   };
 }

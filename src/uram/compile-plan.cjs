@@ -492,6 +492,42 @@ function validateMaxSteps(steps, executableCtx) {
   }
 }
 
+function assertUniqueScenarioStepIds(steps) {
+  if (!Array.isArray(steps) || steps.length === 0) {
+    return;
+  }
+
+  const seenStepIds = new Set();
+
+  steps.forEach((step, index) => {
+    if (!step || typeof step !== "object" || Array.isArray(step)) {
+      return;
+    }
+
+    const stepId =
+      typeof step.id === "string" && step.id.trim().length > 0
+        ? step.id.trim()
+        : null;
+
+    if (!stepId) {
+      return;
+    }
+
+    if (seenStepIds.has(stepId)) {
+      throw createPlanCompileError(
+        ERROR_CODES.SCENARIO_INVALID,
+        "Scenario step is invalid: duplicate stepId",
+        {
+          stepIndex: index,
+          stepId,
+        }
+      );
+    }
+
+    seenStepIds.add(stepId);
+  });
+}
+
 function getScenarioStepId(step, index) {
   const stepId =
     typeof step.id === "string" && step.id.trim().length > 0
@@ -693,6 +729,8 @@ function compilePlan(params) {
   assertScenarioEngine(executableCtx);
 
   const steps = validateRunbookSteps(runbook);
+  assertUniqueScenarioStepIds(steps);
+
   const browserFlowSteps = compileBrowserFlow(runbook.browser || {});
 
   validateMaxSteps([...steps, ...browserFlowSteps], executableCtx);

@@ -467,6 +467,157 @@ function pickExistingOutboxPath(primaryPath, fallbackPath) {
   return fallbackPath || null;
 }
 
+function buildPublishedStatusPayload(outboxPayload) {
+  const payload = {
+    status:
+      typeof outboxPayload?.status === "string" && outboxPayload.status.trim()
+        ? outboxPayload.status
+        : "unknown",
+  };
+
+  if (Number.isInteger(outboxPayload?.attempts) && outboxPayload.attempts > 0) {
+    payload.attempts = outboxPayload.attempts;
+  }
+
+  if (typeof outboxPayload?.runId === "string" && outboxPayload.runId.trim()) {
+    payload.runId = outboxPayload.runId;
+  }
+
+  if (typeof outboxPayload?.project === "string" && outboxPayload.project.trim()) {
+    payload.project = outboxPayload.project;
+  }
+
+  if (typeof outboxPayload?.engine === "string" && outboxPayload.engine.trim()) {
+    payload.engine = outboxPayload.engine;
+  }
+
+  if (typeof outboxPayload?.executionKind === "string" && outboxPayload.executionKind.trim()) {
+    payload.executionKind = outboxPayload.executionKind;
+  }
+
+  if (typeof outboxPayload?.stage === "string" && outboxPayload.stage.trim()) {
+    payload.stage = outboxPayload.stage;
+  }
+
+  if (typeof outboxPayload?.ok === "boolean") {
+    payload.ok = outboxPayload.ok;
+  }
+
+  return payload;
+}
+
+function buildPublishedSnapshotText(statusPayload) {
+  const lines = [`status: ${statusPayload.status}`];
+
+  if (Number.isInteger(statusPayload.attempts)) {
+    lines.push(`attempts: ${statusPayload.attempts}`);
+  }
+
+  if (typeof statusPayload.runId === "string") {
+    lines.push(`runId: ${statusPayload.runId}`);
+  }
+
+  if (typeof statusPayload.engine === "string") {
+    lines.push(`engine: ${statusPayload.engine}`);
+  }
+
+  if (typeof statusPayload.executionKind === "string") {
+    lines.push(`executionKind: ${statusPayload.executionKind}`);
+  }
+
+  if (typeof statusPayload.stage === "string") {
+    lines.push(`stage: ${statusPayload.stage}`);
+  }
+
+  if (typeof statusPayload.project === "string") {
+    lines.push(`project: ${statusPayload.project}`);
+  }
+
+  if (typeof statusPayload.ok === "boolean") {
+    lines.push(`ok: ${statusPayload.ok ? "true" : "false"}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+async function overwriteZipEntry(zipPath, relativePath, content) {
+  if (!zipPath || !fs.existsSync(zipPath)) {
+    return;
+  }
+
+  const { execFileSync } = require("child_process");
+  const patchRoot = await fsp.mkdtemp(path.join(path.dirname(zipPath), ".watch-outbox-patch-"));
+  const absPath = path.join(patchRoot, relativePath);
+
+  try {
+    await fsp.mkdir(path.dirname(absPath), { recursive: true });
+    await fsp.writeFile(absPath, content, "utf8");
+
+    try {
+      execFileSync("zip", ["-q", "-d", zipPath, relativePath], {
+        stdio: "ignore",
+      });
+    } catch {
+      // ignore if entry does not exist
+    }
+
+    execFileSync("zip", ["-q", zipPath, relativePath], {
+      cwd: patchRoot,
+      stdio: "ignore",
+    });
+  } finally {
+    await fsp.rm(patchRoot, { recursive: true, force: true });
+  }
+}
+
+async function publishPipelineFailureOutbox({
+  processedDir,
+  projectOutboxDir = null,
+  outboxPayload,
+}) {
+  if (!outboxPayload || typeof outboxPayload !== "object" || Array.isArray(outboxPayload)) {
+    return;
+  }
+
+  const statusPayload = buildPublishedStatusPayload(outboxPayload);
+  const outboxJson = JSON.stringify(outboxPayload, null, 2) + "\n";
+  const statusJson = JSON.stringify(statusPayload, null, 2) + "\n";
+  const snapshotText = buildPublishedSnapshotText(statusPayload);
+
+  const targets = [
+    {
+      dir: processedDir,
+      zipPath: path.join(processedDir, "outbox.zip"),
+      jsonPath: path.join(processedDir, "outbox.json"),
+    },
+  ];
+
+  if (typeof projectOutboxDir === "string" && projectOutboxDir.trim()) {
+    targets.push({
+      dir: projectOutboxDir,
+      zipPath: path.join(projectOutboxDir, "outbox.zip"),
+      jsonPath: path.join(projectOutboxDir, "outbox.json"),
+    });
+  }
+
+  for (const target of targets) {
+    if (!target.dir) {
+      continue;
+    }
+
+    await fsp.mkdir(target.dir, { recursive: true });
+    await fsp.writeFile(target.jsonPath, outboxJson, "utf8");
+
+    if (fs.existsSync(target.zipPath)) {
+      await overwriteZipEntry(target.zipPath, "outbox.json", outboxJson);
+      await overwriteZipEntry(target.zipPath, "REPORT/outbox.json", outboxJson);
+      await overwriteZipEntry(target.zipPath, "STATUS.json", statusJson);
+      await overwriteZipEntry(target.zipPath, "REPORT/status.json", statusJson);
+      await overwriteZipEntry(target.zipPath, "SNAPSHOT.txt", snapshotText);
+    }
+  }
+}
+
 async function runPipelineFullCycle({ uramRoot, watchRoot, inboxDir, processedDir, runbook }) {
   const projectName =
     runbook && typeof runbook.project === "string" && runbook.project.trim()
@@ -489,6 +640,20 @@ async function runPipelineFullCycle({ uramRoot, watchRoot, inboxDir, processedDi
     processedDir,
     projectName,
   });
+
+  if (
+    pipelineResult &&
+    pipelineResult.ok === false &&
+    pipelineResult.outboxPayload &&
+    typeof pipelineResult.outboxPayload === "object" &&
+    !Array.isArray(pipelineResult.outboxPayload)
+  ) {
+    await publishPipelineFailureOutbox({
+      processedDir,
+      projectOutboxDir: projectOwned.projectCtx?.outboxDir || null,
+      outboxPayload: pipelineResult.outboxPayload,
+    });
+  }
 
   return {
     pipelineResult,
