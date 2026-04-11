@@ -428,35 +428,27 @@ async function copyLatestOutboxArtifacts({ uramRoot, processedDir, projectName }
 
 
 async function resolveProjectOwnedOutboxPaths(uramRoot, projectName) {
-  try {
-    const projectCtx = await resolveProjectContext({
-      uramRoot,
-      project: projectName,
-    });
+  const projectCtx = await resolveProjectContext({
+    uramRoot,
+    project: projectName,
+  });
 
-    if (!projectCtx || !projectCtx.outboxDir) {
-      return {
-        projectCtx,
-        projectOutboxZipPath: null,
-        projectOutboxJsonPath: null,
-      };
-    }
-
-    const projectOutboxZipPath = path.join(projectCtx.outboxDir, "outbox.zip");
-    const projectOutboxJsonPath = path.join(projectCtx.outboxDir, "outbox.json");
-
+  if (!projectCtx || !projectCtx.outboxDir) {
     return {
       projectCtx,
-      projectOutboxZipPath,
-      projectOutboxJsonPath,
-    };
-  } catch {
-    return {
-      projectCtx: null,
       projectOutboxZipPath: null,
       projectOutboxJsonPath: null,
     };
   }
+
+  const projectOutboxZipPath = path.join(projectCtx.outboxDir, "outbox.zip");
+  const projectOutboxJsonPath = path.join(projectCtx.outboxDir, "outbox.json");
+
+  return {
+    projectCtx,
+    projectOutboxZipPath,
+    projectOutboxJsonPath,
+  };
 }
 
 function pickExistingOutboxPath(primaryPath, fallbackPath) {
@@ -683,6 +675,7 @@ async function handleInboxZip(fullPath, options) {
     executeFullCycle = false,
     stdout = process.stdout,
     archiveSource = false,
+    transportMode = null,
   } = options;
 
   const inspection = await inspectInboxZip(fullPath);
@@ -713,6 +706,40 @@ async function handleInboxZip(fullPath, options) {
   let archivedSourcePath = null;
   if (archiveSource) {
     archivedSourcePath = archiveSourceZip(fullPath, processedSourceDir);
+  }
+
+  if (transportMode === "project-owned") {
+    const projectName =
+      inspection.runbook && typeof inspection.runbook.project === "string"
+        ? inspection.runbook.project.trim()
+        : "";
+
+    if (!projectName) {
+      return {
+        handled: true,
+        accepted: false,
+        status: "validation_error",
+        reason: "project is required for project-owned transport",
+        runbook: inspection.runbook,
+        archivedSourcePath,
+      };
+    }
+
+    try {
+      await resolveProjectContext({
+        uramRoot,
+        project: projectName,
+      });
+    } catch (error) {
+      return {
+        handled: true,
+        accepted: false,
+        status: "validation_error",
+        reason: error && error.message ? error.message : String(error),
+        runbook: inspection.runbook,
+        archivedSourcePath,
+      };
+    }
   }
 
   if (executeFullCycle) {
@@ -882,6 +909,7 @@ async function runWatchCycle(loaded, options = {}) {
       processedSourceDir,
       executeFullCycle,
       archiveSource,
+      transportMode: config.transportMode || config.transport || null,
       stdout,
     });
 
@@ -902,14 +930,22 @@ async function runWatchCycle(loaded, options = {}) {
           archivedSource: result.archivedSourcePath || undefined,
         });
       } else if (!result.alreadyLogged) {
-        printStatus(stdout, "ignored", {
-          reason: result.reason,
-        });
+        printStatus(
+          stdout,
+          result.status === "validation_error" ? "validation_error" : "ignored",
+          {
+            reason: result.reason,
+          }
+        );
       }
     } else if (!result.accepted && !result.alreadyLogged) {
-      printStatus(stdout, "ignored", {
-        reason: result.reason,
-      });
+      printStatus(
+        stdout,
+        result.status === "validation_error" ? "validation_error" : "ignored",
+        {
+          reason: result.reason,
+        }
+      );
     }
 
     return result;
