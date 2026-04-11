@@ -774,6 +774,12 @@ function compilePlan(params) {
     kind: PLAN_KIND_SCENARIO,
     engine: "scenario",
     project: project || runbook?.project || "unknown",
+    scenario:
+      runbook?.scenario && typeof runbook.scenario === "object" && typeof runbook.scenario.id === "string" && runbook.scenario.id.trim()
+        ? { id: runbook.scenario.id.trim() }
+        : typeof runbook?.id === "string" && runbook.id.trim()
+        ? { id: runbook.id.trim() }
+        : undefined,
     runtime,
     executableCtxSnapshot: {
       engine: executableCtx?.engine || null,

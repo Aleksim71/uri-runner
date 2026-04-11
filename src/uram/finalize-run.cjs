@@ -94,6 +94,23 @@ function buildMinimalSuccessOutbox(summary) {
     outbox.trace = summary.trace;
   }
 
+  // === MVP preserve scenario report fields ===
+  if (summary?.sourceScenario && typeof summary.sourceScenario === "object") {
+    outbox.sourceScenario = summary.sourceScenario;
+  }
+
+  if (summary?.executedScenario && typeof summary.executedScenario === "object") {
+    outbox.executedScenario = summary.executedScenario;
+  }
+
+  if (Array.isArray(summary?.steps)) {
+    outbox.steps = summary.steps;
+  }
+
+  if (Array.isArray(summary?.checks)) {
+    outbox.checks = summary.checks;
+  }
+
   if (summary?.fileDeliveryReport && typeof summary.fileDeliveryReport === "object") {
     outbox.fileDeliveryReport = summary.fileDeliveryReport;
   }

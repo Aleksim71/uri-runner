@@ -162,7 +162,7 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
         return null;
       };
 
-      commands["browser.session.start"] = async ({ args = {}, context }) => {
+      commands["browser.session.start"] = async (args = {}, context = {}) => {
         const { executeBrowserSessionStartStep } = require("../runtime/browser/execute-browser-session-start-step.cjs");
         return executeBrowserSessionStartStep({
           runtimeContext: context,
@@ -170,7 +170,7 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
         });
       };
 
-      commands["browser.page.open"] = async ({ args = {}, context }) => {
+      commands["browser.page.open"] = async (args = {}, context = {}) => {
         const { executeBrowserPageOpenStep } = require("../runtime/browser/execute-browser-page-open-step.cjs");
         return executeBrowserPageOpenStep({
           runtimeContext: context,
@@ -184,7 +184,7 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
         });
       };
 
-      commands["browser.page.wait"] = async ({ args = {}, context }) => {
+      commands["browser.page.wait"] = async (args = {}, context = {}) => {
         const { executeBrowserPageWaitStep } = require("../runtime/browser/execute-browser-page-wait-step.cjs");
         return executeBrowserPageWaitStep({
           runtimeContext: context,
@@ -197,7 +197,7 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
         });
       };
 
-      commands["browser.diagnostics.collect"] = async ({ args = {}, context }) => {
+      commands["browser.diagnostics.collect"] = async (args = {}, context = {}) => {
         const path = require("path");
         const { executeBrowserDiagnosticsCollectStep } = require("../runtime/browser/execute-browser-diagnostics-collect-step.cjs");
 
@@ -225,7 +225,7 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
         });
       };
 
-      commands["browser.session.stop"] = async ({ args = {}, context }) => {
+      commands["browser.session.stop"] = async (args = {}, context = {}) => {
         const { executeBrowserSessionStopStep } = require("../runtime/browser/execute-browser-session-stop-step.cjs");
         return executeBrowserSessionStopStep({
           runtimeContext: context,
@@ -683,6 +683,71 @@ function getScenarioRuntime(normalizedPlan) {
   };
 }
 
+function extractScenarioResultValue(stepResult) {
+  if (!stepResult || typeof stepResult !== "object") {
+    return "EMPTY";
+  }
+
+  if (typeof stepResult.result === "string") {
+    return stepResult.result;
+  }
+
+  if (
+    stepResult.value &&
+    typeof stepResult.value === "object" &&
+    stepResult.value.data &&
+    typeof stepResult.value.data === "object" &&
+    typeof stepResult.value.data.message === "string"
+  ) {
+    return stepResult.value.data.message;
+  }
+
+  if (
+    stepResult.data &&
+    typeof stepResult.data === "object" &&
+    typeof stepResult.data.message === "string"
+  ) {
+    return stepResult.data.message;
+  }
+
+  return "EMPTY";
+}
+
+function resolveScenarioTemplateString(value, executionContext) {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const match = value.match(/^\{\{steps\.([^.]+)\.result\}\}$/);
+  if (!match) {
+    return value;
+  }
+
+  const stepId = match[1];
+  const prior = Array.isArray(executionContext?.results)
+    ? executionContext.results.find((item) => item && item.stepId === stepId)
+    : null;
+
+  return extractScenarioResultValue(prior);
+}
+
+function resolveScenarioStepArgs(value, executionContext) {
+  if (Array.isArray(value)) {
+    return value.map((item) => resolveScenarioStepArgs(item, executionContext));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        resolveScenarioStepArgs(item, executionContext),
+      ])
+    );
+  }
+
+  return resolveScenarioTemplateString(value, executionContext);
+}
+
 function buildScenarioFailureResult({
   normalizedPlan,
   executionContext,
@@ -993,12 +1058,29 @@ async function runScenarioPlan(normalizedPlan, params) {
     }
 
     try {
-      const value = await commandFn({
-        id: step.stepId,
-        command: step.command,
-        args: step.args || {},
-        context: executionContext,
-      });
+      // === MVP resolve scenario step templates from prior results ===
+      const resolvedArgs = resolveScenarioStepArgs(
+        step.args || {},
+        executionContext
+      );
+
+      const previousStepContext = executionContext.step;
+      executionContext.step = {
+        id: step.stepId || null,
+        command: step.command || null,
+        args: resolvedArgs,
+      };
+
+      let value;
+      try {
+        value = await commandFn(resolvedArgs, executionContext);
+      } finally {
+        if (previousStepContext === undefined) {
+          delete executionContext.step;
+        } else {
+          executionContext.step = previousStepContext;
+        }
+      }
 
       executionContext.results.push({
         stepId: step.stepId || null,

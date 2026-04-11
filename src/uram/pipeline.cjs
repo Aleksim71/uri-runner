@@ -910,6 +910,124 @@ async function runUramPipeline({
       outboxPayload: engineResult.outboxPayload || {},
     });
 
+    // === MVP sourceScenario success injection ===
+    if (
+      finalOutboxPayload &&
+      typeof finalOutboxPayload === "object" &&
+      !finalOutboxPayload.sourceScenario
+    ) {
+      if (rb?.scenario && typeof rb.scenario === "object") {
+        finalOutboxPayload.sourceScenario = { ...rb.scenario };
+
+        if (
+          (!finalOutboxPayload.sourceScenario.id ||
+            typeof finalOutboxPayload.sourceScenario.id !== "string") &&
+          typeof rb?.id === "string" &&
+          rb.id.trim()
+        ) {
+          finalOutboxPayload.sourceScenario.id = rb.id;
+        }
+      } else if (typeof rb?.id === "string" && rb.id.trim()) {
+        finalOutboxPayload.sourceScenario = { id: rb.id };
+      }
+    }
+
+    // === MVP executedScenario success injection ===
+    if (
+      finalOutboxPayload &&
+      typeof finalOutboxPayload === "object" &&
+      !finalOutboxPayload.executedScenario
+    ) {
+      const executedScenario = {
+        engine: executionKind,
+      };
+
+      if (
+        engineResult?.meta?.plan &&
+        typeof engineResult.meta.plan === "object"
+      ) {
+        executedScenario.plan = engineResult.meta.plan;
+      }
+
+      finalOutboxPayload.executedScenario = executedScenario;
+    }
+
+    // === MVP steps success injection ===
+    if (
+      finalOutboxPayload &&
+      typeof finalOutboxPayload === "object" &&
+      !Array.isArray(finalOutboxPayload.steps)
+    ) {
+      const rawSteps = finalOutboxPayload?.result?.results;
+
+      if (Array.isArray(rawSteps)) {
+        finalOutboxPayload.steps = rawSteps.map((item) => {
+          const rawValue = item?.value;
+          const data =
+            rawValue && typeof rawValue === "object" && rawValue.data && typeof rawValue.data === "object"
+              ? rawValue.data
+              : null;
+
+          const result =
+            typeof item?.result === "string"
+              ? item.result
+              : typeof data?.result === "string"
+              ? data.result
+              : typeof data?.message === "string"
+              ? data.message
+              : rawValue ?? null;
+
+          return {
+            stepId: item?.stepId || null,
+            command: item?.command || null,
+            status: item?.ok === true ? "success" : "failed",
+            result,
+          };
+        });
+      }
+    }
+
+    // === MVP checks success injection ===
+    if (
+      finalOutboxPayload &&
+      typeof finalOutboxPayload === "object" &&
+      !Array.isArray(finalOutboxPayload.checks)
+    ) {
+      const stepMap = new Map(
+        Array.isArray(finalOutboxPayload.steps)
+          ? finalOutboxPayload.steps.map((step) => [step?.stepId, step])
+          : []
+      );
+
+      const goalChecks = Array.isArray(rb?.goal_checks) ? rb.goal_checks : [];
+
+      finalOutboxPayload.checks = goalChecks.map((check) => {
+        const left =
+          typeof check?.left === "string" ? check.left.trim() : "";
+
+        const match = left.match(/^\{\{steps\.([^.]+)\.result\}\}$/);
+        const stepId = match ? match[1] : null;
+        const actualStep = stepId ? stepMap.get(stepId) : null;
+        const actual = actualStep?.result ?? null;
+        const expected =
+          typeof check?.right === "string"
+            ? check.right
+            : check?.right ?? null;
+
+        return {
+          type: typeof check?.type === "string" ? check.type : "equals",
+          target: stepId ? `${stepId}.result` : left || null,
+          left: stepId ? `${stepId}.result` : left || null,
+          path: stepId ? `${stepId}.result` : left || null,
+          passed: actual === expected,
+          actual,
+          expected,
+          right: actual,
+          equals: expected,
+        };
+      });
+    }
+
     await fsp.writeFile(
       "/tmp/uri-final-outbox-payload.json",
       JSON.stringify(finalOutboxPayload, null, 2),
