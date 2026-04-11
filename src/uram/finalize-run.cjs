@@ -98,6 +98,18 @@ function buildMinimalSuccessOutbox(summary) {
     outbox.fileDeliveryReport = summary.fileDeliveryReport;
   }
 
+  
+  // persist last run (safe, post-execution)
+  try {
+    if (runId && typeof runId === "string" && runId.trim()) {
+      const fs = require("fs");
+      const path = require("path");
+      const lastRunPath = path.join(root, "runtime", "watch", "last_run.txt");
+      fs.mkdirSync(path.dirname(lastRunPath), { recursive: true });
+      fs.writeFileSync(lastRunPath, runId.trim(), "utf-8");
+    }
+  } catch (_) {}
+
   return outbox;
 }
 

@@ -187,6 +187,15 @@ function pickErrorDetails(err) {
     }
   }
 
+  // persist last runId only for real runs
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const lastRunPath = path.join(uramRoot, "runtime", "watch", "last_run.txt");
+    fs.mkdirSync(path.dirname(lastRunPath), { recursive: true });
+    fs.writeFileSync(lastRunPath, runId, "utf-8");
+  } catch (_) {}
+
   return {};
 }
 
@@ -259,6 +268,24 @@ function normalizeEngineError(err, fallbackEngine) {
           : null,
     },
   };
+}
+
+function writeLastRunId({ uramRoot, runId }) {
+  try {
+    if (typeof uramRoot !== "string" || !uramRoot.trim()) {
+      return;
+    }
+
+    if (typeof runId !== "string" || !runId.trim()) {
+      return;
+    }
+
+    const lastRunPath = path.join(uramRoot, "runtime", "watch", "last_run.txt");
+    require("fs").mkdirSync(path.dirname(lastRunPath), { recursive: true });
+    require("fs").writeFileSync(lastRunPath, `${runId.trim()}\n`, "utf-8");
+  } catch (_) {
+    // do not break pipeline
+  }
 }
 
 function buildCanonicalRuntimeOutbox({
@@ -790,6 +817,8 @@ async function runUramPipeline({
   const startedAt = Date.now();
   const runId = makeRunId();
 
+
+
   let project = "unknown";
   let executionKind = "unknown";
   let projectCtx = null;
@@ -944,6 +973,8 @@ async function runUramPipeline({
       outboxPayload: finalOutboxPayload,
     });
 
+    await writeLastRunId({ uramRoot, runId });
+
     return toPipelineReturn(runtimeResult);
   } catch (err) {
     const normalizedResult = normalizeEngineError(err, executionKind);
@@ -1051,6 +1082,8 @@ async function runUramPipeline({
       meta: normalizedResult.meta || {},
       outboxPayload: normalizedResult.outboxPayload || {},
     });
+
+    await writeLastRunId({ uramRoot, runId });
 
     return toPipelineReturn(runtimeResult);
   }

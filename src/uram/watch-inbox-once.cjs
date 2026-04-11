@@ -720,7 +720,13 @@ async function runWatchCycle(loaded, options = {}) {
       stdout,
     });
 
-    safeWriteLastRun(lastRun);
+    if (
+      result &&
+      typeof result.runId === "string" &&
+      result.runId.trim().length > 0
+    ) {
+      safeWriteLastRun(lastRun, result.runId.trim());
+    }
 
     if (!executeFullCycle) {
       if (result.accepted) {
@@ -743,8 +749,6 @@ async function runWatchCycle(loaded, options = {}) {
 
     return result;
   }
-
-  safeWriteLastRun(lastRun);
 
   if (!options.suppressNoInboxLog) {
     printStatus(stdout, "no inbox.zip found");
