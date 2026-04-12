@@ -28,6 +28,45 @@ function resolveNoColorFromEnv(env = process.env) {
   return value === '1' || value === 'true' || value === 'yes';
 }
 
+const WATCH_PROGRESS_STEPS = [
+  'inbox.zip detected',
+  'accepted',
+  'execution started',
+  'execution completed',
+  'completed'
+];
+
+function normalizeProgressStatus(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveWatchProgress(value) {
+  const normalized = normalizeProgressStatus(value);
+  const index = WATCH_PROGRESS_STEPS.indexOf(normalized);
+
+  if (index === -1) {
+    return null;
+  }
+
+  return {
+    current: index + 1,
+    total: WATCH_PROGRESS_STEPS.length
+  };
+}
+
+function formatProgressLabel(label, text) {
+  if (label !== 'status') {
+    return label;
+  }
+
+  const progress = resolveWatchProgress(text);
+  if (!progress) {
+    return label;
+  }
+
+  return `${label} [${progress.current}/${progress.total}]`;
+}
+
 function inferStateFromStatus(value) {
   const text = String(value || '').toLowerCase();
 
@@ -138,7 +177,8 @@ function createWatchTerminalUi(options = {}) {
 
   function printStatus(label, text, statusState = 'info') {
     ensurePipelineSection();
-    console.log(renderer.step(label, text, statusState));
+    const nextLabel = formatProgressLabel(label, text);
+    console.log(renderer.step(nextLabel, text, statusState));
   }
 
   function printArtifact(label, value) {
