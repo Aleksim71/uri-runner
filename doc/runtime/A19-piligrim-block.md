@@ -99,3 +99,37 @@ A19.1 считается закрытым, когда:
 - browser report пишется;
 - scenario tests зелёные;
 - watcher не падает фатально из-за browser failure.
+
+## A37 — СЛОЙ TERMINAL UI ДЛЯ WATCH-ВЫВОДА
+
+### Статус
+ГОТОВО
+
+### Что добавлено
+- настраиваемый terminal UI layer для watcher output
+- режимы темы: `dark`, `light`, `auto`
+- поддержка пресетов через конфиг и env
+- поддержка ручного palette override через конфиг
+- интерактивный терминал использует человеко-ориентированный themed output
+- неинтерактивный режим и тесты сохраняют legacy plain-text contract
+
+### Конфиг
+- `config/terminal-ui.json`
+
+### Runtime-файлы
+- `src/ui/terminal-palettes.cjs`
+- `src/ui/load-terminal-ui-config.cjs`
+- `src/ui/resolve-terminal-theme.cjs`
+- `src/ui/terminal-theme.cjs`
+- `src/ui/terminal-render.cjs`
+- `src/ui/watch-terminal-ui.cjs`
+
+### Интеграция в watch
+- `src/uram/watch-inbox-once.cjs`
+
+### Demo
+- `scripts/demo-terminal-ui.cjs`
+
+### Контракт
+- human UI включается для интерактивного терминала
+- legacy stdout contract сохраняется для tests / CI / non-TTY
