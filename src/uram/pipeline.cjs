@@ -20,6 +20,7 @@ const {
 } = require("./runbook.cjs");
 
 const { loadExecutableContext } = require("./executable-context.cjs");
+const { compute, resolveGoalTitle } = require("./goal-tracker.cjs");
 
 const {
   resolveUramRoot,
@@ -832,6 +833,7 @@ async function runUramPipeline({
     const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
     const rb = validateRunbook(runbook);
+    const goalInfo = compute(uramRoot, resolveGoalTitle(rb));
     project = getProjectName(rb);
     executionKind = resolveExecutionKind(rb);
 
@@ -909,6 +911,12 @@ async function runUramPipeline({
       meta: engineResult.meta || {},
       outboxPayload: engineResult.outboxPayload || {},
     });
+
+    finalOutboxPayload.goal = {
+      title: goalInfo.goalTitle,
+      key: goalInfo.goalKey,
+      attempt: goalInfo.attempt,
+    };
 
     // === MVP sourceScenario success injection ===
     if (
@@ -1127,6 +1135,12 @@ async function runUramPipeline({
           meta: normalizedResult.meta || {},
           outboxPayload: normalizedResult.outboxPayload || {},
         });
+
+        finalOutboxPayload.goal = {
+          title: goalInfo.goalTitle,
+          key: goalInfo.goalKey,
+          attempt: goalInfo.attempt,
+        };
 
         await fsp.writeFile(
           tmpOutboxPath,

@@ -1,6 +1,8 @@
 /* path: src/uram/finalize-run.cjs */
 "use strict";
 
+const { persist } = require("./goal-tracker.cjs");
+
 const fsp = require("fs/promises");
 const path = require("path");
 const { execFile } = require("child_process");
@@ -414,6 +416,17 @@ async function finalizeRun({
 
   if (isSuccess) {
     const successOutbox = buildMinimalSuccessOutbox(payload);
+    if (payload && payload.goal && typeof payload.goal === "object") {
+      successOutbox.goal = {
+        title: payload.goal.title,
+        key: payload.goal.key,
+        attempt: payload.goal.attempt,
+      };
+      const goalRoot = processedDir
+        ? path.resolve(processedDir, "..", "..", "..")
+        : process.cwd();
+      persist(goalRoot, successOutbox.goal);
+    }
 
     await buildZipArtifact({
       zipPath: latestZipPath,
