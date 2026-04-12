@@ -459,7 +459,21 @@ async function runMaterializedPlan(normalizedPlan, params) {
         action: step.action || null,
       });
 
-      executionContext.results.push({
+      
+      // === A41: stream stdout to UI ===
+      if (typeof result?.stdout === "string" && result.stdout.trim()) {
+        const lines = result.stdout.split(/\r?\n/);
+        for (const line of lines) {
+          if (line.trim()) {
+            emitStepHook(executionContext, "onStepOutput", {
+              stepId: step.stepId || null,
+              line,
+            });
+          }
+        }
+      }
+
+executionContext.results.push({
         stepId: step.stepId || null,
         command: null,
         type: step.type || null,

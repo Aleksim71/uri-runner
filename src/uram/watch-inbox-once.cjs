@@ -865,7 +865,13 @@ async function handleInboxZip(fullPath, options) {
               "step";
             watchUi.printStatus("step", `${label} ✔`, "success");
           },
-          onStepError(step) {
+          
+          onStepOutput(event) {
+            const line = event && event.line ? String(event.line) : "";
+            if (!line.trim()) return;
+            watchUi.printStatus("output", `  ↳ ${line}`, "info");
+          },
+onStepError(step) {
             const label =
               step.command ||
               [step.kind, step.action].filter(Boolean).join(".") ||
