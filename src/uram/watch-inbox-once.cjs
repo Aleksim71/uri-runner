@@ -854,7 +854,7 @@ async function handleInboxZip(fullPath, options) {
               [step.type, step.action].filter(Boolean).join(".") ||
               step.stepId ||
               "step";
-            watchUi.printStatus("step", `${label} → running`, "warn");
+            watchUi.printStatus("step", `${label} …`, "warn");
           },
           onStepSuccess(step) {
             const label =
@@ -863,7 +863,7 @@ async function handleInboxZip(fullPath, options) {
               [step.type, step.action].filter(Boolean).join(".") ||
               step.stepId ||
               "step";
-            watchUi.printStatus("step", `${label} → success`, "success");
+            watchUi.printStatus("step", `${label} ✔`, "success");
           },
           onStepError(step) {
             const label =
@@ -872,7 +872,7 @@ async function handleInboxZip(fullPath, options) {
               [step.type, step.action].filter(Boolean).join(".") ||
               step.stepId ||
               "step";
-            watchUi.printStatus("step", `${label} → error`, "error");
+            watchUi.printStatus("step", `${label} ✖`, "error");
           },
         },
       });
