@@ -62,6 +62,38 @@ function inferStateFromStatus(value) {
   return 'info';
 }
 
+
+function pickSummaryPayload(result = {}) {
+  if (result && result.summary && typeof result.summary === 'object') {
+    return result.summary;
+  }
+
+  return {};
+}
+
+function numberOrNull(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function formatDurationMs(value) {
+  const ms = numberOrNull(value);
+  if (ms === null) return '-';
+  if (ms < 1000) return `${ms} ms`;
+
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes <= 0) return `${totalSeconds} s`;
+  return `${minutes}m ${seconds}s`;
+}
+
+function formatRatio(done, total) {
+  if (!Number.isInteger(total)) return null;
+  const left = Number.isInteger(done) ? done : 0;
+  return `${left}/${total}`;
+}
+
 function createWatchTerminalUi(options = {}) {
   const renderer = createTerminalRenderer({
     cliTheme: options.theme || resolveThemeFromEnv(options.env),
@@ -121,34 +153,94 @@ function createWatchTerminalUi(options = {}) {
   function printSummary(result = {}) {
     ensureSummarySection();
 
-    if (result.result) {
-      console.log(
-        renderer.step(
-          'result',
-          String(result.result),
-          result.result === 'success' ? 'success' : 'error'
-        )
-      );
-    }
+    const summary = pickSummaryPayload(result);
+    const finalResult =
+      summary.result ||
+      result.result ||
+      result.status ||
+      '-';
 
-    if (typeof result.steps === 'number' && typeof result.totalSteps === 'number') {
+    console.log(
+      renderer.step(
+        'result',
+        String(finalResult),
+        finalResult === 'success' ? 'success' : finalResult === 'error' ? 'error' : 'warn'
+      )
+    );
+
+    const stepsRatio =
+      formatRatio(summary.stepsCompleted, summary.stepsTotal) ||
+      (typeof result.steps === 'number' && typeof result.totalSteps === 'number'
+        ? `${result.steps}/${result.totalSteps}`
+        : null);
+
+    if (stepsRatio) {
+      const total = Number.isInteger(summary.stepsTotal) ? summary.stepsTotal : result.totalSteps;
+      const done = Number.isInteger(summary.stepsCompleted) ? summary.stepsCompleted : result.steps;
+
       console.log(
         renderer.step(
           'steps',
-          `${result.steps}/${result.totalSteps} passed`,
-          result.steps === result.totalSteps ? 'success' : 'warn'
+          `${stepsRatio} passed`,
+          typeof total === 'number' && typeof done === 'number' && done === total ? 'success' : 'warn'
         )
       );
     }
 
-    if (typeof result.checks === 'number' && typeof result.totalChecks === 'number') {
+    const checksRatio =
+      formatRatio(summary.checksPassed, summary.checksTotal) ||
+      (typeof result.checks === 'number' && typeof result.totalChecks === 'number'
+        ? `${result.checks}/${result.totalChecks}`
+        : null);
+
+    if (checksRatio) {
+      const total = Number.isInteger(summary.checksTotal) ? summary.checksTotal : result.totalChecks;
+      const done = Number.isInteger(summary.checksPassed) ? summary.checksPassed : result.checks;
+
       console.log(
         renderer.step(
           'checks',
-          `${result.checks}/${result.totalChecks} passed`,
-          result.checks === result.totalChecks ? 'success' : 'warn'
+          `${checksRatio} passed`,
+          typeof total === 'number' && typeof done === 'number' && done === total ? 'success' : 'warn'
         )
       );
+    }
+
+    if (summary.project || result.project) {
+      console.log(renderer.path('project', String(summary.project || result.project)));
+    }
+
+    if (summary.runId || result.runId) {
+      console.log(renderer.path('runId', String(summary.runId || result.runId)));
+    }
+
+    if (summary.engine || summary.executionKind || result.engine) {
+      console.log(
+        renderer.path(
+          'engine',
+          String(summary.engine || summary.executionKind || result.engine)
+        )
+      );
+    }
+
+    if (numberOrNull(summary.durationMs) !== null) {
+      console.log(renderer.path('duration', formatDurationMs(summary.durationMs)));
+    }
+
+    if (summary.projectOutboxZipPath) {
+      console.log(renderer.path('outbox', String(summary.projectOutboxZipPath)));
+    }
+
+    if (summary.projectOutboxJsonPath) {
+      console.log(renderer.path('outboxJson', String(summary.projectOutboxJsonPath)));
+    }
+
+    if (summary.latestOutboxZipPath) {
+      console.log(renderer.path('transportOutbox', String(summary.latestOutboxZipPath)));
+    }
+
+    if (summary.historyOutboxZipPath) {
+      console.log(renderer.path('historyOutbox', String(summary.historyOutboxZipPath)));
     }
   }
 
