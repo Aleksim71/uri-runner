@@ -389,6 +389,21 @@ async function executeProvideFileReadStep(step, context) {
   };
 }
 
+// === A40 STEP HOOKS ===
+function emitStepHook(executionContext, hookName, payload) {
+  try {
+    if (
+      executionContext &&
+      executionContext.hooks &&
+      typeof executionContext.hooks[hookName] === "function"
+    ) {
+      executionContext.hooks[hookName](payload);
+    }
+  } catch (_) {
+    // hooks must never break execution
+  }
+}
+
 async function executeGoalCheckStep(step) {
   const payload =
     step && step.payload && typeof step.payload === "object" ? step.payload : {};
@@ -405,11 +420,18 @@ async function runMaterializedPlan(normalizedPlan, params) {
     workspaceDir: params.workspaceDir || null,
     projectRoot: params.projectRoot,
     results: [],
+    hooks: params.hooks || {},
   };
 
   let failedStep = null;
 
   for (const step of normalizedPlan.steps) {
+    emitStepHook(executionContext, "onStepStart", {
+      stepId: step.stepId || null,
+      type: step.type || null,
+      action: step.action || null,
+    });
+
     try {
       let value;
 
@@ -430,6 +452,12 @@ async function runMaterializedPlan(normalizedPlan, params) {
           }
         );
       }
+
+      emitStepHook(executionContext, "onStepSuccess", {
+        stepId: step.stepId || null,
+        type: step.type || null,
+        action: step.action || null,
+      });
 
       executionContext.results.push({
         stepId: step.stepId || null,
@@ -823,6 +851,7 @@ async function runScenarioPlan(normalizedPlan, params) {
     loadedCommands,
     plan: normalizedPlan,
     results: [],
+    hooks: params.hooks || {},
   };
 
   const scenarioRegistry = resolveScenarioCommandRegistry(normalizedPlan);
@@ -894,6 +923,14 @@ async function runScenarioPlan(normalizedPlan, params) {
   let failedStep = null;
 
   for (const step of normalizedPlan.steps) {
+    emitStepHook(executionContext, "onStepStart", {
+      stepId: step.stepId || null,
+      kind: step.kind || null,
+      action: step.action || null,
+      command: step.command || null,
+      args: step.args && typeof step.args === "object" ? step.args : {},
+    });
+
     if (step.kind === "browser") {
       try {
         let value;
@@ -948,6 +985,13 @@ async function runScenarioPlan(normalizedPlan, params) {
             }
           );
         }
+        emitStepHook(executionContext, "onStepSuccess", {
+          stepId: step.stepId || null,
+          kind: "browser",
+          action: step.action || null,
+          command: null,
+        });
+
         executionContext.results.push({
           stepId: step.stepId || null,
           command: null,
@@ -1036,6 +1080,13 @@ async function runScenarioPlan(normalizedPlan, params) {
       }
 
       failedStep = step.stepId || null;
+      emitStepHook(executionContext, "onStepError", {
+        stepId: step.stepId || null,
+        command: step.command || null,
+        args: step.args && typeof step.args === "object" ? step.args : {},
+        error: notFoundError.message,
+      });
+
       executionContext.results.push({
         stepId: step.stepId || null,
         command: step.command || null,
@@ -1082,6 +1133,12 @@ async function runScenarioPlan(normalizedPlan, params) {
         }
       }
 
+      emitStepHook(executionContext, "onStepSuccess", {
+        stepId: step.stepId || null,
+        command: step.command || null,
+        args: step.args && typeof step.args === "object" ? step.args : {},
+      });
+
       executionContext.results.push({
         stepId: step.stepId || null,
         command: step.command || null,
@@ -1090,6 +1147,13 @@ async function runScenarioPlan(normalizedPlan, params) {
       });
     } catch (error) {
       failedStep = step.stepId || null;
+      emitStepHook(executionContext, "onStepError", {
+        stepId: step.stepId || null,
+        command: step.command || null,
+        args: step.args && typeof step.args === "object" ? step.args : {},
+        error: error?.message || "Step execution failed",
+      });
+
       executionContext.results.push({
         stepId: step.stepId || null,
         command: step.command || null,
