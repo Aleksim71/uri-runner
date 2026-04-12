@@ -28,77 +28,152 @@ function resolveNoColorFromEnv(env = process.env) {
   return value === '1' || value === 'true' || value === 'yes';
 }
 
+function inferStateFromStatus(value) {
+  const text = String(value || '').toLowerCase();
+
+  if (
+    text === 'accepted' ||
+    text === 'execution completed' ||
+    text === 'completed'
+  ) {
+    return 'success';
+  }
+
+  if (
+    text === 'execution failed' ||
+    text === 'config_error' ||
+    text.includes('fatal') ||
+    text.includes('error')
+  ) {
+    return 'error';
+  }
+
+  if (
+    text === 'started' ||
+    text === 'inbox.zip detected' ||
+    text === 'waiting for inbox.zip' ||
+    text === 'stopping' ||
+    text === 'execution started' ||
+    text === 'no inbox.zip found'
+  ) {
+    return 'warn';
+  }
+
+  return 'info';
+}
+
 function createWatchTerminalUi(options = {}) {
   const renderer = createTerminalRenderer({
     cliTheme: options.theme || resolveThemeFromEnv(options.env),
-    noColor: options.noColor === true || resolveNoColorFromEnv(options.env)
+    noColor:
+      options.noColor === true ||
+      resolveNoColorFromEnv(options.env)
   });
+
+  const state = {
+    headerPrinted: false,
+    pipelineShown: false,
+    artifactsShown: false,
+    summaryShown: false
+  };
 
   function printBanner(meta = []) {
     console.log(renderer.header('URI WATCH', meta));
+    state.headerPrinted = true;
+  }
+
+  function ensurePipelineSection() {
+    if (state.pipelineShown) return;
+    console.log(renderer.section('PIPELINE'));
+    state.pipelineShown = true;
+  }
+
+  function ensureArtifactsSection() {
+    if (state.artifactsShown) return;
+    console.log(renderer.section('ARTIFACTS'));
+    state.artifactsShown = true;
+  }
+
+  function ensureSummarySection() {
+    if (state.summaryShown) return;
+    console.log(renderer.section('SUMMARY'));
+    state.summaryShown = true;
   }
 
   function printSection(title) {
     console.log(renderer.section(title));
   }
 
-  function printStatus(label, text, state = 'info') {
-    console.log(renderer.step(label, text, state));
+  function printStatus(label, text, statusState = 'info') {
+    ensurePipelineSection();
+    console.log(renderer.step(label, text, statusState));
   }
 
   function printArtifact(label, value) {
+    ensureArtifactsSection();
     console.log(renderer.path(label, value));
-  }
-
-  function inferStateFromStatus(value) {
-    const text = String(value || '').toLowerCase();
-
-    if (
-      text.includes('error') ||
-      text.includes('failed') ||
-      text.includes('fatal') ||
-      text.includes('rejected')
-    ) {
-      return 'error';
-    }
-
-    if (
-      text.includes('detected') ||
-      text.includes('waiting') ||
-      text.includes('accepted') ||
-      text.includes('started')
-    ) {
-      return 'warn';
-    }
-
-    if (
-      text.includes('completed') ||
-      text.includes('written') ||
-      text.includes('created') ||
-      text.includes('success')
-    ) {
-      return 'success';
-    }
-
-    return 'info';
   }
 
   function printLegacyStatus(value) {
     printStatus('status', value, inferStateFromStatus(value));
   }
 
+  function printSummary(result = {}) {
+    ensureSummarySection();
+
+    if (result.result) {
+      console.log(
+        renderer.step(
+          'result',
+          String(result.result),
+          result.result === 'success' ? 'success' : 'error'
+        )
+      );
+    }
+
+    if (typeof result.steps === 'number' && typeof result.totalSteps === 'number') {
+      console.log(
+        renderer.step(
+          'steps',
+          `${result.steps}/${result.totalSteps} passed`,
+          result.steps === result.totalSteps ? 'success' : 'warn'
+        )
+      );
+    }
+
+    if (typeof result.checks === 'number' && typeof result.totalChecks === 'number') {
+      console.log(
+        renderer.step(
+          'checks',
+          `${result.checks}/${result.totalChecks} passed`,
+          result.checks === result.totalChecks ? 'success' : 'warn'
+        )
+      );
+    }
+  }
+
+  function resetSections() {
+    state.pipelineShown = false;
+    state.artifactsShown = false;
+    state.summaryShown = false;
+  }
+
   return {
     renderer,
+    state,
     printBanner,
     printSection,
     printStatus,
     printArtifact,
-    printLegacyStatus
+    printLegacyStatus,
+    printSummary,
+    resetSections
   };
 }
 
 module.exports = {
   createWatchTerminalUi,
   resolveThemeFromEnv,
-  resolveNoColorFromEnv
+  resolveNoColorFromEnv,
+  inferStateFromStatus
 };

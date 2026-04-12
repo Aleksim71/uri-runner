@@ -1,4 +1,6 @@
 const { createWatchTerminalUi } = require('../ui/watch-terminal-ui.cjs');
+
+const watchUi = createWatchTerminalUi();
 /* path: src/uram/watch-inbox-once.cjs */
 "use strict";
 
@@ -379,17 +381,17 @@ function printBanner(options) {
     return;
   }
 
-  const ui = createWatchTerminalUi();
+  watchUi.resetSections();
 
   const meta = [];
   meta.push(['mode', options.mode || 'once']);
 
-  if (ui && ui.renderer && ui.renderer.theme) {
-    meta.push(['theme', ui.renderer.theme.mode]);
-    meta.push(['preset', ui.renderer.theme.preset]);
+  if (watchUi && watchUi.renderer && watchUi.renderer.theme) {
+    meta.push(['theme', watchUi.renderer.theme.mode]);
+    meta.push(['preset', watchUi.renderer.theme.preset]);
 
-    if (ui.renderer.theme.configPath) {
-      meta.push(['config', ui.renderer.theme.configPath]);
+    if (watchUi.renderer.theme.configPath) {
+      meta.push(['config', watchUi.renderer.theme.configPath]);
     }
   }
 
@@ -397,12 +399,13 @@ function printBanner(options) {
     meta.push(['transport', options.transport]);
   }
 
-  ui.printBanner(meta);
-  ui.printLegacyStatus('started');
-  ui.printArtifact('config', options.configPath || '<missing>');
-  ui.printArtifact('source', options.downloadsDir || '<unknown>');
-  ui.printArtifact('inbox', options.inboxDir || '<unknown>');
-  ui.printArtifact('processed', options.processedDir || '<unknown>');
+  meta.push(['watchConfig', options.configPath || '<missing>']);
+  meta.push(['source', options.downloadsDir || '<unknown>']);
+  meta.push(['inbox', options.inboxDir || '<unknown>']);
+  meta.push(['processed', options.processedDir || '<unknown>']);
+
+  watchUi.printBanner(meta);
+  watchUi.printLegacyStatus('started');
 }
 
 function printStatus(stdout, status, extra = {}) {
@@ -421,8 +424,6 @@ function printStatus(stdout, status, extra = {}) {
     }
     return;
   }
-
-  const ui = createWatchTerminalUi();
 
   const normalized = String(status || '').toLowerCase();
   let state = 'info';
@@ -448,7 +449,7 @@ function printStatus(stdout, status, extra = {}) {
     state = 'warn';
   }
 
-  ui.printStatus('status', status, state);
+  watchUi.printStatus('status', status, state);
 
   for (const [key, value] of Object.entries(extra)) {
     if (value === undefined || value === null || value === '') {
@@ -456,16 +457,16 @@ function printStatus(stdout, status, extra = {}) {
     }
 
     if (key === 'project') {
-      ui.printStatus('project', String(value), 'accent');
+      watchUi.printStatus('project', String(value), 'accent');
       continue;
     }
 
     if (key === 'archivedSource') {
-      ui.printArtifact('archivedSource', String(value));
+      watchUi.printArtifact('archivedSource', String(value));
       continue;
     }
 
-    ui.printArtifact(key, String(value));
+    watchUi.printArtifact(key, String(value));
   }
 }
 
