@@ -1,0 +1,17 @@
+{
+  "terminalUi": {
+    "theme": "dark",
+    "preset": "dark-contrast",
+    "noColor": false,
+    "palette": {
+      "title": "brightWhite",
+      "section": "brightCyan",
+      "success": "brightGreen",
+      "warn": "brightYellow",
+      "error": "brightRed",
+      "accent": "brightMagenta",
+      "meta": "brightWhite",
+      "normal": "brightWhite"
+    }
+  }
+}

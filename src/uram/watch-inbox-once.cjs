@@ -1,3 +1,4 @@
+const { createWatchTerminalUi } = require('../ui/watch-terminal-ui.cjs');
 /* path: src/uram/watch-inbox-once.cjs */
 "use strict";
 
@@ -357,27 +358,114 @@ function writeLine(stream, text = "") {
 
 function printBanner(options) {
   const stdout = options.stdout || process.stdout;
-  writeLine(stdout, "");
-  writeLine(stdout, "URI WATCH");
-  writeLine(stdout, "────────────────────────");
-  writeLine(stdout, `mode: ${options.mode}`);
-  if (options.transport) {
-    writeLine(stdout, `transport: ${options.transport}`);
+  const isInteractiveTerminal =
+    Boolean(stdout && stdout.isTTY) &&
+    !process.env.VITEST &&
+    !process.env.CI;
+
+  if (!isInteractiveTerminal) {
+    writeLine(stdout, "");
+    writeLine(stdout, "URI WATCH");
+    writeLine(stdout, "────────────────────────");
+    writeLine(stdout, `mode: ${options.mode}`);
+    if (options.transport) {
+      writeLine(stdout, `transport: ${options.transport}`);
+    }
+    writeLine(stdout, "status: started");
+    writeLine(stdout, `config: ${options.configPath || "<missing>"}`);
+    writeLine(stdout, `source: ${options.downloadsDir || "<unknown>"}`);
+    writeLine(stdout, `inbox: ${options.inboxDir || "<unknown>"}`);
+    writeLine(stdout, `processed: ${options.processedDir || "<unknown>"}`);
+    return;
   }
-  writeLine(stdout, "status: started");
-  writeLine(stdout, `config: ${options.configPath || "<missing>"}`);
-  writeLine(stdout, `source: ${options.downloadsDir || "<unknown>"}`);
-  writeLine(stdout, `inbox: ${options.inboxDir || "<unknown>"}`);
-  writeLine(stdout, `processed: ${options.processedDir || "<unknown>"}`);
+
+  const ui = createWatchTerminalUi();
+
+  const meta = [];
+  meta.push(['mode', options.mode || 'once']);
+
+  if (ui && ui.renderer && ui.renderer.theme) {
+    meta.push(['theme', ui.renderer.theme.mode]);
+    meta.push(['preset', ui.renderer.theme.preset]);
+
+    if (ui.renderer.theme.configPath) {
+      meta.push(['config', ui.renderer.theme.configPath]);
+    }
+  }
+
+  if (options.transport) {
+    meta.push(['transport', options.transport]);
+  }
+
+  ui.printBanner(meta);
+  ui.printLegacyStatus('started');
+  ui.printArtifact('config', options.configPath || '<missing>');
+  ui.printArtifact('source', options.downloadsDir || '<unknown>');
+  ui.printArtifact('inbox', options.inboxDir || '<unknown>');
+  ui.printArtifact('processed', options.processedDir || '<unknown>');
 }
 
 function printStatus(stdout, status, extra = {}) {
-  writeLine(stdout, `status: ${status}`);
+  const isInteractiveTerminal =
+    Boolean(stdout && stdout.isTTY) &&
+    !process.env.VITEST &&
+    !process.env.CI;
+
+  if (!isInteractiveTerminal) {
+    writeLine(stdout, `status: ${status}`);
+    for (const [key, value] of Object.entries(extra)) {
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
+      writeLine(stdout, `${key}: ${value}`);
+    }
+    return;
+  }
+
+  const ui = createWatchTerminalUi();
+
+  const normalized = String(status || '').toLowerCase();
+  let state = 'info';
+
+  if (
+    normalized === 'accepted' ||
+    normalized === 'execution completed' ||
+    normalized === 'completed'
+  ) {
+    state = 'success';
+  } else if (
+    normalized === 'execution failed' ||
+    normalized === 'config_error'
+  ) {
+    state = 'error';
+  } else if (
+    normalized === 'inbox.zip detected' ||
+    normalized === 'waiting for inbox.zip' ||
+    normalized === 'stopping' ||
+    normalized === 'execution started' ||
+    normalized === 'no inbox.zip found'
+  ) {
+    state = 'warn';
+  }
+
+  ui.printStatus('status', status, state);
+
   for (const [key, value] of Object.entries(extra)) {
-    if (value === undefined || value === null || value === "") {
+    if (value === undefined || value === null || value === '') {
       continue;
     }
-    writeLine(stdout, `${key}: ${value}`);
+
+    if (key === 'project') {
+      ui.printStatus('project', String(value), 'accent');
+      continue;
+    }
+
+    if (key === 'archivedSource') {
+      ui.printArtifact('archivedSource', String(value));
+      continue;
+    }
+
+    ui.printArtifact(key, String(value));
   }
 }
 
