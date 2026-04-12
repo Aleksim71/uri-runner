@@ -833,7 +833,7 @@ async function runUramPipeline({
     const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
     const rb = validateRunbook(runbook);
-    const goalInfo = compute(uramRoot, resolveGoalTitle(rb));
+    const goalInfo = compute(process.cwd(), resolveGoalTitle(rb));
     project = getProjectName(rb);
     executionKind = resolveExecutionKind(rb);
 
