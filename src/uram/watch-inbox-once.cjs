@@ -699,7 +699,7 @@ async function publishPipelineFailureOutbox({
   }
 }
 
-async function runPipelineFullCycle({ uramRoot, watchRoot, inboxDir, processedDir, runbook }) {
+async function runPipelineFullCycle({ uramRoot, watchRoot, inboxDir, processedDir, runbook, hooks = {} }) {
   const projectName =
     runbook && typeof runbook.project === "string" && runbook.project.trim()
       ? runbook.project.trim()
@@ -713,8 +713,9 @@ async function runPipelineFullCycle({ uramRoot, watchRoot, inboxDir, processedDi
     quiet: true,
     env: process.env,
     homeDir: os.homedir(),
-  inboxZipPath: path.join(inboxDir, "inbox.zip"),
-});
+    inboxZipPath: path.join(inboxDir, "inbox.zip"),
+    hooks,
+  });
 
   const copiedArtifacts = await copyLatestOutboxArtifacts({
     uramRoot,
@@ -845,6 +846,35 @@ async function handleInboxZip(fullPath, options) {
         inboxDir,
         processedDir,
         runbook: inspection.runbook,
+        hooks: {
+          onStepStart(step) {
+            const label =
+              step.command ||
+              [step.kind, step.action].filter(Boolean).join(".") ||
+              [step.type, step.action].filter(Boolean).join(".") ||
+              step.stepId ||
+              "step";
+            watchUi.printStatus("step", `${label} → running`, "warn");
+          },
+          onStepSuccess(step) {
+            const label =
+              step.command ||
+              [step.kind, step.action].filter(Boolean).join(".") ||
+              [step.type, step.action].filter(Boolean).join(".") ||
+              step.stepId ||
+              "step";
+            watchUi.printStatus("step", `${label} → success`, "success");
+          },
+          onStepError(step) {
+            const label =
+              step.command ||
+              [step.kind, step.action].filter(Boolean).join(".") ||
+              [step.type, step.action].filter(Boolean).join(".") ||
+              step.stepId ||
+              "step";
+            watchUi.printStatus("step", `${label} → error`, "error");
+          },
+        },
       });
 
       const pipelineResult = execution.pipelineResult || {};
