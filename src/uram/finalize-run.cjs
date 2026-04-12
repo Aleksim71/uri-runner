@@ -157,6 +157,198 @@ function detectFailureFromPayload(payload, exitCode) {
   return false;
 }
 
+
+function toEpochMs(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function toDurationMs(startedAt, finishedAt = Date.now()) {
+  const start = toEpochMs(startedAt);
+  const end = toEpochMs(finishedAt);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return null;
+  }
+
+  const delta = end - start;
+  return delta >= 0 ? delta : null;
+}
+
+function summarizeSteps(steps) {
+  if (!Array.isArray(steps)) {
+    return { total: 0, completed: 0, failed: 0 };
+  }
+
+  let completed = 0;
+  let failed = 0;
+
+  for (const item of steps) {
+    const status =
+      typeof item?.status === "string" ? item.status.trim().toLowerCase() : "";
+
+    if (
+      item?.ok === true ||
+      item?.passed === true ||
+      ["ok", "success", "passed", "completed", "done"].includes(status)
+    ) {
+      completed += 1;
+      continue;
+    }
+
+    if (
+      item?.ok === false ||
+      item?.passed === false ||
+      ["error", "failed", "fail"].includes(status)
+    ) {
+      failed += 1;
+    }
+  }
+
+  return {
+    total: steps.length,
+    completed,
+    failed,
+  };
+}
+
+function summarizeChecks(checks) {
+  if (!Array.isArray(checks)) {
+    return { total: 0, passed: 0, failed: 0 };
+  }
+
+  let passed = 0;
+  let failed = 0;
+
+  for (const item of checks) {
+    const status =
+      typeof item?.status === "string" ? item.status.trim().toLowerCase() : "";
+
+    if (
+      item?.passed === true ||
+      item?.ok === true ||
+      ["ok", "success", "passed"].includes(status)
+    ) {
+      passed += 1;
+      continue;
+    }
+
+    if (
+      item?.passed === false ||
+      item?.ok === false ||
+      ["error", "failed", "fail"].includes(status)
+    ) {
+      failed += 1;
+    }
+  }
+
+  return {
+    total: checks.length,
+    passed,
+    failed,
+  };
+}
+
+function buildSummaryBlock(outboxPayload = {}, context = {}) {
+  const durationMs = toDurationMs(context.startedAt, context.finishedAt);
+  const stepSummary = summarizeSteps(outboxPayload.steps);
+  const checkSummary = summarizeChecks(outboxPayload.checks);
+
+  return {
+    result:
+      typeof outboxPayload?.status === "string" && outboxPayload.status.trim()
+        ? outboxPayload.status
+        : context.exitCode === 0
+          ? "success"
+          : "error",
+    project:
+      typeof outboxPayload?.project === "string" && outboxPayload.project.trim()
+        ? outboxPayload.project
+        : context.project || null,
+    runId:
+      typeof outboxPayload?.runId === "string" && outboxPayload.runId.trim()
+        ? outboxPayload.runId
+        : context.runId || null,
+    engine:
+      typeof outboxPayload?.engine === "string" && outboxPayload.engine.trim()
+        ? outboxPayload.engine
+        : context.executionKind || null,
+    executionKind:
+      typeof outboxPayload?.executionKind === "string" &&
+      outboxPayload.executionKind.trim()
+        ? outboxPayload.executionKind
+        : context.executionKind || null,
+    durationMs,
+    stepsTotal: stepSummary.total,
+    stepsCompleted: stepSummary.completed,
+    stepsFailed: stepSummary.failed,
+    checksTotal: checkSummary.total,
+    checksPassed: checkSummary.passed,
+    checksFailed: checkSummary.failed,
+    latestOutboxZipPath: context.latestZipPath || null,
+    historyOutboxZipPath: context.historyOutboxPath || null,
+    projectOutboxZipPath:
+      typeof context.projectOutboxDir === "string" && context.projectOutboxDir.trim()
+        ? path.join(context.projectOutboxDir, "outbox.zip")
+        : null,
+    projectOutboxJsonPath:
+      typeof context.projectOutboxDir === "string" && context.projectOutboxDir.trim()
+        ? path.join(context.projectOutboxDir, "outbox.json")
+        : null,
+  };
+}
+
+function enrichOutboxPayload(outboxPayload = {}, context = {}) {
+  const enriched =
+    outboxPayload && typeof outboxPayload === "object"
+      ? { ...outboxPayload }
+      : {};
+
+  if (!("runId" in enriched) && context.runId) {
+    enriched.runId = context.runId;
+  }
+
+  if (!("project" in enriched) && context.project) {
+    enriched.project = context.project;
+  }
+
+  if (!("engine" in enriched) && context.executionKind) {
+    enriched.engine = context.executionKind;
+  }
+
+  if (!("executionKind" in enriched) && context.executionKind) {
+    enriched.executionKind = context.executionKind;
+  }
+
+  if (!("exitCode" in enriched) && Number.isInteger(context.exitCode)) {
+    enriched.exitCode = context.exitCode;
+  }
+
+  if (!("ok" in enriched) && Number.isInteger(context.exitCode)) {
+    enriched.ok = context.exitCode === 0;
+  }
+
+  const durationMs = toDurationMs(context.startedAt, context.finishedAt);
+  if (Number.isFinite(durationMs)) {
+    enriched.durationMs = durationMs;
+  }
+
+  enriched.summary = buildSummaryBlock(enriched, context);
+
+  return enriched;
+}
+
+
 function buildStatusPayload(outboxPayload) {
   const payload = {
     status:
@@ -196,6 +388,73 @@ function buildStatusPayload(outboxPayload) {
     payload.ok = outboxPayload.ok;
   }
 
+  const summary =
+    outboxPayload?.summary && typeof outboxPayload.summary === "object"
+      ? outboxPayload.summary
+      : null;
+
+  if (summary) {
+    if (typeof summary.result === "string" && summary.result.trim()) {
+      payload.result = summary.result;
+    }
+
+    if (Number.isFinite(summary.durationMs)) {
+      payload.durationMs = summary.durationMs;
+    }
+
+    if (Number.isInteger(summary.stepsTotal)) {
+      payload.stepsTotal = summary.stepsTotal;
+    }
+
+    if (Number.isInteger(summary.stepsCompleted)) {
+      payload.stepsCompleted = summary.stepsCompleted;
+    }
+
+    if (Number.isInteger(summary.stepsFailed)) {
+      payload.stepsFailed = summary.stepsFailed;
+    }
+
+    if (Number.isInteger(summary.checksTotal)) {
+      payload.checksTotal = summary.checksTotal;
+    }
+
+    if (Number.isInteger(summary.checksPassed)) {
+      payload.checksPassed = summary.checksPassed;
+    }
+
+    if (Number.isInteger(summary.checksFailed)) {
+      payload.checksFailed = summary.checksFailed;
+    }
+
+    if (
+      typeof summary.projectOutboxZipPath === "string" &&
+      summary.projectOutboxZipPath.trim()
+    ) {
+      payload.projectOutboxZipPath = summary.projectOutboxZipPath;
+    }
+
+    if (
+      typeof summary.projectOutboxJsonPath === "string" &&
+      summary.projectOutboxJsonPath.trim()
+    ) {
+      payload.projectOutboxJsonPath = summary.projectOutboxJsonPath;
+    }
+
+    if (
+      typeof summary.latestOutboxZipPath === "string" &&
+      summary.latestOutboxZipPath.trim()
+    ) {
+      payload.latestOutboxZipPath = summary.latestOutboxZipPath;
+    }
+
+    if (
+      typeof summary.historyOutboxZipPath === "string" &&
+      summary.historyOutboxZipPath.trim()
+    ) {
+      payload.historyOutboxZipPath = summary.historyOutboxZipPath;
+    }
+  }
+
   return payload;
 }
 
@@ -228,6 +487,38 @@ function buildSnapshotText(statusPayload) {
 
   if (typeof statusPayload.ok === "boolean") {
     lines.push(`ok: ${statusPayload.ok ? "true" : "false"}`);
+  }
+
+  if (typeof statusPayload.result === "string") {
+    lines.push(`result: ${statusPayload.result}`);
+  }
+
+  if (Number.isFinite(statusPayload.durationMs)) {
+    lines.push(`durationMs: ${statusPayload.durationMs}`);
+  }
+
+  if (Number.isInteger(statusPayload.stepsTotal)) {
+    lines.push(`steps: ${statusPayload.stepsCompleted || 0}/${statusPayload.stepsTotal}`);
+  }
+
+  if (Number.isInteger(statusPayload.checksTotal)) {
+    lines.push(`checks: ${statusPayload.checksPassed || 0}/${statusPayload.checksTotal}`);
+  }
+
+  if (typeof statusPayload.projectOutboxZipPath === "string") {
+    lines.push(`projectOutboxZipPath: ${statusPayload.projectOutboxZipPath}`);
+  }
+
+  if (typeof statusPayload.projectOutboxJsonPath === "string") {
+    lines.push(`projectOutboxJsonPath: ${statusPayload.projectOutboxJsonPath}`);
+  }
+
+  if (typeof statusPayload.latestOutboxZipPath === "string") {
+    lines.push(`latestOutboxZipPath: ${statusPayload.latestOutboxZipPath}`);
+  }
+
+  if (typeof statusPayload.historyOutboxZipPath === "string") {
+    lines.push(`historyOutboxZipPath: ${statusPayload.historyOutboxZipPath}`);
   }
 
   return `${lines.join("\n")}\n`;
@@ -415,7 +706,17 @@ async function finalizeRun({
     : `${latestOutboxPath}.zip`;
 
   if (isSuccess) {
-    const successOutbox = buildMinimalSuccessOutbox(payload);
+    const successOutbox = enrichOutboxPayload(buildMinimalSuccessOutbox(payload), {
+      runId,
+      project,
+      executionKind,
+      exitCode,
+      startedAt,
+      finishedAt: Date.now(),
+      latestZipPath,
+      historyOutboxPath,
+      projectOutboxDir,
+    });
     if (payload && payload.goal && typeof payload.goal === "object") {
       successOutbox.goal = {
         title: payload.goal.title,
@@ -446,7 +747,7 @@ async function finalizeRun({
       tmpProvidedDir,
     });
   } else {
-    const errorOutbox =
+    const errorOutbox = enrichOutboxPayload(
       looksLikeScenarioSummary(payload)
         ? {
             ...payload,
@@ -474,7 +775,19 @@ async function finalizeRun({
               message: "Runtime failed",
               details: {},
             },
-          };
+          },
+      {
+        runId,
+        project,
+        executionKind,
+        exitCode,
+        startedAt,
+        finishedAt: Date.now(),
+        latestZipPath,
+        historyOutboxPath,
+        projectOutboxDir,
+      }
+    );
 
     await buildZipArtifact({
       zipPath: latestZipPath,
