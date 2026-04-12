@@ -1,0 +1,3457 @@
+.
+├── artifacts
+│   ├── inbox
+│   │   └── .gitkeep
+│   └── outbox
+│       └── .gitkeep
+├── bin
+│   └── uri.cjs
+├── config
+│   ├── policy.yaml
+│   ├── projects.yaml
+│   ├── projects.yaml.example
+│   ├── uram
+│   │   └── watch.json
+│   └── watch.json
+├── contexts
+│   ├── cf
+│   │   └── .gitkeep
+│   ├── projects
+│   │   ├── abonasi
+│   │   │   └── .gitkeep
+│   │   ├── freelance
+│   │   │   └── .gitkeep
+│   │   └── tempasi
+│   │       └── .gitkeep
+│   ├── system
+│   │   └── executable.yaml
+│   └── uri-runner
+│       └── .gitkeep
+├── doc
+│   ├── architecture
+│   │   ├── phase1-overview.md
+│   │   └── project-structure.md
+│   ├── changelog.md
+│   ├── commands
+│   │   ├── command-libraries.md
+│   │   ├── command-loader-pack.md
+│   │   └── command-loading.md
+│   ├── context
+│   │   ├── context-links.md
+│   │   ├── context-metadata.md
+│   │   └── context-reading.md
+│   ├── criteria
+│   │   └── phase1-completion.md
+│   ├── index.md
+│   ├── notes
+│   │   └── ideas.md
+│   ├── .obsidian
+│   │   ├── appearance.json
+│   │   ├── app.json
+│   │   ├── core-plugins.json
+│   │   └── workspace.json
+│   ├── runtime
+│   │   ├── A19-browser-diagnostics-v1-implementation.md
+│   │   ├── A19-cdp-colors-overlay-notes.md
+│   │   ├── A19-code-package-notes.md
+│   │   ├── A19-console-collection-overlay-notes.md
+│   │   ├── A19-network-summary-overlay-notes.md
+│   │   ├── A19-package-index.md
+│   │   ├── A19-piligrim-block.md
+│   │   ├── A19-real-artifacts-overlay-notes.md
+│   │   ├── A19_URI_Mitya_Start_Prompt.md
+│   │   ├── A19-write-path-fix-notes.md
+│   │   ├── artifact-contract.txt
+│   │   ├── baseline-restoration.txt
+│   │   ├── contracts
+│   │   │   ├── browser-approval-explanation.md
+│   │   │   ├── browser-approval-prompt.md
+│   │   │   ├── browser-artifacts-contract.md
+│   │   │   ├── browser-attach-sequence.md
+│   │   │   ├── TERMINAL_INSPECT_CONTRACT_V1.md
+│   │   │   ├── URI_TERMINAL_APPROVAL_EXPLANATION_CONTRACT_V1_1.md
+│   │   │   ├── URI_TERMINAL_APPROVAL_FLOW_V1.md
+│   │   │   ├── URI_TERMINAL_APPROVAL_LOOP_V1.md
+│   │   │   ├── URI_TERMINAL_APPROVAL_PROMPT_RENDERER_V1.md
+│   │   │   ├── URI_TERMINAL_APPROVAL_STDIN_V1.md
+│   │   │   ├── URI_TERMINAL_APPROVAL_WATCHER_PROMPT_V1.md
+│   │   │   ├── URI_TERMINAL_USER_DECISION_PROTOCOL_V1.md
+│   │   │   ├── URI_WATCH_APPROVAL_STEP_V1.md
+│   │   │   └── URI_WATCH_POLICY_BRANCH_ADAPTER_V1.md
+│   │   ├── environment-reset.md
+│   │   ├── executable-plan-v1.txt
+│   │   ├── execution-graph.txt
+│   │   ├── execution-lifecycle.txt
+│   │   ├── execution-lifecycle-v1.txt
+│   │   ├── execution-lock.md
+│   │   ├── execution-model.md
+│   │   ├── finalize-contract.txt
+│   │   ├── history-index-contract.txt
+│   │   ├── inbox-outbox-protocol.txt
+│   │   ├── intake-gate-v1.txt
+│   │   ├── meta-pipeline.md
+│   │   ├── runbook-current.txt
+│   │   ├── runbook-spec.txt
+│   │   ├── runtime-architecture.txt
+│   │   ├── runtime-pack.md
+│   │   ├── stage-a13-status.txt
+│   │   └── state-domains.txt
+│   ├── scenario
+│   │   └── scenario-body-v1.md
+│   ├── system
+│   │   └── executable-context-runtime.md
+│   └── uri-checklist.md
+├── docs
+│   └── testing-strategy.md
+├── FILE_DELIVERY_REPORT_CONTRACT_V1.txt
+├── .gitignore
+├── intake
+│   ├── Inbox
+│   │   └── inbox.zip
+│   └── source-processed
+│       ├── inbox.2026-03-23T10-27-48-759Z.zip
+│       ├── inbox.2026-03-24T14-22-33-892Z.zip
+│       ├── inbox.2026-03-24T14-51-41-611Z.zip
+│       ├── inbox.2026-03-24T15-21-27-870Z.zip
+│       ├── inbox.2026-03-24T15-24-51-303Z.zip
+│       ├── inbox.2026-03-24T15-38-25-328Z.zip
+│       ├── inbox.2026-03-24T15-43-11-889Z.zip
+│       ├── inbox.2026-03-24T16-22-44-032Z.zip
+│       ├── inbox.2026-03-24T18-06-46-898Z.zip
+│       ├── inbox.2026-03-24T18-51-26-053Z.zip
+│       ├── inbox.2026-03-24T18-58-38-681Z.zip
+│       ├── inbox.2026-03-24T19-04-57-225Z.zip
+│       ├── inbox.2026-03-24T19-08-59-580Z.zip
+│       ├── inbox.2026-03-24T19-09-11-637Z.zip
+│       ├── inbox.2026-03-24T19-12-43-003Z.zip
+│       ├── inbox.2026-03-24T19-18-33-538Z.zip
+│       ├── inbox.2026-03-24T19-24-19-447Z.zip
+│       ├── inbox.2026-03-24T19-27-41-775Z.zip
+│       ├── inbox.2026-03-24T19-28-11-865Z.zip
+│       ├── inbox.2026-03-24T19-30-34-110Z.zip
+│       ├── inbox.2026-03-24T19-34-30-489Z.zip
+│       ├── inbox.2026-03-24T19-43-49-289Z.zip
+│       ├── inbox.2026-03-24T19-51-08-496Z.zip
+│       ├── inbox.2026-03-24T19-58-45-888Z.zip
+│       ├── inbox.2026-03-24T20-25-16-257Z.zip
+│       ├── inbox.2026-03-24T20-32-26-295Z.zip
+│       ├── inbox.2026-03-24T20-41-13-094Z.zip
+│       ├── inbox.2026-03-24T20-43-16-097Z.zip
+│       ├── inbox.2026-03-24T20-49-52-300Z.zip
+│       ├── inbox.2026-03-24T20-53-53-111Z.zip
+│       ├── inbox.2026-03-24T20-55-52-048Z.zip
+│       ├── inbox.2026-03-24T22-08-41-728Z.zip
+│       ├── inbox.2026-03-24T22-08-44-163Z.zip
+│       ├── inbox.2026-03-25T07-13-21-365Z.zip
+│       ├── inbox.2026-03-25T07-53-39-925Z.zip
+│       ├── inbox.2026-03-25T09-15-28-887Z.zip
+│       ├── inbox.2026-03-25T09-32-28-805Z.zip
+│       ├── inbox.2026-03-25T09-45-30-448Z.zip
+│       ├── inbox.2026-03-25T10-32-56-813Z.zip
+│       ├── inbox.2026-03-25T10-44-15-636Z.zip
+│       ├── inbox.2026-03-25T10-57-56-854Z.zip
+│       ├── inbox.2026-03-25T10-58-30-949Z.zip
+│       ├── inbox.2026-03-25T10-59-50-985Z.zip
+│       ├── inbox.2026-03-25T11-26-55-312Z.zip
+│       ├── inbox.2026-03-25T11-36-06-111Z.zip
+│       ├── inbox.2026-03-25T11-47-51-140Z.zip
+│       ├── inbox.2026-03-25T12-07-58-952Z.zip
+│       ├── inbox.2026-03-25T12-34-13-237Z.zip
+│       ├── inbox.2026-03-25T12-41-25-941Z.zip
+│       ├── inbox.2026-03-25T12-49-28-621Z.zip
+│       ├── inbox.2026-03-25T12-50-52-912Z.zip
+│       ├── inbox.2026-03-25T12-57-13-537Z.zip
+│       ├── inbox.2026-03-25T12-59-31-805Z.zip
+│       ├── inbox.2026-03-25T13-06-20-442Z.zip
+│       ├── inbox.2026-03-25T13-08-56-740Z.zip
+│       ├── inbox.2026-03-25T13-15-07-335Z.zip
+│       ├── inbox.2026-03-25T13-17-43-628Z.zip
+│       ├── inbox.2026-03-25T13-24-27-567Z.zip
+│       ├── inbox.2026-03-25T13-54-30-173Z.zip
+│       ├── inbox.2026-03-25T13-59-56-736Z.zip
+│       └── inbox.2026-03-25T20-22-44-566Z.zip
+├── locks
+├── logs
+│   └── failed
+│       └── 2026-03-25T20-22-44-570Z_55ac8f
+│           ├── outbox.json
+│           └── outbox.zip
+├── package.json
+├── package-lock.json
+├── plan.json
+├── README-A27-browser-cdp-adapter-fix.txt
+├── README-A27-browser-command-bridge-fix.txt
+├── README-A27-browser-flow-args-fix.txt
+├── README-A27-browser-page-open-interface-fix.txt
+├── README-A27-browser-page-state-fix.txt
+├── README-A27-browser-session-start-attach-fix.txt
+├── README-A27-project-config-fix.txt
+├── README-A27-project-registry-fix.txt
+├── README_A7_CODE_PACKAGE.txt
+├── README.md
+├── README.testing.md
+├── runtime
+│   ├── artifacts
+│   ├── db
+│   │   ├── create-db-backup.cjs
+│   │   ├── db-client-postgres.cjs
+│   │   └── restore-db-backup.cjs
+│   ├── environment
+│   │   ├── cleanup-runtime-state.cjs
+│   │   ├── reset-environment.cjs
+│   │   ├── run-healthcheck.cjs
+│   │   ├── start-managed-server.cjs
+│   │   └── stop-managed-processes.cjs
+│   ├── git
+│   │   ├── collect-run-file-changes.cjs
+│   │   ├── git-client.cjs
+│   │   └── rollback-to-checkpoint.cjs
+│   ├── history
+│   │   └── index.json
+│   ├── logs
+│   ├── provided
+│   ├── report
+│   │   ├── build-run-report.cjs
+│   │   └── write-outbox-report.cjs
+│   ├── rollback
+│   │   └── run-rollback.cjs
+│   ├── runs
+│   │   ├── run_20260316184616_7i8th
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316184616_wflom
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316184616_wflom.trace.json
+│   │   ├── run_20260316190227_eqb4k
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316190227_eqb4k.trace.json
+│   │   ├── run_20260316190228_78hc4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316190520_u6niy
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316190520_u6niy.trace.json
+│   │   ├── run_20260316190521_63x35
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316193528_8bpkg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316193528_8bpkg.trace.json
+│   │   ├── run_20260316193528_yhnhp
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316194622_1fh27
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316194622_3lefd
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316194622_3lefd.trace.json
+│   │   ├── run_20260316195352_4ble0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316195352_s0c46
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316195352_s0c46.trace.json
+│   │   ├── run_20260316200149_ke68u
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316200149_ke68u.trace.json
+│   │   ├── run_20260316200150_mwiqt
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316201151_ej6fp
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316201151_krkp0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316201151_krkp0.trace.json
+│   │   ├── run_20260316204150_agbze
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260316204150_xhl56
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316204150_xhl56.trace.json
+│   │   ├── run_20260316205038_9jxht
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260316205038_9jxht.trace.json
+│   │   ├── run_20260316205038_lfbxa
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260317115717_0ia3v
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260317115717_0ia3v.trace.json
+│   │   ├── run_20260317115718_5hedy
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260317122335_5hfs6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260317122335_qob5m
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260317122335_qob5m.trace.json
+│   │   ├── run_20260317122901_cbnbp
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260317122901_cbnbp.trace.json
+│   │   ├── run_20260317122901_npihy
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260317130944_fj001
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260317130944_u8ui3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260317130944_u8ui3.trace.json
+│   │   ├── run_20260318133415_39dj2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260318133415_5meh9
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260318133415_5meh9.trace.json
+│   │   ├── run_20260318155447_12iyg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260318155447_12iyg.trace.json
+│   │   ├── run_20260318155448_qwihx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260318160710_ar2vu
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260318160710_ar2vu.trace.json
+│   │   ├── run_20260318160711_eibnp
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260318161225_8khf1
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260318161225_tbdec
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260318161225_tbdec.trace.json
+│   │   ├── run_20260318174917_hf1td
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260318174917_hf1td.trace.json
+│   │   ├── run_20260318174918_eue4i
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260318175113_1bi5m
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260318175113_xamkb
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260318175113_xamkb.trace.json
+│   │   ├── run_20260319082740_y87k2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319082740_y87k2.trace.json
+│   │   ├── run_20260319082741_qdku4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319085056_zzvd6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319085056_zzvd6.trace.json
+│   │   ├── run_20260319085057_rr2kl
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319103822_e0ygg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319103822_e0ygg.trace.json
+│   │   ├── run_20260319103823_wcpgq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319105434_1x9cw
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319105434_1x9cw.trace.json
+│   │   ├── run_20260319105435_qvn1s
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319110140_0cwyu
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319110140_0cwyu.trace.json
+│   │   ├── run_20260319110140_ov885
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319110747_cbsn2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319110747_cbsn2.trace.json
+│   │   ├── run_20260319110747_ceuf1
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319112300_1zwr4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319112300_1zwr4.trace.json
+│   │   ├── run_20260319112300_7vrbo
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319112317_rx2b4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319112317_sbfvr
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319112317_sbfvr.trace.json
+│   │   ├── run_20260319112932_nqjbt
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319112932_nqjbt.trace.json
+│   │   ├── run_20260319112933_nkwhy
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319114011_9aj1e
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319114011_9aj1e.trace.json
+│   │   ├── run_20260319114011_dg8wo
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260319114614_d2kee
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260319114614_d2kee.trace.json
+│   │   ├── run_20260319114615_eg155
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320071111_ioz6p
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320071111_ioz6p.trace.json
+│   │   ├── run_20260320071112_tesh5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320080208_kvjq7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320080208_oafzo
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320080208_oafzo.trace.json
+│   │   ├── run_20260320080850_3smqc
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320080850_3smqc.trace.json
+│   │   ├── run_20260320082107_73ozl
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320082107_73ozl.trace.json
+│   │   ├── run_20260320082108_fmqhg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320084005_74kue
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320084005_74kue.trace.json
+│   │   ├── run_20260320084005_r1dcw
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320132127_9hxed
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320132127_lvhlx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320132127_lvhlx.trace.json
+│   │   ├── run_20260320134630_mgzn2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320134630_slv6l
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320134630_slv6l.trace.json
+│   │   ├── run_20260320141352_0bvv6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320141352_0bvv6.trace.json
+│   │   ├── run_20260320141352_i7ng6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320141428_bxkgd
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320141428_gn2uz
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320141428_gn2uz.trace.json
+│   │   ├── run_20260320143821_1gp3j
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320143821_1gp3j.trace.json
+│   │   ├── run_20260320143822_osekq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320151326_2thap
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320151326_2thap.trace.json
+│   │   ├── run_20260320151327_kn41s
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320184419_lgm7z
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320184419_mnfvn
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320184419_mnfvn.trace.json
+│   │   ├── run_20260320191549_ho1g7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320191549_tuh7h
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320191549_tuh7h.trace.json
+│   │   ├── run_20260320191626_y8181
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320191626_y8181.trace.json
+│   │   ├── run_20260320191627_17xr3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320191800_r6i18
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320191800_r6i18.trace.json
+│   │   ├── run_20260320191800_w434j
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320191814_92nz7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320191814_92nz7.trace.json
+│   │   ├── run_20260320191815_8t601
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320191938_8lsx3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320191938_8lsx3.trace.json
+│   │   ├── run_20260320191939_5zpay
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320192117_0d268
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260320192117_dytt4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320192117_dytt4.trace.json
+│   │   ├── run_20260320192248_5lin6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260320192248_5lin6.trace.json
+│   │   ├── run_20260320192248_vz8sv
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321173530_4o0ly
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321173530_r781j
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321173530_r781j.trace.json
+│   │   ├── run_20260321174844_imip2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321174844_imip2.trace.json
+│   │   ├── run_20260321174845_5m1vg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321194328_gnfz8
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321194328_gnfz8.trace.json
+│   │   ├── run_20260321194328_n7q0x
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321195256_64fxe
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321195256_yuj81
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321195256_yuj81.trace.json
+│   │   ├── run_20260321204341_9o25l
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321204341_9o25l.trace.json
+│   │   ├── run_20260321204341_i50hl
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321211727_65c8i
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321211727_ldgz7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321211727_ldgz7.trace.json
+│   │   ├── run_20260321211757_it001
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321211757_it001.trace.json
+│   │   ├── run_20260321211758_nj7vt
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260321212627_smqyn
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260321212627_smqyn.trace.json
+│   │   ├── run_20260321212627_z0v4b
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322175359_c52q9
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322175359_c52q9.trace.json
+│   │   ├── run_20260322175400_idfqq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322175936_ob0m4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322175936_ob0m4.trace.json
+│   │   ├── run_20260322175937_otw1w
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322181207_kykhq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322181207_kykhq.trace.json
+│   │   ├── run_20260322181208_vtqj3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322181512_brsjv
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322181512_brsjv.trace.json
+│   │   ├── run_20260322181513_tcedm
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322181904_vugvb
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322181904_xquws
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322181904_xquws.trace.json
+│   │   ├── run_20260322182600_e98f8
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322182600_myb02
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322182600_myb02.trace.json
+│   │   ├── run_20260322183002_dwjfv
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322183002_dwjfv.trace.json
+│   │   ├── run_20260322183002_qtueh
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322185420_9ph4y
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322185420_9ph4y.trace.json
+│   │   ├── run_20260322185420_goar7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322190250_p28is
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322190250_p28is.trace.json
+│   │   ├── run_20260322190250_we770
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322190736_2cfid
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322190736_2cfid.trace.json
+│   │   ├── run_20260322190736_4j1bt
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322191634_i39nc
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322191634_wzygj
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322191634_wzygj.trace.json
+│   │   ├── run_20260322195636_1m9az
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322195636_rrwyh
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322195636_rrwyh.trace.json
+│   │   ├── run_20260322200646_ex87r
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322200646_ex87r.trace.json
+│   │   ├── run_20260322200647_uvwqk
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322203320_9t0zx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322203320_9t0zx.trace.json
+│   │   ├── run_20260322203320_jckxi
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322223021_7jt1x
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260322223021_bercn
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322223021_bercn.trace.json
+│   │   ├── run_20260322223610_jp0h1
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260322223610_jp0h1.trace.json
+│   │   ├── run_20260322223611_9masp
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323060412_0983e
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323060412_ng8xx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323060412_ng8xx.trace.json
+│   │   ├── run_20260323060444_xdyoz
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323060444_xdyoz.trace.json
+│   │   ├── run_20260323060445_rf59m
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323060807_ejm7c
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323060807_ejm7c.trace.json
+│   │   ├── run_20260323060807_ish7b
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323061213_bo1ad
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323061213_of0h3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323061213_of0h3.trace.json
+│   │   ├── run_20260323061233_chrth
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323061233_chrth.trace.json
+│   │   ├── run_20260323061234_d3rh8
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323064404_zbsh4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323064404_zbsh4.trace.json
+│   │   ├── run_20260323064405_htaq0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323064848_e81o5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323064848_e81o5.trace.json
+│   │   ├── run_20260323064848_zq2m2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323071727_m5wpq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323071727_m5wpq.trace.json
+│   │   ├── run_20260323071728_nw0l3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323072221_djx6k
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323072221_djx6k.trace.json
+│   │   ├── run_20260323072221_x0do6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323072445_6ylkf
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323072445_hmdpc
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323072445_hmdpc.trace.json
+│   │   ├── run_20260323075107_3ebzz
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323075107_ckkul
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323075107_ckkul.trace.json
+│   │   ├── run_20260323075144_a34we
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323075144_a34we.trace.json
+│   │   ├── run_20260323075145_o39kx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323075550_3bwb5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323075550_3bwb5.trace.json
+│   │   ├── run_20260323075550_69wr3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323081520_dvwpe
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323081520_dvwpe.trace.json
+│   │   ├── run_20260323081521_kx4rg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323081821_a514q
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323081821_a514q.trace.json
+│   │   ├── run_20260323081821_hzwe7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323082322_k50g5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323082322_k50g5.trace.json
+│   │   ├── run_20260323082323_t4clg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323082805_pngnt
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323082805_pngnt.trace.json
+│   │   ├── run_20260323082805_ydomh
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323093923_q8zyt
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323093923_wxw8y
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323093923_wxw8y.trace.json
+│   │   ├── run_20260323094523_8jjbe
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323094523_qd7n9
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323094523_qd7n9.trace.json
+│   │   ├── run_20260323094846_g75mz
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323094846_g75mz.trace.json
+│   │   ├── run_20260323094847_2ilo7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323095150_79kqj
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323095150_79kqj.trace.json
+│   │   ├── run_20260323095150_iavb1
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323095416_lbk4e
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323095416_lbk4e.trace.json
+│   │   ├── run_20260323095416_of36k
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323095811_faiv5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323095811_faiv5.trace.json
+│   │   ├── run_20260323095811_gfky0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323095833_76kuj
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323095833_lvdnc
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323095833_lvdnc.trace.json
+│   │   ├── run_20260323100153_nxe9n
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323100153_nxe9n.trace.json
+│   │   ├── run_20260323100154_x5dsd
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323100514_ichzf
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323100514_jcq1q
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323100514_jcq1q.trace.json
+│   │   ├── run_20260323101204_m8f49
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323101204_ywmv2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323101204_ywmv2.trace.json
+│   │   ├── run_20260323104136_e1s6j
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323104136_e1s6j.trace.json
+│   │   ├── run_20260323104137_dbznm
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323105159_cxslq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323105159_cxslq.trace.json
+│   │   ├── run_20260323105159_p1k7d
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323105804_4lt9l
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323105804_owstg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323105804_owstg.trace.json
+│   │   ├── run_20260323111303_d29re
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323111303_d29re.trace.json
+│   │   ├── run_20260323111303_hw44q
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323111716_734k0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323111716_idg9j
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323111716_idg9j.trace.json
+│   │   ├── run_20260323112059_gxp7a
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323112059_gxp7a.trace.json
+│   │   ├── run_20260323112059_y3171
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323113035_ovrj1
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323113035_rphpk
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323113035_rphpk.trace.json
+│   │   ├── run_20260323115857_132pz
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323115857_4w8mg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323115857_4w8mg.trace.json
+│   │   ├── run_20260323120245_lqv0u
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323120245_lqv0u.trace.json
+│   │   ├── run_20260323120246_bbnzq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323121551_6uhxs
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323121551_ov6k9
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323121551_ov6k9.trace.json
+│   │   ├── run_20260323121934_4il9n
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323121934_4il9n.trace.json
+│   │   ├── run_20260323121935_fxxsk
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323122310_rmcyw
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323122310_rmcyw.trace.json
+│   │   ├── run_20260323122310_vbdit
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323122743_d1yjj
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323122743_d1yjj.trace.json
+│   │   ├── run_20260323122743_dij89
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323124050_gz6q5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323124050_y9v93
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323124050_y9v93.trace.json
+│   │   ├── run_20260323124737_1wjjh
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323124737_1wjjh.trace.json
+│   │   ├── run_20260323124738_k3jgd
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323130104_fqfg6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323130104_fqfg6.trace.json
+│   │   ├── run_20260323130104_kik9v
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323130410_9zc4x
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323130410_gz1yp
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323130410_gz1yp.trace.json
+│   │   ├── run_20260323130847_sqocj
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323130847_sqocj.trace.json
+│   │   ├── run_20260323130848_rdpff
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323131835_48nlm
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323131835_48nlm.trace.json
+│   │   ├── run_20260323131836_tdyc2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323151406_2fqdg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323151406_2fqdg.trace.json
+│   │   ├── run_20260323151406_79dxq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323152205_s0i81
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323152205_s0i81.trace.json
+│   │   ├── run_20260323152206_1c7t1
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323154116_gv8g9
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323154116_wtd00
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323154116_wtd00.trace.json
+│   │   ├── run_20260323175406_pr8do
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323175406_vra1f
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323175406_vra1f.trace.json
+│   │   ├── run_20260323184346_190jk
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323184346_190jk.trace.json
+│   │   ├── run_20260323184346_nnmiu
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323185904_h4vvc
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323185904_phfhs
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323185904_phfhs.trace.json
+│   │   ├── run_20260323190932_bzctf
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323190932_bzctf.trace.json
+│   │   ├── run_20260323190933_7z981
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323191819_32pra
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323191819_kp67s
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323191819_kp67s.trace.json
+│   │   ├── run_20260323200535_h85qo
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323200535_h85qo.trace.json
+│   │   ├── run_20260323200535_i04ch
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323201912_5gihw
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323201912_5gihw.trace.json
+│   │   ├── run_20260323201913_nv5za
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323203930_23079
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323203930_23079.trace.json
+│   │   ├── run_20260323203931_e4ggc
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323211808_6n2t7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323211808_b91m0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323211808_b91m0.trace.json
+│   │   ├── run_20260323212434_0a9yo
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323212434_0a9yo.trace.json
+│   │   ├── run_20260323212434_fb9ou
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323214604_lm804
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323214604_lm804.trace.json
+│   │   ├── run_20260323214605_hriee
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323214827_19spn
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323214827_19spn.trace.json
+│   │   ├── run_20260323214827_b8g0e
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323221306_8hh4y
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260323221306_k5trx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323221306_k5trx.trace.json
+│   │   ├── run_20260323222154_njn7u
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260323222154_njn7u.trace.json
+│   │   ├── run_20260323222155_9rnh0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324053313_remoh
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324053313_remoh.trace.json
+│   │   ├── run_20260324053313_tlszv
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324060322_fckr3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324060322_fckr3.trace.json
+│   │   ├── run_20260324060322_moonf
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324060322_moonf.trace.json
+│   │   ├── run_20260324060835_bm2z7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324060835_r77mb
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324060835_r77mb.trace.json
+│   │   ├── run_20260324063857_qvdrt
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324063857_qvdrt.trace.json
+│   │   ├── run_20260324063858_a2xmf
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324064034_eosqx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324064034_eosqx.trace.json
+│   │   ├── run_20260324064035_bztif
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324064215_ob6qr
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324064215_ob6qr.trace.json
+│   │   ├── run_20260324064216_0if6z
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324064447_udxm8
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324064447_udxm8.trace.json
+│   │   ├── run_20260324064448_cnkca
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324064512_qkwdf
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324064512_qkwdf.trace.json
+│   │   ├── run_20260324064512_t2amv
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324064816_x65iz
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324064816_x65iz.trace.json
+│   │   ├── run_20260324064816_zv84j
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324065048_4uv2o
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324065048_4uv2o.trace.json
+│   │   ├── run_20260324065049_obmgq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324065414_oz1ma
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324065414_oz1ma.trace.json
+│   │   ├── run_20260324065415_shwp1
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324065659_9yhwq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324065659_9yhwq.trace.json
+│   │   ├── run_20260324065659_t3fhw
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324065932_uf0w5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324065932_uf0w5.trace.json
+│   │   ├── run_20260324065932_w0zah
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324070159_jnri7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324070159_jnri7.trace.json
+│   │   ├── run_20260324070200_1v7de
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324070434_d9ugv
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324070434_d9ugv.trace.json
+│   │   ├── run_20260324070435_b59sr
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324070732_6vxjz
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324070732_6vxjz.trace.json
+│   │   ├── run_20260324070732_hs0tx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324071054_5rtse
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324071054_66xx2
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324071054_66xx2.trace.json
+│   │   ├── run_20260324071913_ag3x8
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324071913_s5l0e
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324071913_s5l0e.trace.json
+│   │   ├── run_20260324072129_awwtp
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324072129_awwtp.trace.json
+│   │   ├── run_20260324072130_hkwtb
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324072310_b8qjk
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324072310_k6mai
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324072310_k6mai.trace.json
+│   │   ├── run_20260324073234_lbttx
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324073234_lbttx.trace.json
+│   │   ├── run_20260324073235_2np67
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324075812_f1fnn
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324075812_nbwiq
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324075812_nbwiq.trace.json
+│   │   ├── run_20260324094651_vr3x8
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324095416_1e06s
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324100251_r9uto
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324100251_r9uto.trace.json
+│   │   ├── run_20260324101241_v3227
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324101241_v3227.trace.json
+│   │   ├── run_20260324102156_p4jy3
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324102156_p4jy3.trace.json
+│   │   ├── run_20260324102835_340su
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324102835_340su.trace.json
+│   │   ├── run_20260324103044_p3tpn
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324103044_p3tpn.trace.json
+│   │   ├── run_20260324103414_jvr9r
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324103414_jvr9r.trace.json
+│   │   ├── run_20260324103816_a9gh5
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324103816_a9gh5.trace.json
+│   │   ├── run_20260324103817_da3gi
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324103907_kzw9m
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324103907_kzw9m.trace.json
+│   │   ├── run_20260324103907_ryxc6
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324103935_0057t
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324103935_0057t.trace.json
+│   │   ├── run_20260324103935_qzteu
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324104306_dfpxl
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324104306_dfpxl.trace.json
+│   │   ├── run_20260324104306_q137k
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324110022_alvl7
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324110022_alvl7.trace.json
+│   │   ├── run_20260324110022_tnkhk
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324110151_a75su
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324110151_a75su.trace.json
+│   │   ├── run_20260324110151_hood0
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324110919_sgsbl
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324110919_u0pt4
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324111321_015go
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324111321_w9ggo
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324111321_w9ggo.trace.json
+│   │   ├── run_20260324111757_evqik
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324111757_evqik.trace.json
+│   │   ├── run_20260324111757_kyhlv
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324131404_ekj4o
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324131404_ekj4o.trace.json
+│   │   ├── run_20260324131404_tm72g
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324170554_0ci2c
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260324170554_rp0hf
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260324170554_rp0hf.trace.json
+│   │   ├── run_20260325135427_8ev1x
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260325135427_8ev1x.trace.json
+│   │   ├── run_20260325135427_f84ms
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260325135950_2mgj8
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260325135950_2mgj8.trace.json
+│   │   ├── run_20260325135950_ax5qg
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   ├── run_20260325141020_654jd
+│   │   │   ├── artifacts
+│   │   │   ├── logs
+│   │   │   ├── provided
+│   │   │   ├── tmp
+│   │   │   └── traces
+│   │   │       └── run_20260325141020_654jd.trace.json
+│   │   └── run_20260325141021_6aeqc
+│   │       ├── artifacts
+│   │       ├── logs
+│   │       ├── provided
+│   │       ├── tmp
+│   │       └── traces
+│   ├── test-plan.json
+│   ├── tmp
+│   ├── traces
+│   │   ├── run_20260315202802._5tr2q.trace.json
+│   │   ├── run_20260315203423_67msx.trace.json
+│   │   ├── run_20260315203515_xthkf.trace.json
+│   │   ├── run_20260316093608_i4tdc.trace.json
+│   │   ├── run_20260316094719_el8bq.trace.json
+│   │   ├── run_20260316095334_rkvf7.trace.json
+│   │   ├── run_20260316095718_udc41.trace.json
+│   │   ├── run_20260316100513_d6drf.trace.json
+│   │   ├── run_20260316100831_nighg.trace.json
+│   │   ├── run_20260316102335_ldytm.trace.json
+│   │   ├── run_20260316105448_hx3y7.trace.json
+│   │   ├── run_20260316105519_kk3ci.trace.json
+│   │   ├── run_20260316110336_9oei4.trace.json
+│   │   ├── run_20260316112030_hmpim.trace.json
+│   │   ├── run_20260316112527_pa7mp.trace.json
+│   │   ├── run_20260316113200_vyaa7.trace.json
+│   │   ├── run_20260316113603_9l0rx.trace.json
+│   │   ├── run_20260316114035_c7xfn.trace.json
+│   │   ├── run_20260316114451_aq5dt.trace.json
+│   │   ├── run_20260316114818_ls4x4.trace.json
+│   │   ├── run_20260316120101_gqxy5.trace.json
+│   │   ├── run_20260316121637_84349.trace.json
+│   │   ├── run_20260316122747_kprig.trace.json
+│   │   ├── run_20260316122844_ujtyz.trace.json
+│   │   ├── run_20260316125226_lotjo.trace.json
+│   │   ├── run_20260316125421_yw87e.trace.json
+│   │   ├── run_20260316134455_mmjed.trace.json
+│   │   ├── run_20260316140005_1zq9e.trace.json
+│   │   ├── run_20260316140856_ni7cw.trace.json
+│   │   ├── run_20260316141644_5jcis.trace.json
+│   │   ├── run_20260316141908_c0dv3.trace.json
+│   │   ├── run_20260316143351_rrlyq.trace.json
+│   │   ├── run_20260316145653_jla5s.trace.json
+│   │   ├── run_20260316151027_ywboz.trace.json
+│   │   ├── run_20260316151605_l8biv.trace.json
+│   │   ├── run_20260316152535_zm5dl.trace.json
+│   │   ├── run_20260316153325_1p1zy.trace.json
+│   │   ├── run_20260316174901_jzbyj.trace.json
+│   │   ├── run_20260316181902_ov7e6.trace.json
+│   │   └── run_20260316182358_40b1o.trace.json
+│   ├── validation
+│   │   ├── checks
+│   │   │   ├── check-exit-code.cjs
+│   │   │   ├── check-file-contains.cjs
+│   │   │   ├── check-file-exists.cjs
+│   │   │   ├── check-http-ok.cjs
+│   │   │   ├── check-port-open.cjs
+│   │   │   └── index.cjs
+│   │   ├── goal-checks
+│   │   │   ├── check-command-success.cjs
+│   │   │   ├── check-file-exists.cjs
+│   │   │   ├── check-http-ok.cjs
+│   │   │   └── index.cjs
+│   │   ├── run-goal-checks.cjs
+│   │   └── run-step-checks.cjs
+│   └── watch
+│       ├── config
+│       │   └── projects.yaml
+│       ├── Inbox
+│       │   └── processed
+│       │       └── __uri-runner__2026-03-20T09-10-16-780Z_f22a73.inbox.zip
+│       ├── last_run.txt
+│       ├── locks
+│       ├── processed
+│       │   ├── inbox.processed.txt
+│       │   ├── outbox.json
+│       │   ├── outbox.zip
+│       │   ├── __uri-runner__2026-03-24T15-21-27-872Z_8ca311.inbox.zip
+│       │   ├── __uri-runner__2026-03-24T15-24-51-306Z_4cc837.inbox.zip
+│       │   ├── __uri-runner__2026-03-24T15-38-25-331Z_57ec45.inbox.zip
+│       │   ├── __uri-runner__2026-03-24T15-43-11-892Z_5ade8b.inbox.zip
+│       │   ├── __uri-runner__2026-03-24T16-22-44-035Z_248ed8.inbox.zip
+│       │   ├── __uri-runner__2026-03-24T22-08-41-732Z_a28065.inbox.zip
+│       │   ├── __uri-runner__2026-03-24T22-08-44-175Z_66865f.inbox.zip
+│       │   ├── __uri-runner__2026-03-25T13-54-30-175Z_606d8b.inbox.zip
+│       │   ├── __uri-runner__2026-03-25T13-59-56-740Z_47de3f.inbox.zip
+│       │   ├── __uri-runner__2026-03-25T20-22-44-570Z_55ac8f.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T18-06-46-901Z_4b2c57.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T18-51-26-055Z_3de76a.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T18-58-38-683Z_cfe65b.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-04-57-227Z_6e9cf8.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-08-59-582Z_9b8ca2.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-09-11-638Z_c0d72b.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-12-43-006Z_5c0c24.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-18-33-540Z_028520.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-24-19-449Z_4ba918.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-27-41-777Z_994fc5.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-28-11-867Z_df4eb0.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-30-34-111Z_13a3f3.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-34-30-492Z_63d99b.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-43-49-290Z_f8a5bf.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-51-08-498Z_3f7529.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T19-58-45-890Z_2f72f3.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T20-25-16-260Z_1d056a.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T20-32-26-297Z_8623dd.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T20-41-13-096Z_363242.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T20-43-16-099Z_6f3aea.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T20-49-52-303Z_80d3ad.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T20-53-53-113Z_9a1124.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-24T20-55-52-050Z_d18729.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T07-13-21-367Z_135dc9.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T07-53-39-928Z_a427a8.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T09-15-28-889Z_35db7a.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T09-32-28-808Z_ed3f4e.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T09-45-30-451Z_c040cb.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T10-32-56-816Z_550b6b.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T10-44-15-639Z_dcab91.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T10-57-56-855Z_07160d.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T10-58-30-951Z_e70754.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T10-59-50-988Z_2d2e8b.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T11-26-55-314Z_20a400.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T11-36-06-113Z_b7d482.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T11-47-51-143Z_6a0b7b.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T12-07-58-955Z_b6e71b.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T12-34-13-238Z_53084f.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T12-41-25-943Z_4cc583.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T12-49-28-624Z_3d0e13.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T12-50-52-914Z_7f5d51.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T12-57-13-539Z_e79031.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T12-59-31-807Z_9a232a.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T13-06-20-444Z_42f3a4.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T13-08-56-742Z_fe8eb3.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T13-15-07-336Z_d64798.inbox.zip
+│       │   ├── __uri-runner-next__2026-03-25T13-17-43-629Z_a4dc8b.inbox.zip
+│       │   └── __uri-runner-next__2026-03-25T13-24-27-570Z_06d862.inbox.zip
+│       ├── runs
+│       ├── source-processed
+│       │   └── inbox.2026-03-20T09-10-16-779Z.zip
+│       ├── tmp
+│       └── uri-runnerBox
+│           ├── history
+│           │   ├── 2026-03-20T09-10-16-780Z_f22a73__scenario__OK.outbox.zip
+│           │   ├── index.json
+│           │   ├── index.jsonl
+│           │   ├── plans
+│           │   │   └── 2026-03-20T09-10-16-780Z_f22a73.plan.json
+│           │   └── runs
+│           │       └── 2026-03-20T09-10-16-780Z_f22a73
+│           │           ├── baseline
+│           │           │   └── BASELINE_META.json
+│           │           ├── BASELINE_VERIFY_RESULT.json
+│           │           ├── RESULT.json
+│           │           ├── ROLLBACK_RESULT.json
+│           │           └── RUN_SUMMARY.json
+│           ├── outbox.latest.zip
+│           └── plans
+│               └── latest.plan.json
+├── src
+│   ├── cli
+│   │   ├── cli.cjs
+│   │   ├── commands
+│   │   │   ├── compile.cjs
+│   │   │   ├── debug-commands.cjs
+│   │   │   ├── debug-plan.cjs
+│   │   │   ├── debug-runbook.cjs
+│   │   │   ├── debug-step.cjs
+│   │   │   ├── history.cjs
+│   │   │   ├── history-prune.cjs
+│   │   │   ├── last.cjs
+│   │   │   ├── replay.cjs
+│   │   │   ├── run-plan.cjs
+│   │   │   ├── runtime-gc.cjs
+│   │   │   ├── show.cjs
+│   │   │   ├── test.cjs
+│   │   │   └── watch.cjs
+│   │   └── index.cjs
+│   ├── cli.cjs
+│   ├── commands
+│   │   ├── browser.cjs
+│   │   ├── command-registry.cjs
+│   │   ├── context
+│   │   │   ├── audit.cjs
+│   │   │   ├── runbook.cjs
+│   │   │   └── validate-meta.cjs
+│   │   ├── file
+│   │   │   ├── build-inbox.cjs
+│   │   │   ├── patch.cjs
+│   │   │   └── zip.cjs
+│   │   ├── load-commands.cjs
+│   │   ├── system
+│   │   │   ├── doctor.cjs
+│   │   │   ├── echo.cjs
+│   │   │   ├── exec.cjs
+│   │   │   ├── server.cjs
+│   │   │   └── urls.cjs
+│   │   ├── test
+│   │   │   ├── checks.cjs
+│   │   │   └── run-vitest.cjs
+│   │   └── watch.cjs
+│   ├── lib
+│   │   ├── audit.cjs
+│   │   ├── buildInbox.cjs
+│   │   ├── checks.cjs
+│   │   ├── doctor.cjs
+│   │   ├── exec.cjs
+│   │   ├── meta.validate.cjs
+│   │   ├── patch.cjs
+│   │   ├── runbook.cjs
+│   │   ├── server.cjs
+│   │   ├── urls.cjs
+│   │   └── zip.cjs
+│   ├── runtime
+│   │   ├── browser
+│   │   │   ├── attach-browser-session.cjs
+│   │   │   ├── browser-session-store.cjs
+│   │   │   ├── build-browser-approval-view-model.cjs
+│   │   │   ├── cdp-client.cjs
+│   │   │   ├── collect-browser-artifacts.cjs
+│   │   │   ├── collect-browser-diagnostics.cjs
+│   │   │   ├── execute-browser-diagnostics-collect-step.cjs
+│   │   │   ├── execute-browser-page-open-step.cjs
+│   │   │   ├── execute-browser-page-wait-step.cjs
+│   │   │   ├── execute-browser-session-start-step.cjs
+│   │   │   ├── execute-browser-session-stop-step.cjs
+│   │   │   ├── handle-browser-step-policy.cjs
+│   │   │   ├── normalize-browser-approval-input.cjs
+│   │   │   ├── normalize-browser-result.cjs
+│   │   │   ├── normalize-browser-run-input.cjs
+│   │   │   ├── open-browser-page.cjs
+│   │   │   ├── render-browser-approval-prompt.cjs
+│   │   │   ├── resolve-browser-environment.cjs
+│   │   │   ├── run-browser-diagnostics.cjs
+│   │   │   ├── start-browser-session.cjs
+│   │   │   ├── stop-browser-session.cjs
+│   │   │   ├── wait-browser-page-ready.cjs
+│   │   │   ├── write-browser-artifacts.cjs
+│   │   │   └── write-browser-report.cjs
+│   │   ├── compile-runbook.cjs
+│   │   ├── environment
+│   │   │   ├── cleanup-runtime-state.cjs
+│   │   │   ├── reset-environment.cjs
+│   │   │   ├── run-healthcheck.cjs
+│   │   │   ├── start-managed-server.cjs
+│   │   │   └── stop-managed-processes.cjs
+│   │   ├── execution
+│   │   │   ├── build-stable-trace.cjs
+│   │   │   ├── create-deterministic-run-id.cjs
+│   │   │   ├── create-deterministic-step-id.cjs
+│   │   │   ├── execution-error.cjs
+│   │   │   ├── execution-event-bus.cjs
+│   │   │   ├── execution-events.cjs
+│   │   │   ├── replay-trace.cjs
+│   │   │   ├── run-with-trace.cjs
+│   │   │   ├── trace-event-subscriber.cjs
+│   │   │   ├── trace-finalizer.cjs
+│   │   │   └── trace-schema.cjs
+│   │   ├── finalize-run.cjs
+│   │   ├── history
+│   │   │   ├── append-history-entry.cjs
+│   │   │   ├── find-stale-history-entries.cjs
+│   │   │   ├── history-index-schema.cjs
+│   │   │   ├── prune-history-index.cjs
+│   │   │   ├── read-history-index.cjs
+│   │   │   └── write-history-index.cjs
+│   │   ├── list-trace-history.cjs
+│   │   ├── materialize-plan.cjs
+│   │   ├── report
+│   │   │   └── terminal-report.cjs
+│   │   ├── result-builder.cjs
+│   │   ├── run-from-runbook.cjs
+│   │   ├── run-plan.cjs
+│   │   ├── runtime-gc.cjs
+│   │   ├── runtime-paths.cjs
+│   │   ├── run-with-trace.cjs
+│   │   ├── terminal
+│   │   │   ├── build-approval-view-model.cjs
+│   │   │   ├── colors.cjs
+│   │   │   ├── create-approval-flow-state.cjs
+│   │   │   ├── execute-terminal-step.cjs
+│   │   │   ├── handle-watch-step-policy.cjs
+│   │   │   ├── normalize-approval-input.cjs
+│   │   │   ├── normalize-terminal-result.cjs
+│   │   │   ├── render-approval-prompt.cjs
+│   │   │   ├── run-approval-loop.cjs
+│   │   │   ├── run-approval-stdin.cjs
+│   │   │   ├── run-watch-approval-step.cjs
+│   │   │   └── write-terminal-artifacts.cjs
+│   │   ├── watch
+│   │   │   ├── README-failure-outbox-fix.txt
+│   │   │   └── write-failure-outbox.cjs
+│   │   └── watch-paths.cjs
+│   └── uram
+│       ├── artifacts
+│       │   ├── baseline-verify-result-artifact.cjs
+│       │   ├── error-utils.cjs
+│       │   ├── result-artifact.cjs
+│       │   ├── rollback-result-artifact.cjs
+│       │   └── run-summary-artifact.cjs
+│       ├── compile-browser-flow.cjs
+│       ├── compile-plan.cjs
+│       ├── engines
+│       │   ├── audit-engine.cjs
+│       │   └── scenario-engine.cjs
+│       ├── error-codes.cjs
+│       ├── executable-context.cjs
+│       ├── execute-browser-diagnostics-step.cjs
+│       ├── execution-lock.cjs
+│       ├── finalize-run.cjs
+│       ├── load-policy.cjs
+│       ├── paths.cjs
+│       ├── pipeline.cjs
+│       ├── plan-debug.cjs
+│       ├── plan-io.cjs
+│       ├── plan-paths.cjs
+│       ├── plan-schema.cjs
+│       ├── policy-hook.cjs
+│       ├── project-resolver.cjs
+│       ├── provide-output.cjs
+│       ├── resolve-command-permission.cjs
+│       ├── runbook.cjs
+│       ├── run.cjs
+│       ├── run-paths.cjs
+│       ├── run-plan.cjs
+│       ├── runtime-context.cjs
+│       ├── runtime-summary.cjs
+│       ├── scenario-executor.cjs
+│       ├── scenario-parser.cjs
+│       ├── state
+│       │   ├── capture-baseline.cjs
+│       │   ├── restore-baseline.cjs
+│       │   ├── state-domains.cjs
+│       │   └── verify-baseline.cjs
+│       ├── watch
+│       │   ├── dedupe-cache.cjs
+│       │   ├── file-fingerprint.cjs
+│       │   ├── handle-rejected-inbox.cjs
+│       │   ├── intake-decision.cjs
+│       │   └── README-A27-watcher-hardening.txt
+│       └── watch-inbox-once.cjs
+├── TASKLIST_STAGE3.txt
+├── test
+│   ├── audit.smoke.test.mjs
+│   ├── cli
+│   │   ├── browser.router.test.cjs
+│   │   ├── cli-compile.test.mjs
+│   │   ├── cli-debug-commands.test.mjs
+│   │   ├── cli-debug-plan.test.mjs
+│   │   ├── cli-debug-runbook.test.mjs
+│   │   ├── cli-debug-step.test.mjs
+│   │   ├── cli-replay.test.mjs
+│   │   └── cli-run-plan.test.mjs
+│   ├── commands
+│   │   └── browser.command.test.cjs
+│   ├── e2e
+│   │   ├── helpers
+│   │   │   ├── inbox-zip-builder.mjs
+│   │   │   ├── watch-contract-adapter.mjs
+│   │   │   ├── watcher-runner.mjs
+│   │   │   ├── watch-test-env.mjs
+│   │   │   └── zip-assertions.mjs
+│   │   ├── watch-pipeline.happy-path.test.mjs
+│   │   ├── watch-pipeline.invalid-contract.test.mjs
+│   │   ├── watch-pipeline.invalid-zip.test.mjs
+│   │   └── watch-pipeline.missing-requested-file.test.mjs
+│   ├── fixtures
+│   │   ├── http-server.cjs
+│   │   ├── RUNBOOK_CHECKS.yaml
+│   │   ├── RUNBOOK_SERVER.yaml
+│   │   ├── RUNBOOK_URLS_PUBLIC.yaml
+│   │   └── RUNBOOK.yaml
+│   ├── helpers
+│   │   ├── sandbox.cjs
+│   │   └── zip-create.cjs
+│   ├── real
+│   │   ├── browser_action.profile.real.test.mjs
+│   │   ├── browser.command.real.test.mjs
+│   │   ├── cases
+│   │   │   ├── browser_action.success
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   └── inbox.zip
+│   │   │   ├── browser_action.timeout_with_diagnostics
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   └── inbox.zip
+│   │   │   ├── db_migration.stall_detected
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   └── inbox.zip
+│   │   │   ├── db_migration.success
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   └── inbox.zip
+│   │   │   ├── db_query.retry_then_fail
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   └── INBOX
+│   │   │   │       ├── META.json
+│   │   │   │       └── RUNBOOK.yaml
+│   │   │   ├── db_query.success
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   └── INBOX
+│   │   │   │       ├── META.json
+│   │   │   │       └── RUNBOOK.yaml
+│   │   │   ├── interactive_risk.no_retry_fail_fast
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   ├── inbox.zip
+│   │   │   │   └── .tmp-outbox
+│   │   │   ├── interactive_risk.prompt_detected
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   ├── inbox.zip
+│   │   │   │   └── .tmp-outbox
+│   │   │   ├── quick.non_zero_exit
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   ├── inbox.zip
+│   │   │   │   └── .tmp-outbox
+│   │   │   ├── quick.success.basic
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   ├── INBOX
+│   │   │   │   │   ├── META.json
+│   │   │   │   │   └── RUNBOOK.yaml
+│   │   │   │   ├── inbox.zip
+│   │   │   │   └── .tmp-outbox
+│   │   │   ├── service_start.not_ready_timeout
+│   │   │   │   ├── CASE.md
+│   │   │   │   ├── EXPECTED
+│   │   │   │   │   └── expected-outbox.json
+│   │   │   │   └── INBOX
+│   │   │   │       ├── META.json
+│   │   │   │       └── RUNBOOK.yaml
+│   │   │   └── service_start.ready_success
+│   │   │       ├── CASE.md
+│   │   │       ├── EXPECTED
+│   │   │       │   └── expected-outbox.json
+│   │   │       └── INBOX
+│   │   │           ├── META.json
+│   │   │           └── RUNBOOK.yaml
+│   │   ├── db_migration.profile.real.test.mjs
+│   │   ├── db_query.profile.real.test.mjs
+│   │   ├── _docs
+│   │   │   ├── CURRENT_OUTBOX_ALIGNMENT_NOTES.md
+│   │   │   ├── REAL_TESTS_STRATEGY.md
+│   │   │   ├── URI_COMMANDS_V1.md
+│   │   │   ├── URI_PROFILE_DOCUMENTATION_V1.md
+│   │   │   ├── URI_PROFILE_TESTS_V1.md
+│   │   │   ├── WAVE2_NOTES.md
+│   │   │   └── WAVE3_NOTES.md
+│   │   ├── fixtures
+│   │   │   ├── browser
+│   │   │   │   ├── action-success.js
+│   │   │   │   └── action-timeout.js
+│   │   │   ├── db
+│   │   │   │   ├── migration-stall.js
+│   │   │   │   ├── migration-success.js
+│   │   │   │   ├── query-fail.js
+│   │   │   │   └── query-success.js
+│   │   │   ├── interactive
+│   │   │   │   └── prompt-wait.js
+│   │   │   ├── runbooks
+│   │   │   │   └── AUDIT_RUNBOOK_TEMPLATE.md
+│   │   │   └── service
+│   │   │       ├── http-not-ready-server.js
+│   │   │       └── http-ready-server.js
+│   │   ├── helpers
+│   │   │   ├── assert-current-outbox.mjs
+│   │   │   ├── assert-outbox.mjs
+│   │   │   ├── normalize-current-outbox.mjs
+│   │   │   ├── normalize-outbox.mjs
+│   │   │   ├── run-uri-real-case.mjs
+│   │   │   └── unzip-outbox.mjs
+│   │   ├── interactive.profile.real.test.mjs
+│   │   ├── quick.profile.real.test.mjs
+│   │   ├── README.md
+│   │   ├── service_start.profile.real.test.mjs
+│   │   └── _templates
+│   │       ├── inbox.quick.success
+│   │       │   ├── META.json
+│   │       │   └── RUNBOOK.yaml
+│   │       └── inbox.quick.success.zip
+│   ├── runtime
+│   │   └── browser
+│   │       ├── browser-session-store.test.cjs
+│   │       ├── normalize-browser-run-input.test.cjs
+│   │       └── resolve-browser-environment.test.cjs
+│   ├── sandbox
+│   │   ├── create-sandbox-config.cjs
+│   │   ├── create-sandbox.sh
+│   │   └── write-sandbox-config.cjs
+│   ├── scenarios
+│   │   ├── browser-flow.console-collection.test.mjs
+│   │   ├── browser-flow.diagnostics-report.test.mjs
+│   │   ├── browser-flow.network-summary.test.mjs
+│   │   ├── browser-flow.real-artifacts.test.mjs
+│   │   ├── last-run.created-on-empty-run.test.mjs
+│   │   ├── last-run.exists-after-accepted-inbox.test.mjs
+│   │   ├── last-run.updated-on-second-run.test.mjs
+│   │   ├── outbox.failure-is-valid-zip.test.mjs
+│   │   ├── processed.accepted-flow-is-deterministic.test.mjs
+│   │   ├── processed.accepted-inbox-is-recorded.test.mjs
+│   │   ├── processed.ignored-files-do-not-create-records.test.mjs
+│   │   ├── sandbox.smoke.test.mjs
+│   │   ├── scenario-runtime.environment-reset-success.test.mjs
+│   │   ├── scenario-runtime.execution-lock.test.mjs
+│   │   ├── scenario-runtime.file-delivery-report.test.mjs
+│   │   ├── scenario-runtime.history-plan-link.test.mjs
+│   │   ├── scenario-runtime.invalid-plan-contract.test.mjs
+│   │   ├── scenario-runtime.max-steps.test.mjs
+│   │   ├── scenario-runtime.outbox-contract.test.mjs
+│   │   ├── scenario-runtime.plan-artifact.test.mjs
+│   │   ├── scenario-runtime.root-policy.test.mjs
+│   │   ├── scenario-runtime.smoke.test.mjs
+│   │   ├── scenario-runtime.unknown-command.test.mjs
+│   │   ├── terminal-flow.execution-report.test.mjs
+│   │   ├── watch-inbox.accepts-runbook.test.mjs
+│   │   ├── watch-inbox.ignores-broken-runbook.test.mjs
+│   │   ├── watch-inbox.ignores-foreign-receiver.test.mjs
+│   │   ├── watch-inbox.project-owned-full-cycle.test.mjs
+│   │   └── watch-inbox.strict-intake.test.mjs
+│   ├── unit
+│   │   ├── attach-browser-session.test.mjs
+│   │   ├── browser-flow.smoke.test.mjs
+│   │   ├── cdp-client.test.mjs
+│   │   ├── collect-browser-artifacts.test.mjs
+│   │   ├── colors.test.mjs
+│   │   ├── compile-browser-flow.test.mjs
+│   │   ├── compile-plan.browser.test.mjs
+│   │   ├── compile-plan.scenario.test.mjs
+│   │   ├── compile-runbook.test.mjs
+│   │   ├── create-approval-flow-state.test.mjs
+│   │   ├── execute-browser-diagnostics-collect-step.test.cjs
+│   │   ├── execute-browser-page-open-step.interface.test.cjs
+│   │   ├── execute-browser-page-open-step.session-state.test.cjs
+│   │   ├── execute-browser-page-open-step.test.cjs
+│   │   ├── execute-browser-page-wait-step.test.cjs
+│   │   ├── execute-browser-session-stop-step.test.cjs
+│   │   ├── execute-terminal-step.test.mjs
+│   │   ├── handle-watch-step-policy.test.mjs
+│   │   ├── normalize-approval-input.test.mjs
+│   │   ├── normalize-browser-result.test.mjs
+│   │   ├── normalize-terminal-result.test.mjs
+│   │   ├── plan-schema.test.mjs
+│   │   ├── render-approval-prompt.test.mjs
+│   │   ├── result-artifact.test.mjs
+│   │   ├── result-builder.test.mjs
+│   │   ├── run-approval-loop.test.mjs
+│   │   ├── run-approval-stdin.mock.test.mjs
+│   │   ├── run-browser-diagnostics.test.mjs
+│   │   ├── run-paths.test.mjs
+│   │   ├── run-plan.scenario.test.mjs
+│   │   ├── runtime-environment.cleanup-runtime-state.test.mjs
+│   │   ├── runtime-environment.reset-environment.test.mjs
+│   │   ├── runtime-environment.run-healthcheck.test.mjs
+│   │   ├── runtime-environment.start-managed-server.test.mjs
+│   │   ├── runtime-environment.stop-managed-processes.test.mjs
+│   │   ├── runtime-summary.test.mjs
+│   │   ├── run-watch-approval-step.test.mjs
+│   │   ├── start-browser-session.cdp-adapter.test.cjs
+│   │   ├── write-browser-artifacts.test.mjs
+│   │   └── write-terminal-artifacts.test.mjs
+│   └── uram
+│       ├── execute-browser-diagnostics-step.test.cjs
+│       ├── plan-schema.browser.test.cjs
+│       ├── run-plan.browser-artifacts.test.cjs
+│       └── run-plan.browser.test.cjs
+├── .tmp-uram-e2e
+│   ├── config
+│   │   └── projects.yaml
+│   ├── inbox
+│   ├── Inbox
+│   │   └── processed
+│   │       ├── 2026-03-11_14-05-03__uri-runner-next__2026-03-11T13-05-03-925Z_b061c1.inbox.zip
+│   │       ├── 2026-03-11_14-30-34__uri-runner-next__2026-03-11T13-30-34-167Z_53a8c0.inbox.zip
+│   │       ├── 2026-03-11_15-08-17__uri-runner-next__2026-03-11T14-08-17-338Z_98bee0.inbox.zip
+│   │       └── uri-runner-next__2026-03-11T13-18-52-224Z_62833d.inbox.zip
+│   ├── locks
+│   ├── outbox
+│   ├── processed
+│   ├── projects
+│   ├── RUNBOOK.yaml
+│   ├── tmp
+│   └── uri-runner-nextBox
+│       ├── history
+│       │   ├── 2026-03-11_14-05-03__scenario__OK__2026-03-11T13-05-03-925Z_b061c1.outbox.zip
+│       │   ├── 2026-03-11_14-30-34__scenario__OK__2026-03-11T13-30-34-167Z_53a8c0.outbox.zip
+│       │   ├── 2026-03-11_15-08-17__scenario__OK__2026-03-11T14-08-17-338Z_98bee0.outbox.zip
+│       │   └── index.jsonl
+│       └── outbox.latest.zip
+├── .tmp-uram-live
+│   ├── config
+│   │   └── projects.yaml
+│   ├── Inbox
+│   │   └── processed
+│   │       ├── __uri-runner__2026-03-20T08-21-36-767Z_55b1ce.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-40-24-482Z_447f2f.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-01-846Z_3a4756.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-03-927Z_1da02a.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-05-988Z_65d1d7.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-08-042Z_ec05cb.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-10-099Z_de2043.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-12-166Z_1343e1.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-14-222Z_d99c4e.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-16-276Z_493fd6.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-18-334Z_e9e33b.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-20-390Z_1b6903.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-22-449Z_ba03c7.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-24-505Z_f63927.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-26-564Z_31a5ca.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-28-621Z_e17e5e.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-30-678Z_4f7b6f.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-32-733Z_1f5f4e.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-34-786Z_7ff988.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-36-845Z_e237ac.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-48-725Z_f19507.inbox.zip
+│   │       ├── __uri-runner__2026-03-20T08-47-50-799Z_b26f64.inbox.zip
+│   │       └── __uri-runner__2026-03-20T08-47-52-859Z_a5a50c.inbox.zip
+│   ├── last_run.txt
+│   ├── locks
+│   ├── processed
+│   │   ├── inbox.processed.txt
+│   │   ├── outbox.json
+│   │   └── outbox.zip
+│   ├── runs
+│   │   ├── run_2026-03-20T07-22-55-578Z_yawglp
+│   │   │   ├── inbox
+│   │   │   │   ├── README.txt
+│   │   │   │   └── RUNBOOK.yaml
+│   │   │   └── plan.json
+│   │   ├── run_2026-03-20T08-00-43-800Z_bskczn
+│   │   │   └── inbox
+│   │   │       ├── README.txt
+│   │   │       └── RUNBOOK.yaml
+│   │   ├── run_2026-03-20T08-06-54-917Z_zgu5vt
+│   │   │   └── inbox
+│   │   │       ├── README.txt
+│   │   │       └── RUNBOOK.yaml
+│   │   └── run_2026-03-20T08-08-50-434Z_bocys4
+│   │       └── inbox
+│   │           ├── README.txt
+│   │           └── RUNBOOK.yaml
+│   ├── tmp
+│   ├── uri-config.json
+│   ├── uri-runnerBox
+│   │   ├── history
+│   │   │   ├── 2026-03-20T08-21-36-767Z_55b1ce__scenario__ERR.outbox.zip
+│   │   │   ├── 2026-03-20T08-40-24-482Z_447f2f__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-01-846Z_3a4756__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-03-927Z_1da02a__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-05-988Z_65d1d7__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-08-042Z_ec05cb__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-10-099Z_de2043__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-12-166Z_1343e1__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-14-222Z_d99c4e__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-16-276Z_493fd6__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-18-334Z_e9e33b__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-20-390Z_1b6903__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-22-449Z_ba03c7__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-24-505Z_f63927__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-26-564Z_31a5ca__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-28-621Z_e17e5e__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-30-678Z_4f7b6f__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-32-733Z_1f5f4e__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-34-786Z_7ff988__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-36-845Z_e237ac__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-48-725Z_f19507__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-50-799Z_b26f64__scenario__OK.outbox.zip
+│   │   │   ├── 2026-03-20T08-47-52-859Z_a5a50c__scenario__OK.outbox.zip
+│   │   │   ├── index.json
+│   │   │   ├── index.jsonl
+│   │   │   ├── plans
+│   │   │   │   ├── 2026-03-20T08-40-24-482Z_447f2f.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-01-846Z_3a4756.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-03-927Z_1da02a.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-05-988Z_65d1d7.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-08-042Z_ec05cb.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-10-099Z_de2043.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-12-166Z_1343e1.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-14-222Z_d99c4e.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-16-276Z_493fd6.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-18-334Z_e9e33b.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-20-390Z_1b6903.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-22-449Z_ba03c7.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-24-505Z_f63927.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-26-564Z_31a5ca.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-28-621Z_e17e5e.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-30-678Z_4f7b6f.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-32-733Z_1f5f4e.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-34-786Z_7ff988.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-36-845Z_e237ac.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-48-725Z_f19507.plan.json
+│   │   │   │   ├── 2026-03-20T08-47-50-799Z_b26f64.plan.json
+│   │   │   │   └── 2026-03-20T08-47-52-859Z_a5a50c.plan.json
+│   │   │   └── runs
+│   │   │       ├── 2026-03-20T08-21-36-767Z_55b1ce
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-40-24-482Z_447f2f
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-01-846Z_3a4756
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-03-927Z_1da02a
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-05-988Z_65d1d7
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-08-042Z_ec05cb
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-10-099Z_de2043
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-12-166Z_1343e1
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-14-222Z_d99c4e
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-16-276Z_493fd6
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-18-334Z_e9e33b
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-20-390Z_1b6903
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-22-449Z_ba03c7
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-24-505Z_f63927
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-26-564Z_31a5ca
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-28-621Z_e17e5e
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-30-678Z_4f7b6f
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-32-733Z_1f5f4e
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-34-786Z_7ff988
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-36-845Z_e237ac
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-48-725Z_f19507
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       ├── 2026-03-20T08-47-50-799Z_b26f64
+│   │   │       │   ├── baseline
+│   │   │       │   │   └── BASELINE_META.json
+│   │   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │   │       │   ├── RESULT.json
+│   │   │       │   ├── ROLLBACK_RESULT.json
+│   │   │       │   └── RUN_SUMMARY.json
+│   │   │       └── 2026-03-20T08-47-52-859Z_a5a50c
+│   │   │           ├── baseline
+│   │   │           │   └── BASELINE_META.json
+│   │   │           ├── BASELINE_VERIFY_RESULT.json
+│   │   │           ├── RESULT.json
+│   │   │           ├── ROLLBACK_RESULT.json
+│   │   │           └── RUN_SUMMARY.json
+│   │   ├── outbox.latest.zip
+│   │   └── plans
+│   │       └── latest.plan.json
+│   └── Загрузки
+│       └── inbox.zip
+├── tools
+│   └── debug-watch-once.sh
+├── uri-runnerBox
+│   ├── history
+│   │   ├── 2026-03-25T13-54-30-175Z_606d8b__scenario__OK.outbox.zip
+│   │   ├── 2026-03-25T13-59-56-740Z_47de3f__scenario__OK.outbox.zip
+│   │   ├── 2026-03-25T20-22-44-570Z_55ac8f__scenario__ERR.outbox.zip
+│   │   ├── index.json
+│   │   ├── index.jsonl
+│   │   ├── plans
+│   │   │   ├── 2026-03-25T13-54-30-175Z_606d8b.plan.json
+│   │   │   ├── 2026-03-25T13-59-56-740Z_47de3f.plan.json
+│   │   │   └── 2026-03-25T20-22-44-570Z_55ac8f.plan.json
+│   │   └── runs
+│   │       ├── 2026-03-25T13-54-30-175Z_606d8b
+│   │       │   ├── baseline
+│   │       │   │   └── BASELINE_META.json
+│   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │       │   ├── RESULT.json
+│   │       │   ├── ROLLBACK_RESULT.json
+│   │       │   └── RUN_SUMMARY.json
+│   │       ├── 2026-03-25T13-59-56-740Z_47de3f
+│   │       │   ├── baseline
+│   │       │   │   └── BASELINE_META.json
+│   │       │   ├── BASELINE_VERIFY_RESULT.json
+│   │       │   ├── RESULT.json
+│   │       │   ├── ROLLBACK_RESULT.json
+│   │       │   └── RUN_SUMMARY.json
+│   │       └── 2026-03-25T20-22-44-570Z_55ac8f
+│   │           ├── baseline
+│   │           │   └── BASELINE_META.json
+│   │           ├── BASELINE_VERIFY_RESULT.json
+│   │           ├── RESULT.json
+│   │           ├── ROLLBACK_RESULT.json
+│   │           └── RUN_SUMMARY.json
+│   ├── outbox.latest.zip
+│   └── plans
+│       └── latest.plan.json
+├── URI_TREE.txt
+└── vitest.config.mjs
+
+2362 directories, 1078 files
+
+A37 TERMINAL UI LAYER
+├── config
+│   └── config/terminal-ui.json
+├── ui-runtime
+│   ├── src/ui/terminal-palettes.cjs
+│   ├── src/ui/load-terminal-ui-config.cjs
+│   ├── src/ui/resolve-terminal-theme.cjs
+│   ├── src/ui/terminal-theme.cjs
+│   ├── src/ui/terminal-render.cjs
+│   └── src/ui/watch-terminal-ui.cjs
+├── watch-integration
+│   └── src/uram/watch-inbox-once.cjs
+└── demo
+    └── scripts/demo-terminal-ui.cjs
