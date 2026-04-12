@@ -856,6 +856,14 @@ async function handleInboxZip(fullPath, options) {
           outboxJson: execution.projectOutboxJsonPath || execution.outboxJsonPath || undefined,
           transportOutbox: execution.transportOutboxZipPath || undefined,
         });
+
+  // === A38 SUMMARY HOOK (error) ===
+  try {
+    watchUi.printSummary({
+      result: 'error'
+    });
+  } catch (e) {}
+
         restoreInboxZipIfMissing(target, fullPath, archivedSourcePath);
 
         return {
@@ -879,6 +887,14 @@ async function handleInboxZip(fullPath, options) {
         outboxJson: execution.projectOutboxJsonPath || execution.outboxJsonPath || undefined,
         transportOutbox: execution.transportOutboxZipPath || undefined,
       });
+
+  // === A38 SUMMARY HOOK (success) ===
+  try {
+    watchUi.printSummary({
+      result: 'success'
+    });
+  } catch (e) {}
+
       restoreInboxZipIfMissing(target, fullPath, archivedSourcePath);
 
       return {
