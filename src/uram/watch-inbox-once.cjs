@@ -16,8 +16,15 @@ const { resolveProjectContext } = require("./project-resolver.cjs");
 const { handleIntakeDecision } = require("./watch/intake-decision.cjs");
 const { getFileFingerprint } = require("./watch/file-fingerprint.cjs");
 const { DedupeCache } = require("./watch/dedupe-cache.cjs");
+const {
+  loadPiligrimState,
+  incrementOperationCount,
+  syncPiligrimConfig,
+} = require("../cli/lib/piligrim-support.cjs");
 
 const seenSourceInboxes = new DedupeCache();
+
+let lastPiligrimHintKey = null;
 
 function pickFirst(...values) {
   for (const value of values) {
@@ -406,6 +413,56 @@ function printBanner(options) {
 
   watchUi.printBanner(meta);
   watchUi.printLegacyStatus('started');
+}
+
+async function printPiligrimWatcherHints(stdout, config = {}, options = {}) {
+  const piligrimConfig =
+    config && typeof config === "object" && config.piligrim && typeof config.piligrim === "object"
+      ? config.piligrim
+      : {};
+
+  await syncPiligrimConfig(piligrimConfig);
+  const piligrimState = await loadPiligrimState();
+
+  const counterText = `${Number(piligrimState?.operation_count || 0)}/${Number(piligrimState?.operation_limit || 0)}`;
+  const allowReady =
+    options && typeof options === "object" && options.allowReadyForChat === true;
+
+  let nextHintKey = `none:${counterText}`;
+
+  if (allowReady && piligrimState && piligrimState.piligrim_ready_for_handoff) {
+    nextHintKey = `ready:${counterText}`;
+  } else if (piligrimState && piligrimState.piligrim_update_needed) {
+    nextHintKey = `update_required:${counterText}`;
+  }
+
+  if (nextHintKey === lastPiligrimHintKey) {
+    return piligrimState;
+  }
+
+  lastPiligrimHintKey = nextHintKey;
+
+  printStatus(stdout, "piligrim counter", {
+    progress: counterText,
+  });
+
+  if (nextHintKey.startsWith("ready:")) {
+    printStatus(stdout, "ready for new chat");
+    printStatus(stdout, "hint", {
+      command: "run uri handoff",
+    });
+    return piligrimState;
+  }
+
+  if (nextHintKey.startsWith("update_required:")) {
+    printStatus(stdout, "piligrim update required");
+    printStatus(stdout, "hint", {
+      command: "update project part and run uri piligrim mark-updated",
+    });
+    return piligrimState;
+  }
+
+  return piligrimState;
 }
 
 function printStatus(stdout, status, extra = {}) {
@@ -1020,6 +1077,8 @@ async function runWatchCycle(loaded, options = {}) {
   fs.mkdirSync(path.join(watchRoot, "runs"), { recursive: true });
   fs.mkdirSync(path.join(watchRoot, "tmp"), { recursive: true });
 
+  await printPiligrimWatcherHints(stdout, config, { allowReadyForChat: true });
+
   const files = fs.readdirSync(downloadsDir).sort();
 
   for (const name of files) {
@@ -1087,6 +1146,16 @@ async function runWatchCycle(loaded, options = {}) {
           reason: result.reason,
         }
       );
+    }
+
+    if (
+      executeFullCycle &&
+      result &&
+      result.accepted &&
+      (result.status === "completed" || result.status === "failed")
+    ) {
+      await incrementOperationCount();
+      await printPiligrimWatcherHints(stdout, config, { allowReadyForChat: false });
     }
 
     return result;
