@@ -8,6 +8,7 @@ const { resolveProjectContext } = require("../../uram/project-resolver.cjs");
 const { loadExecutableContext } = require("../../uram/executable-context.cjs");
 const { compilePlan } = require("../../uram/compile-plan.cjs");
 const { compileRunbookObject } = require("../../runtime/compile-runbook.cjs");
+const { createInvalidInboxHelpOutbox } = require("../lib/piligrim-support.cjs");
 
 function isMaterializedRunbook(runbook) {
   return (
@@ -39,38 +40,60 @@ async function compileInboxToPlan(input, maybeOutputPlanPath) {
     throw new Error("compile requires <inbox.zip> <output-plan.json>");
   }
 
-  const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
-
-  const project = runbook?.project;
-  if (!project) {
-    throw new Error("[uri] runbook missing project field");
-  }
-
+  let runbook;
+  let project = "unknown";
   let plan;
 
-  if (isMaterializedRunbook(runbook)) {
-    plan = compileRunbookObject(runbook, { source: "RUNBOOK.yaml" });
-  } else {
-    const projectCtx = await resolveProjectContext({
-      uramRoot,
-      project,
-      cwd: path.dirname(path.resolve(inboxZipPath)),
-    });
+  try {
+    ({ runbook } = await readRunbookFromInboxZip(inboxZipPath));
 
-    let executableCtx = null;
-
-    try {
-      executableCtx = await loadExecutableContext(projectCtx);
-    } catch {
-      executableCtx = null;
+    project = runbook?.project || "unknown";
+    if (!runbook?.project) {
+      throw new Error("[uri] runbook missing project field");
     }
 
-    plan = compilePlan({
-      runbook,
-      project,
-      executionKind: "scenario",
-      executableCtx,
+    if (isMaterializedRunbook(runbook)) {
+      plan = compileRunbookObject(runbook, { source: "RUNBOOK.yaml" });
+    } else {
+      const projectCtx = await resolveProjectContext({
+        uramRoot,
+        project,
+        cwd: path.dirname(path.resolve(inboxZipPath)),
+      });
+
+      let executableCtx = null;
+
+      try {
+        executableCtx = await loadExecutableContext(projectCtx);
+      } catch {
+        executableCtx = null;
+      }
+
+      plan = compilePlan({
+        runbook,
+        project,
+        executionKind: "scenario",
+        executableCtx,
+      });
+    }
+  } catch (error) {
+    const outboxZipPath = path.resolve("Outbox/outbox.zip");
+
+    await createInvalidInboxHelpOutbox({
+      outboxZipPath,
+      projectName: project || "tempasi",
+      validation: {
+        code: "compile_invalid_inbox",
+        message: error?.message || "Inbox validation failed during compile",
+        details: {
+          inboxZipPath: path.resolve(inboxZipPath),
+        },
+      },
     });
+
+    console.error(`[uri] compile failed: ${error?.message || String(error)}`);
+    console.error(`[uri] help outbox: ${outboxZipPath}`);
+    throw error;
   }
 
   const absOutputPath = path.resolve(outputPlanPath);
