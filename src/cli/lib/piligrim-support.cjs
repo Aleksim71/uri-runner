@@ -10,8 +10,15 @@ const { promisify } = require("util");
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_STATE_PATH = path.resolve("runtime/piligrim/state.json");
-const DEFAULT_OUTBOX_DIR = path.resolve("runtime/piligrim/outbox");
 const DEFAULT_OPERATION_LIMIT = 20;
+
+function resolveOutboxDir() {
+  if (process.env.URI_OUTBOX_DIR && process.env.URI_OUTBOX_DIR.trim()) {
+    return path.resolve(process.env.URI_OUTBOX_DIR);
+  }
+
+  return path.resolve("/home/aleksim/workspace/projects/uri-runner/Outbox");
+}
 
 async function ensureDir(dirPath) {
   await fsp.mkdir(dirPath, { recursive: true });
@@ -222,6 +229,21 @@ async function markPiligrimUpdated(statePath = DEFAULT_STATE_PATH) {
   );
 }
 
+async function syncPiligrimConfig(config = {}, statePath = DEFAULT_STATE_PATH) {
+  const state = await loadPiligrimState(statePath);
+  const next = { ...state };
+
+  if (typeof config.enabled === "boolean") {
+    next.enabled = config.enabled;
+  }
+
+  if (Number.isFinite(config.operation_limit) && config.operation_limit > 0) {
+    next.operation_limit = Math.floor(config.operation_limit);
+  }
+
+  return savePiligrimState(next, statePath);
+}
+
 function buildProjectStateMd(projectName = "unknown") {
   return [
     "# PILIGRIM_PROJECT_STATE",
@@ -304,16 +326,12 @@ function buildPiligrimMd(projectName = "unknown") {
 
 async function writeFiles(baseDir, filesMap) {
   await ensureDir(baseDir);
-  const written = [];
 
   for (const [relPath, content] of Object.entries(filesMap)) {
     const absPath = path.join(baseDir, relPath);
     await ensureDir(path.dirname(absPath));
     await fsp.writeFile(absPath, content, "utf8");
-    written.push(absPath);
   }
-
-  return written;
 }
 
 async function buildZipFromFiles(filesMap, outboxZipPath) {
@@ -335,7 +353,7 @@ async function buildZipFromFiles(filesMap, outboxZipPath) {
 }
 
 async function createWhoAmIOutbox({
-  outboxZipPath = path.join(DEFAULT_OUTBOX_DIR, "whoami.outbox.zip"),
+  outboxZipPath = path.join(resolveOutboxDir(), "outbox.zip"),
   projectName = "tempasi",
 } = {}) {
   const filesMap = {
@@ -356,7 +374,7 @@ async function createWhoAmIOutbox({
 }
 
 async function createInvalidInboxHelpOutbox({
-  outboxZipPath = path.join(DEFAULT_OUTBOX_DIR, "invalid-inbox.outbox.zip"),
+  outboxZipPath = path.join(resolveOutboxDir(), "outbox.zip"),
   projectName = "tempasi",
   validation = {},
 } = {}) {
@@ -386,7 +404,7 @@ async function createInvalidInboxHelpOutbox({
 }
 
 async function createHandoffOutbox({
-  outboxZipPath = path.join(DEFAULT_OUTBOX_DIR, "handoff.outbox.zip"),
+  outboxZipPath = path.join(resolveOutboxDir(), "outbox.zip"),
   projectName = "tempasi",
 } = {}) {
   const state = await loadPiligrimState();
@@ -421,12 +439,13 @@ async function createHandoffOutbox({
 
 module.exports = {
   DEFAULT_STATE_PATH,
-  DEFAULT_OUTBOX_DIR,
   DEFAULT_OPERATION_LIMIT,
+  resolveOutboxDir,
   loadPiligrimState,
   savePiligrimState,
   incrementOperationCount,
   markPiligrimUpdated,
+  syncPiligrimConfig,
   createWhoAmIOutbox,
   createInvalidInboxHelpOutbox,
   createHandoffOutbox,
