@@ -221,6 +221,7 @@ async function markPiligrimUpdated(statePath = DEFAULT_STATE_PATH) {
   return savePiligrimState(
     {
       ...state,
+      operation_count: 0,
       piligrim_update_needed: false,
       piligrim_updated: true,
       piligrim_ready_for_handoff: true,
