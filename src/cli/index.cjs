@@ -1,3 +1,4 @@
+/* path: src/cli/index.cjs */
 "use strict";
 
 /**
@@ -83,6 +84,27 @@ async function main(argv = process.argv.slice(2)) {
       uramRoot: process.cwd(),
       planFilePath,
     });
+  }
+
+  if (command === "whoami") {
+    const { runWhoAmICommand } = require("./commands/whoami.cjs");
+    return runWhoAmICommand();
+  }
+
+  if (command === "handoff") {
+    const { runHandoffCommand } = require("./commands/handoff.cjs");
+    return runHandoffCommand();
+  }
+
+  if (command === "piligrim") {
+    const subcommand = commandArgs[0];
+
+    if (subcommand === "mark-updated") {
+      const { runPiligrimMarkUpdatedCommand } = require("./commands/piligrim-mark-updated.cjs");
+      return runPiligrimMarkUpdatedCommand();
+    }
+
+    throw new Error(`Unknown piligrim command: ${subcommand}`);
   }
 
   if (command === "watch") {
@@ -204,14 +226,24 @@ function printHelp() {
   console.log("  debug commands <inbox.zip>");
   console.log("  debug plan <inbox.zip>");
   console.log("  debug runbook <inbox.zip>");
+  console.log("  handoff");
   console.log("  history");
   console.log("  last");
+  console.log("  piligrim mark-updated");
   console.log("  show <runId>");
   console.log("  replay <trace-file|runId> [project]");
   console.log("  run-plan <plan-file>");
   console.log("  runtime gc");
   console.log("  watch");
+  console.log("  whoami");
   console.log("");
 }
 
 module.exports = { main };
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error?.stack || error?.message || String(error));
+    process.exitCode = 1;
+  });
+}
