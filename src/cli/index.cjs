@@ -93,7 +93,7 @@ async function main(argv = process.argv.slice(2)) {
 
   if (command === "handoff") {
     const { runHandoffCommand } = require("./commands/handoff.cjs");
-    return runHandoffCommand();
+    return runHandoffCommand(commandArgs);
   }
 
   if (command === "piligrim") {
@@ -226,7 +226,7 @@ function printHelp() {
   console.log("  debug commands <inbox.zip>");
   console.log("  debug plan <inbox.zip>");
   console.log("  debug runbook <inbox.zip>");
-  console.log("  handoff");
+  console.log("  handoff [project]");
   console.log("  history");
   console.log("  last");
   console.log("  piligrim mark-updated");

@@ -8,7 +8,7 @@ const { resolveProjectContext } = require("../../uram/project-resolver.cjs");
 const { loadExecutableContext } = require("../../uram/executable-context.cjs");
 const { compilePlan } = require("../../uram/compile-plan.cjs");
 const { compileRunbookObject } = require("../../runtime/compile-runbook.cjs");
-const { createInvalidInboxHelpOutbox } = require("../lib/piligrim-support.cjs");
+const { createInvalidInboxHelpOutbox, resolveOutboxDir } = require("../lib/piligrim-support.cjs");
 
 function isMaterializedRunbook(runbook) {
   return (
@@ -77,7 +77,7 @@ async function compileInboxToPlan(input, maybeOutputPlanPath) {
       });
     }
   } catch (error) {
-    const outboxZipPath = path.resolve("Outbox/outbox.zip");
+    const outboxZipPath = path.join(resolveOutboxDir(), "outbox.zip");
 
     await createInvalidInboxHelpOutbox({
       outboxZipPath,
