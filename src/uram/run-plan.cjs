@@ -918,6 +918,65 @@ async function runScenarioPlan(normalizedPlan, params) {
     }
   }
 
+  /* execution registration fallback */
+  if (normalizedPlan.engine === "scenario") {
+    const executableCommands =
+      loadedCommands && typeof loadedCommands === "object" ? loadedCommands : {};
+
+    const missingExecutableSteps = Array.isArray(normalizedPlan.steps)
+      ? normalizedPlan.steps.filter((step) => {
+          if (!step || typeof step !== "object") {
+            return false;
+          }
+
+          const command =
+            typeof step.command === "string" ? step.command.trim() : "";
+
+          if (!command) {
+            return false;
+          }
+
+          return !Object.prototype.hasOwnProperty.call(executableCommands, command);
+        })
+      : [];
+
+    if (missingExecutableSteps.length > 0) {
+      const unknownSteps = missingExecutableSteps.map((step) => ({
+        ...step,
+        stepId:
+          typeof step.stepId === "string" && step.stepId.trim().length > 0
+            ? step.stepId
+            : typeof step.id === "string" && step.id.trim().length > 0
+              ? step.id
+              : null,
+      }));
+
+      return buildScenarioClassificationRequiredResult({
+        normalizedPlan,
+        executionContext,
+        loadedCommands,
+        startedAt,
+        preflight: {
+          status: "classification_required",
+          registryPath: scenarioRegistry.registryPath || null,
+          matchedSteps: [],
+          unknownSteps,
+          classificationRequest: {
+            kind: "scenario_command_classification_request",
+            generated_at: startedAt,
+            registry_path: scenarioRegistry.registryPath || null,
+            unknown_steps: unknownSteps.map((step) => ({
+              step_id: step.stepId || null,
+              command: typeof step.command === "string" ? step.command : null,
+              kind: typeof step.kind === "string" ? step.kind : null,
+            })),
+          },
+        },
+      });
+    }
+  }
+
+
   const environmentPolicy = runtime.environment;
   const shouldResetBeforeRun =
     environmentPolicy &&
