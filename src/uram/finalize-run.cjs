@@ -9,6 +9,29 @@ const { execFile } = require("child_process");
 const { promisify } = require("util");
 
 const execFileAsync = promisify(execFile);
+
+function isClassificationRequiredOutbox(outboxPayload) {
+  if (!outboxPayload || typeof outboxPayload !== "object") {
+    return false;
+  }
+
+  const status = typeof outboxPayload.status === "string" ? outboxPayload.status : "";
+  const executionStatus =
+    typeof outboxPayload.executionStatus === "string" ? outboxPayload.executionStatus : "";
+  const errorCode =
+    outboxPayload.error &&
+    typeof outboxPayload.error === "object" &&
+    typeof outboxPayload.error.code === "string"
+      ? outboxPayload.error.code
+      : "";
+
+  return (
+    status === "classification_required" ||
+    executionStatus === "classification_required" ||
+    errorCode === "CLASSIFICATION_REQUIRED"
+  );
+}
+
 const { copyUnknownCommandInstructionsToStaging, detectUnknownCommand } = require("./copy-unknown-command-instructions.cjs");
 
 async function ensureDir(dirPath) {
@@ -830,8 +853,12 @@ async function finalizeRun({
       outboxPayload: errorOutbox,
       tmpProvidedDir,
     });
-    if (detectUnknownCommand(errorOutbox)) {
-      console.log("status: unknown command detected");
+    if (detectUnknownCommand(errorOutbox) || isClassificationRequiredOutbox(errorOutbox)) {
+      if (isClassificationRequiredOutbox(errorOutbox)) {
+        console.log("status: classification required");
+      } else {
+        console.log("status: unknown command detected");
+      }
       console.log("status: execution blocked before start");
       console.log("status: instructions copied into REPORT/instructions");
       console.log("status: report packaged into outbox.zip");
