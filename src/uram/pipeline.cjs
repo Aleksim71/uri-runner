@@ -513,12 +513,27 @@ function extractScenarioPlanRunMeta(engineResult) {
   const planRun = engineResult?.meta?.planRun;
 
   if (!planRun || typeof planRun !== "object") {
-    throw new ScenarioPipelineError(
-      "[uri] scenario engine result missing meta.planRun",
-      {
-        metaKeys: engineResult?.meta ? Object.keys(engineResult.meta) : [],
-      }
-    );
+    const results = Array.isArray(engineResult?.outboxPayload?.result?.results)
+      ? engineResult.outboxPayload.result.results
+      : [];
+
+    const failedStep =
+      results.find((item) => item && item.ok === false)?.stepId || null;
+
+    return {
+      startedAt: null,
+      finishedAt: null,
+      executionStatus:
+        typeof engineResult?.outboxPayload?.status === "string" &&
+        engineResult.outboxPayload.status.trim()
+          ? engineResult.outboxPayload.status.trim()
+          : engineResult?.exitCode === 0
+            ? "success"
+            : "failed",
+      stepsTotal: results.length,
+      stepsCompleted: results.filter((item) => item && item.ok === true).length,
+      failedStep,
+    };
   }
 
   return {

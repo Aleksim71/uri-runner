@@ -26,6 +26,16 @@ named_commands:
     args_schema:
       required: [message]
 
+  - id: project.git-status
+    group: git
+    profile: instant
+    notes: "Проверить состояние git working tree"
+    match:
+      command: project.git-status
+    args_schema:
+      required: []
+      optional: []
+
 browser_actions:
   - id: browser.session.start
     group: browser

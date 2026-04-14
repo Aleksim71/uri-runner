@@ -9,6 +9,7 @@ const { execFile } = require("child_process");
 const { promisify } = require("util");
 
 const execFileAsync = promisify(execFile);
+const { copyUnknownCommandInstructionsToStaging, detectUnknownCommand } = require("./copy-unknown-command-instructions.cjs");
 
 async function ensureDir(dirPath) {
   await fsp.mkdir(dirPath, { recursive: true });
@@ -549,6 +550,7 @@ async function buildZipArtifact({
   zipPath,
   outboxPayload,
   tmpProvidedDir = null,
+  instructionsSourceDir = null,
 }) {
   const stagingRoot = `${zipPath}.staging`;
 
@@ -567,6 +569,15 @@ async function buildZipArtifact({
   );
   await writeJson(path.join(stagingRoot, "REPORT", "outbox.json"), outboxPayload);
   await writeJson(path.join(stagingRoot, "REPORT", "status.json"), statusPayload);
+
+  if (instructionsSourceDir) {
+    await copyUnknownCommandInstructionsToStaging({
+      stagingRoot,
+      outboxPayload,
+      instructionsSourceDir,
+    });
+    await writeJson(path.join(stagingRoot, "REPORT", "outbox.json"), outboxPayload);
+  }
 
   if (tmpProvidedDir) {
     const providedSrc = path.join(tmpProvidedDir, "provided");
@@ -632,6 +643,7 @@ async function writeProjectOutbox({
     zipPath: outboxZipPath,
     outboxPayload,
     tmpProvidedDir,
+    instructionsSourceDir: path.resolve(process.cwd(), "context/instructions"),
   });
   await writeJson(outboxJsonPath, outboxPayload);
 
@@ -657,6 +669,7 @@ async function writeProjectFailedLog({
     zipPath: outboxZipPath,
     outboxPayload,
     tmpProvidedDir,
+    instructionsSourceDir: path.resolve(process.cwd(), "context/instructions"),
   });
   await writeJson(outboxJsonPath, outboxPayload);
 
@@ -733,12 +746,14 @@ async function finalizeRun({
       zipPath: latestZipPath,
       outboxPayload: successOutbox,
       tmpProvidedDir,
+      instructionsSourceDir: path.resolve(process.cwd(), "context/instructions"),
     });
 
     await buildZipArtifact({
       zipPath: historyOutboxPath,
       outboxPayload: successOutbox,
       tmpProvidedDir,
+      instructionsSourceDir: path.resolve(process.cwd(), "context/instructions"),
     });
 
     await writeProjectOutbox({
@@ -793,12 +808,14 @@ async function finalizeRun({
       zipPath: latestZipPath,
       outboxPayload: errorOutbox,
       tmpProvidedDir,
+      instructionsSourceDir: path.resolve(process.cwd(), "context/instructions"),
     });
 
     await buildZipArtifact({
       zipPath: historyOutboxPath,
       outboxPayload: errorOutbox,
       tmpProvidedDir,
+      instructionsSourceDir: path.resolve(process.cwd(), "context/instructions"),
     });
 
     await writeProjectOutbox({
@@ -813,6 +830,13 @@ async function finalizeRun({
       outboxPayload: errorOutbox,
       tmpProvidedDir,
     });
+    if (detectUnknownCommand(errorOutbox)) {
+      console.log("status: unknown command detected");
+      console.log("status: execution blocked before start");
+      console.log("status: instructions copied into REPORT/instructions");
+      console.log("status: report packaged into outbox.zip");
+    }
+
   }
 
   const runRecord = {
