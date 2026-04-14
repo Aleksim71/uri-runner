@@ -18,7 +18,10 @@
     "test:scenarios": "vitest run test/scenarios",
     "test:cli": "vitest run test/cli",
     "test:audit": "vitest run test/audit.smoke.test.mjs",
-    "lint": "node -c src/cli.cjs && node -c src/lib/audit.cjs && node -c src/lib/runbook.cjs"
+    "lint": "node -c src/cli.cjs && node -c src/lib/audit.cjs && node -c src/lib/runbook.cjs",
+    "test:cleanup": "node scripts/test-cleanup.cjs",
+    "test:clean": "npm test && npm run test:cleanup",
+    "test:real:clean": "npm run test:real && npm run test:cleanup"
   },
   "dependencies": {
     "archiver": "^7.0.1",
