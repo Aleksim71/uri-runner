@@ -106,6 +106,15 @@ async function tryLoadCommandDir(dirPath, namespace, target) {
 
     if (mod && typeof mod.run === "function") {
       target[commandName] = mod.run;
+      continue;
+    }
+
+    if (mod && typeof mod === "object") {
+      const functionEntries = Object.entries(mod).filter(([, value]) => typeof value === "function");
+
+      if (functionEntries.length === 1) {
+        target[commandName] = functionEntries[0][1];
+      }
     }
   }
 }
