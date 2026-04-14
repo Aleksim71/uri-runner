@@ -40,6 +40,8 @@ async function runUrlChecksPublic({ reportDir, baseUrl, list, expect = [200, 304
   const results = [];
   let ok = true;
 
+  await fs.ensureDir(reportDir);
+
   for (const item of list) {
     const p = typeof item === "string" ? item : item.path;
     const url = new URL(p, baseUrl).toString();
