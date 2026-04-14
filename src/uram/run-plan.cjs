@@ -919,9 +919,14 @@ async function runScenarioPlan(normalizedPlan, params) {
   }
 
   /* execution registration fallback */
-  if (normalizedPlan.engine === "scenario") {
-    const executableCommands =
-      loadedCommands && typeof loadedCommands === "object" ? loadedCommands : {};
+  if (normalizedPlan.engine === "scenario" && scenarioRegistry.enabled) {
+    const executableCommandNames = Array.isArray(loadedCommands)
+      ? loadedCommands.filter((name) => typeof name === "string" && name.trim().length > 0)
+      : loadedCommands && typeof loadedCommands === "object"
+        ? Object.keys(loadedCommands)
+        : [];
+
+    const executableCommandSet = new Set(executableCommandNames);
 
     const missingExecutableSteps = Array.isArray(normalizedPlan.steps)
       ? normalizedPlan.steps.filter((step) => {
@@ -936,7 +941,7 @@ async function runScenarioPlan(normalizedPlan, params) {
             return false;
           }
 
-          return !Object.prototype.hasOwnProperty.call(executableCommands, command);
+          return !executableCommandSet.has(command);
         })
       : [];
 
