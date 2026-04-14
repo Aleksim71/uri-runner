@@ -20,6 +20,7 @@ const {
   loadPiligrimState,
   incrementOperationCount,
   syncPiligrimConfig,
+  createInvalidInboxHelpOutbox,
 } = require("../cli/lib/piligrim-support.cjs");
 
 const seenSourceInboxes = new DedupeCache();
@@ -232,6 +233,58 @@ function parseRunbookYaml(yamlText, zipPath) {
 
 function isAcceptedReceiver(runbook) {
   return runbook && runbook.receiver === "uri";
+}
+
+async function writeInvalidInboxHelpArtifacts({
+  processedDir,
+  projectCtx,
+  sourceFile,
+  reason,
+  projectName = "tempasi",
+}) {
+  const targets = [];
+
+  if (typeof processedDir === "string" && processedDir.trim().length > 0) {
+    targets.push(path.join(processedDir, "outbox.zip"));
+  }
+
+  if (
+    projectCtx &&
+    typeof projectCtx.outboxDir === "string" &&
+    projectCtx.outboxDir.trim().length > 0
+  ) {
+    targets.push(path.join(projectCtx.outboxDir, "outbox.zip"));
+  }
+
+  const uniqueTargets = [...new Set(targets)];
+  const validationPayload = {
+    status: "error",
+    code: "watch_invalid_inbox",
+    message: `Inbox validation failed during watch intake: ${reason || "invalid_inbox"}`,
+    details: {
+      inboxZipPath:
+        typeof sourceFile === "string" && sourceFile.trim().length > 0
+          ? path.resolve(sourceFile)
+          : null,
+      reason: reason || "invalid_inbox",
+    },
+  };
+
+  for (const outboxZipPath of uniqueTargets) {
+    await createInvalidInboxHelpOutbox({
+      outboxZipPath,
+      projectName,
+      validation: validationPayload,
+    });
+  }
+
+  if (typeof processedDir === "string" && processedDir.trim().length > 0) {
+    await fsp.writeFile(
+      path.join(processedDir, "outbox.json"),
+      JSON.stringify(validationPayload, null, 2) + "\n",
+      "utf8"
+    );
+  }
 }
 
 function createRunId(now = new Date()) {
@@ -828,6 +881,32 @@ async function handleInboxZip(fullPath, options) {
   const inspection = await inspectInboxZip(fullPath);
 
   if (!inspection.accepted) {
+    if (inspection.reason === "missing_runbook") {
+      await writeInvalidInboxHelpArtifacts({
+        processedDir,
+        sourceFile: fullPath,
+        reason: inspection.reason,
+        projectName: "tempasi",
+      });
+
+      handleIntakeDecision({
+        sourceFile: fullPath,
+        decision: "accepted",
+        reason: inspection.reason,
+        log: (line) => writeLine(stdout, line),
+      });
+
+      return {
+        handled: true,
+        accepted: false,
+        reason: inspection.reason,
+        status: "validation_error",
+        deduped: false,
+        alreadyLogged: true,
+        sourceZipPath: fullPath,
+      };
+    }
+
     const decision = handleIntakeDecision({
       sourceFile: fullPath,
       decision: "ignored",
