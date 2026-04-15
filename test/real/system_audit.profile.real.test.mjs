@@ -25,6 +25,7 @@ function readJson(filePath) {
 const CASES = [
   'audit.system.doctor',
   'audit.system.urls',
+  'audit.system.exec.success',
 ];
 
 describe('real profile: system_audit', () => {

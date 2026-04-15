@@ -46,6 +46,16 @@ named_commands:
       required: [baseUrl, list]
       optional: [reportDir, expect]
 
+  - id: system.exec
+    group: system
+    profile: instant
+    notes: "Выполняет внешнюю команду без shell через execFile"
+    match:
+      command: system.exec
+    args_schema:
+      required: [cmd]
+      optional: [args, opts]
+
   - id: project.git-status
     group: git
     profile: instant

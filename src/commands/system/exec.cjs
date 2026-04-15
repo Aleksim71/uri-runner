@@ -58,4 +58,6 @@ async function execCommand(input = {}, _context = {}) {
   return runCmd(cmd, argv, opts);
 }
 
-module.exports = { runCmd, execCommand };
+module.exports = execCommand;
+module.exports.runCmd = runCmd;
+module.exports.execCommand = execCommand;
