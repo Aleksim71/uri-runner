@@ -26,6 +26,7 @@ const CASES = [
   'audit.system.doctor',
   'audit.system.urls',
   'audit.system.exec.success',
+  'audit.system.exec.non_zero',
 ];
 
 describe('real profile: system_audit', () => {

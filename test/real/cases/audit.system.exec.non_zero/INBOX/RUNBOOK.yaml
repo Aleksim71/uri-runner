@@ -1,0 +1,37 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+steps:
+  -
+    id: "system_exec_non_zero_1"
+    stepId: "system_exec_non_zero_1"
+    kind: "command"
+    index: 0
+    command: "system.exec"
+    commandRoot: "system"
+    args:
+      cmd: "node"
+      args:
+        - "-e"
+        - "process.stderr.write('exec-fail\\n'); process.exit(7)"
+scenario:
+  steps:
+    -
+      id: "system_exec_non_zero_1"
+      stepId: "system_exec_non_zero_1"
+      kind: "command"
+      index: 0
+      command: "system.exec"
+      commandRoot: "system"
+      args:
+        cmd: "node"
+        args:
+          - "-e"
+          - "process.stderr.write('exec-fail\\n'); process.exit(7)"
