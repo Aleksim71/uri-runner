@@ -1,0 +1,37 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+      - "project"
+      - "fs"
+steps:
+  -
+    id: "fs_replace_file_1"
+    stepId: "fs_replace_file_1"
+    kind: "command"
+    index: 0
+    command: "fs.replace.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/replace-file/input.txt"
+      search: "OLD"
+      replace: "NEW"
+scenario:
+  steps:
+    -
+      id: "fs_replace_file_1"
+      stepId: "fs_replace_file_1"
+      kind: "command"
+      index: 0
+      command: "fs.replace.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/replace-file/input.txt"
+        search: "OLD"
+        replace: "NEW"

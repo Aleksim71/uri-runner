@@ -1,0 +1,33 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+      - "project"
+      - "fs"
+steps:
+  -
+    id: "fs_ensure_dir_1"
+    stepId: "fs_ensure_dir_1"
+    kind: "command"
+    index: 0
+    command: "fs.ensure.dir"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/ensure-dir/nested"
+scenario:
+  steps:
+    -
+      id: "fs_ensure_dir_1"
+      stepId: "fs_ensure_dir_1"
+      kind: "command"
+      index: 0
+      command: "fs.ensure.dir"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/ensure-dir/nested"

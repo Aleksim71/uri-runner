@@ -4,8 +4,8 @@ const { promisify } = require("node:util");
 const execFileAsync = promisify(execFile);
 
 /**
- * Run a command and return { stdout, stderr, exitCode }.
- * Never throws for non-zero exit codes; callers decide.
+ * Low-level runner.
+ * Returns { stdout, stderr, exitCode } and never throws on non-zero exit codes.
  */
 async function runCmd(cmd, args, opts = {}) {
   try {
@@ -16,7 +16,6 @@ async function runCmd(cmd, args, opts = {}) {
     });
     return { stdout: stdout ?? "", stderr: stderr ?? "", exitCode: 0 };
   } catch (e) {
-    // execFile throws on non-zero exit codes
     const stdout = e && e.stdout ? String(e.stdout) : "";
     const stderr = e && e.stderr ? String(e.stderr) : (e && e.message ? String(e.message) : "");
     const code = typeof e.code === "number" ? e.code : 1;
@@ -24,4 +23,39 @@ async function runCmd(cmd, args, opts = {}) {
   }
 }
 
-module.exports = { runCmd };
+/**
+ * Scenario command handler.
+ * Expects:
+ * {
+ *   cmd: "pwd",
+ *   args: [],
+ *   opts: { cwd: "/path" }
+ * }
+ */
+async function execCommand(input = {}, _context = {}) {
+  const cmd =
+    input && typeof input.cmd === "string" && input.cmd.trim().length > 0
+      ? input.cmd.trim()
+      : "";
+
+  const argv = Array.isArray(input?.args)
+    ? input.args.map((v) => String(v))
+    : [];
+
+  const opts =
+    input && input.opts && typeof input.opts === "object" && !Array.isArray(input.opts)
+      ? { ...input.opts }
+      : {};
+
+  if (!cmd) {
+    return {
+      stdout: "",
+      stderr: 'system.exec: "cmd" is required',
+      exitCode: 1,
+    };
+  }
+
+  return runCmd(cmd, argv, opts);
+}
+
+module.exports = { runCmd, execCommand };

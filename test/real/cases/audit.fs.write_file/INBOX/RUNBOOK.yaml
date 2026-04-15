@@ -1,0 +1,35 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+      - "project"
+      - "fs"
+steps:
+  -
+    id: "fs_write_file_1"
+    stepId: "fs_write_file_1"
+    kind: "command"
+    index: 0
+    command: "fs.write.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/write-file/note.txt"
+      content: "alpha\nbeta\n"
+scenario:
+  steps:
+    -
+      id: "fs_write_file_1"
+      stepId: "fs_write_file_1"
+      kind: "command"
+      index: 0
+      command: "fs.write.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/write-file/note.txt"
+        content: "alpha\nbeta\n"

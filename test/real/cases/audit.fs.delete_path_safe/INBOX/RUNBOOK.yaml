@@ -1,0 +1,33 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+      - "project"
+      - "fs"
+steps:
+  -
+    id: "fs_delete_path_safe_1"
+    stepId: "fs_delete_path_safe_1"
+    kind: "command"
+    index: 0
+    command: "fs.delete.path.safe"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/delete-path/trash.txt"
+scenario:
+  steps:
+    -
+      id: "fs_delete_path_safe_1"
+      stepId: "fs_delete_path_safe_1"
+      kind: "command"
+      index: 0
+      command: "fs.delete.path.safe"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/delete-path/trash.txt"

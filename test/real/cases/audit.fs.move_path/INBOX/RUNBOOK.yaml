@@ -1,0 +1,55 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+      - "project"
+      - "fs"
+steps:
+  -
+    id: "fs_move_path_write_source"
+    stepId: "fs_move_path_write_source"
+    kind: "command"
+    index: 0
+    command: "fs.write.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/move-path/source.txt"
+      content: "move source\n"
+  -
+    id: "fs_move_path_1"
+    stepId: "fs_move_path_1"
+    kind: "command"
+    index: 1
+    command: "fs.move.path"
+    commandRoot: "fs"
+    args:
+      from: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/move-path/source.txt"
+      to: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/move-path/moved.txt"
+scenario:
+  steps:
+    -
+      id: "fs_move_path_write_source"
+      stepId: "fs_move_path_write_source"
+      kind: "command"
+      index: 0
+      command: "fs.write.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/move-path/source.txt"
+        content: "move source\n"
+    -
+      id: "fs_move_path_1"
+      stepId: "fs_move_path_1"
+      kind: "command"
+      index: 1
+      command: "fs.move.path"
+      commandRoot: "fs"
+      args:
+        from: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/move-path/source.txt"
+        to: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/move-path/moved.txt"

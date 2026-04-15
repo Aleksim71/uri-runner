@@ -1,0 +1,35 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+      - "project"
+      - "fs"
+steps:
+  -
+    id: "fs_copy_path_1"
+    stepId: "fs_copy_path_1"
+    kind: "command"
+    index: 0
+    command: "fs.copy.path"
+    commandRoot: "fs"
+    args:
+      from: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/copy-path/source.txt"
+      to: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/copy-path/copied.txt"
+scenario:
+  steps:
+    -
+      id: "fs_copy_path_1"
+      stepId: "fs_copy_path_1"
+      kind: "command"
+      index: 0
+      command: "fs.copy.path"
+      commandRoot: "fs"
+      args:
+        from: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/copy-path/source.txt"
+        to: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/copy-path/copied.txt"

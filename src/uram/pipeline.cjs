@@ -843,12 +843,13 @@ async function runUramPipeline({
   let historyDir = null;
   let latestOutboxPath = null;
   let tmpOutboxPath = null;
+  let goalInfo = compute(process.cwd(), "Цель не указана");
 
   try {
     const { runbook } = await readRunbookFromInboxZip(inboxZipPath);
 
     const rb = validateRunbook(runbook);
-    const goalInfo = compute(process.cwd(), resolveGoalTitle(rb));
+    goalInfo = compute(process.cwd(), resolveGoalTitle(rb));
     project = getProjectName(rb);
     executionKind = resolveExecutionKind(rb);
 
@@ -858,6 +859,39 @@ async function runUramPipeline({
     });
 
     executableCtx = await loadExecutableContext(projectCtx);
+
+    // Merge runbook-level executableCtx command roots into loaded executable context.
+    if (rb && rb.executableCtx && typeof rb.executableCtx === "object") {
+      const loadedRoots =
+        executableCtx &&
+        executableCtx.commands &&
+        Array.isArray(executableCtx.commands.roots)
+          ? executableCtx.commands.roots
+          : [];
+
+      const runbookRoots =
+        rb.executableCtx &&
+        rb.executableCtx.commands &&
+        Array.isArray(rb.executableCtx.commands.roots)
+          ? rb.executableCtx.commands.roots
+          : [];
+
+      const mergedRoots = [...new Set(
+        [...loadedRoots, ...runbookRoots]
+          .map((v) => String(v || "").trim())
+          .filter(Boolean)
+      )];
+
+      executableCtx = {
+        ...(executableCtx || {}),
+        ...(rb.executableCtx || {}),
+        commands: {
+          ...((executableCtx && executableCtx.commands) || {}),
+          ...((rb.executableCtx && rb.executableCtx.commands) || {}),
+          roots: mergedRoots,
+        },
+      };
+    }
 
     assertEngineAllowed(executionKind, executableCtx);
 

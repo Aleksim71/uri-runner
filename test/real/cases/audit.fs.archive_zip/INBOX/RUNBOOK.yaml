@@ -1,0 +1,35 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+      - "project"
+      - "fs"
+steps:
+  -
+    id: "fs_archive_zip_1"
+    stepId: "fs_archive_zip_1"
+    kind: "command"
+    index: 0
+    command: "fs.archive.zip"
+    commandRoot: "fs"
+    args:
+      source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/dir"
+      target: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/bundle.zip"
+scenario:
+  steps:
+    -
+      id: "fs_archive_zip_1"
+      stepId: "fs_archive_zip_1"
+      kind: "command"
+      index: 0
+      command: "fs.archive.zip"
+      commandRoot: "fs"
+      args:
+        source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/dir"
+        target: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/bundle.zip"

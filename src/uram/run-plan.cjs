@@ -56,6 +56,54 @@ function normalizeLoadedCommands(commandMap) {
   return Object.keys(commandMap).sort();
 }
 
+
+async function collectCommandFiles(dirPath, prefix = "") {
+  let entries = [];
+  try {
+    entries = await fs.readdir(dirPath, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const files = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(dirPath, entry.name);
+    const relName = prefix ? `${prefix}.${entry.name}` : entry.name;
+
+    if (entry.isDirectory()) {
+      const nested = await collectCommandFiles(entryPath, relName);
+      files.push(...nested);
+      continue;
+    }
+
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    if (!entry.name.endsWith(".cjs")) {
+      continue;
+    }
+
+    const baseName = relName.replace(/\.cjs$/, "");
+    files.push({
+      absolutePath: entryPath,
+      commandTail: baseName,
+    });
+  }
+
+  return files.sort((a, b) => a.commandTail.localeCompare(b.commandTail));
+}
+
+function getFsCommandDirs(projectRoot) {
+  return uniquePaths([
+    path.join(projectRoot, "contexts", "fs", "commands"),
+    path.join(projectRoot, "commands", "fs"),
+    path.join(__dirname, "..", "commands", "fs"),
+    path.join(process.cwd(), "src", "commands", "fs"),
+  ]);
+}
+
 function getSystemCommandDirs(projectRoot) {
   return uniquePaths([
     path.join(projectRoot, "contexts", "system", "commands"),
@@ -76,28 +124,13 @@ function getProjectCommandDirs(projectRoot) {
 }
 
 async function tryLoadCommandDir(dirPath, namespace, target) {
-  let entries = [];
-  try {
-    entries = await fs.readdir(dirPath, { withFileTypes: true });
-  } catch {
-    return;
-  }
+  const files = await collectCommandFiles(dirPath);
 
-  for (const entry of entries) {
-    if (!entry.isFile()) {
-      continue;
-    }
+  for (const file of files) {
+    const commandName = `${namespace}.${file.commandTail}`;
 
-    if (!entry.name.endsWith(".cjs")) {
-      continue;
-    }
-
-    const absolutePath = path.join(dirPath, entry.name);
-    const commandBaseName = entry.name.replace(/\.cjs$/, "");
-    const commandName = `${namespace}.${commandBaseName}`;
-
-    delete require.cache[require.resolve(absolutePath)];
-    const mod = require(absolutePath);
+    delete require.cache[require.resolve(file.absolutePath)];
+    const mod = require(file.absolutePath);
 
     if (typeof mod === "function") {
       target[commandName] = mod;
@@ -123,9 +156,10 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
   const roots =
     executableCtxSnapshot &&
     executableCtxSnapshot.commands &&
-    Array.isArray(executableCtxSnapshot.commands.roots)
+    Array.isArray(executableCtxSnapshot.commands.roots) &&
+    executableCtxSnapshot.commands.roots.length > 0
       ? executableCtxSnapshot.commands.roots
-      : [];
+      : ["system", "project", "browser", "fs"];
 
   const commands = {};
 
@@ -140,6 +174,13 @@ async function loadPlanCommands({ projectRoot, executableCtxSnapshot }) {
     if (root === "project") {
       for (const dirPath of getProjectCommandDirs(projectRoot)) {
         await tryLoadCommandDir(dirPath, "project", commands);
+      }
+      continue;
+    }
+
+    if (root === "fs") {
+      for (const dirPath of getFsCommandDirs(projectRoot)) {
+        await tryLoadCommandDir(dirPath, "fs", commands);
       }
       continue;
     }
@@ -482,13 +523,73 @@ async function runMaterializedPlan(normalizedPlan, params) {
         }
       }
 
+      const normalizedValue = value === undefined ? null : value;
+      const terminalExitCode =
+        normalizedValue &&
+        typeof normalizedValue === "object" &&
+        Number.isInteger(normalizedValue.exitCode)
+          ? normalizedValue.exitCode
+          : 0;
+
+      if (terminalExitCode !== 0) {
+        failedStep = step.stepId || null;
+        const finishedAt = new Date().toISOString();
+
+        executionContext.results.push({
+          stepId: step.stepId || null,
+          command: null,
+          type: step.type || null,
+          action: step.action || null,
+          ok: false,
+          value: normalizedValue,
+          error: {
+            code: "COMMAND_EXIT_NON_ZERO",
+            message: `Command exited with code ${terminalExitCode}`,
+            details: {
+              exitCode: terminalExitCode,
+            },
+          },
+        });
+
+        return {
+          exitCode: 1,
+          outboxPayload: {
+            ok: false,
+            engine: normalizedPlan.engine,
+            project: normalizedPlan.project,
+            loaded_commands: [],
+            result: {
+              results: executionContext.results,
+            },
+          },
+          meta: {
+            loadedCommands: [],
+            error: {
+              code: "COMMAND_EXIT_NON_ZERO",
+              message: `Command exited with code ${terminalExitCode}`,
+              details: {
+                exitCode: terminalExitCode,
+              },
+            },
+            planRun: {
+              startedAt,
+              finishedAt,
+              executionStatus: "failed",
+              stepsTotal: normalizedPlan.steps.length,
+              stepsCompleted: executionContext.results.length,
+              failedStep,
+            },
+          },
+        };
+      }
+
 executionContext.results.push({
         stepId: step.stepId || null,
         command: null,
         type: step.type || null,
         action: step.action || null,
         ok: true,
-        value: value === undefined ? null : value,
+        value: normalizedValue,
       });
     } catch (error) {
       failedStep = step.stepId || null;
