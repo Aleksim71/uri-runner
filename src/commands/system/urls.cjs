@@ -56,4 +56,21 @@ async function runUrlChecksPublic({ reportDir, baseUrl, list, expect = [200, 304
   return { ok, outPath, results };
 }
 
-module.exports = { runUrlChecksPublic };
+async function urlsCommand(args = {}, context = {}) {
+  const reportDir =
+    args.reportDir ||
+    context.reportDir ||
+    context.artifactsDir ||
+    context.outputDir ||
+    "artifacts";
+
+  return await runUrlChecksPublic({
+    reportDir,
+    baseUrl: args.baseUrl,
+    list: Array.isArray(args.list) ? args.list : [],
+    expect: Array.isArray(args.expect) && args.expect.length > 0 ? args.expect : [200, 304],
+  });
+}
+
+module.exports = urlsCommand;
+module.exports.runUrlChecksPublic = runUrlChecksPublic;

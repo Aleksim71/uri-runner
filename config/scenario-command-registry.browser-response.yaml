@@ -26,6 +26,26 @@ named_commands:
     args_schema:
       required: [message]
 
+  - id: system.doctor
+    group: system
+    profile: instant
+    notes: "Проверяет наличие package.json и базовую готовность проекта"
+    match:
+      command: system.doctor
+    args_schema:
+      required: []
+      optional: [cwd, runTests]
+
+  - id: system.urls
+    group: system
+    profile: instant
+    notes: "Проверяет список URL относительно baseUrl и сохраняет отчёт"
+    match:
+      command: system.urls
+    args_schema:
+      required: [baseUrl, list]
+      optional: [reportDir, expect]
+
   - id: project.git-status
     group: git
     profile: instant

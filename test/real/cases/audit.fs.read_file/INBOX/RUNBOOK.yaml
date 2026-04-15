@@ -12,10 +12,20 @@ executableCtx:
       - "fs"
 steps:
   -
+    id: "fs_read_file_prepare"
+    stepId: "fs_read_file_prepare"
+    kind: "command"
+    index: 0
+    command: "fs.write.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/read-file/input.txt"
+      content: "alpha\nbeta\n"
+  -
     id: "fs_read_file_1"
     stepId: "fs_read_file_1"
     kind: "command"
-    index: 0
+    index: 1
     command: "fs.read.file"
     commandRoot: "fs"
     args:
@@ -23,10 +33,20 @@ steps:
 scenario:
   steps:
     -
+      id: "fs_read_file_prepare"
+      stepId: "fs_read_file_prepare"
+      kind: "command"
+      index: 0
+      command: "fs.write.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/read-file/input.txt"
+        content: "alpha\nbeta\n"
+    -
       id: "fs_read_file_1"
       stepId: "fs_read_file_1"
       kind: "command"
-      index: 0
+      index: 1
       command: "fs.read.file"
       commandRoot: "fs"
       args:

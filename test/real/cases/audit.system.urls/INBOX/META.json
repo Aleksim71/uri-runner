@@ -1,0 +1,5 @@
+{
+  "transport": "project-owned",
+  "receiver": "uri",
+  "project": "uri-runner-next"
+}

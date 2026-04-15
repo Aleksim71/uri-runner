@@ -12,10 +12,20 @@ executableCtx:
       - "fs"
 steps:
   -
+    id: "fs_copy_path_prepare"
+    stepId: "fs_copy_path_prepare"
+    kind: "command"
+    index: 0
+    command: "fs.write.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/copy-path/source.txt"
+      content: "copy-me\n"
+  -
     id: "fs_copy_path_1"
     stepId: "fs_copy_path_1"
     kind: "command"
-    index: 0
+    index: 1
     command: "fs.copy.path"
     commandRoot: "fs"
     args:
@@ -24,10 +34,20 @@ steps:
 scenario:
   steps:
     -
+      id: "fs_copy_path_prepare"
+      stepId: "fs_copy_path_prepare"
+      kind: "command"
+      index: 0
+      command: "fs.write.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/copy-path/source.txt"
+        content: "copy-me\n"
+    -
       id: "fs_copy_path_1"
       stepId: "fs_copy_path_1"
       kind: "command"
-      index: 0
+      index: 1
       command: "fs.copy.path"
       commandRoot: "fs"
       args:

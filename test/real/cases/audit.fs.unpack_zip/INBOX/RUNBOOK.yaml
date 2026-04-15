@@ -12,10 +12,30 @@ executableCtx:
       - "fs"
 steps:
   -
+    id: "fs_unpack_zip_prepare_file"
+    stepId: "fs_unpack_zip_prepare_file"
+    kind: "command"
+    index: 0
+    command: "fs.write.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/unpack-zip/source.txt"
+      content: "unpack-me\n"
+  -
+    id: "fs_unpack_zip_prepare_zip"
+    stepId: "fs_unpack_zip_prepare_zip"
+    kind: "command"
+    index: 1
+    command: "fs.archive.zip"
+    commandRoot: "fs"
+    args:
+      source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/unpack-zip/source.txt"
+      target: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/unpack-zip/sample.zip"
+  -
     id: "fs_unpack_zip_1"
     stepId: "fs_unpack_zip_1"
     kind: "command"
-    index: 0
+    index: 2
     command: "fs.unpack.zip"
     commandRoot: "fs"
     args:
@@ -24,10 +44,30 @@ steps:
 scenario:
   steps:
     -
+      id: "fs_unpack_zip_prepare_file"
+      stepId: "fs_unpack_zip_prepare_file"
+      kind: "command"
+      index: 0
+      command: "fs.write.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/unpack-zip/source.txt"
+        content: "unpack-me\n"
+    -
+      id: "fs_unpack_zip_prepare_zip"
+      stepId: "fs_unpack_zip_prepare_zip"
+      kind: "command"
+      index: 1
+      command: "fs.archive.zip"
+      commandRoot: "fs"
+      args:
+        source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/unpack-zip/source.txt"
+        target: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/unpack-zip/sample.zip"
+    -
       id: "fs_unpack_zip_1"
       stepId: "fs_unpack_zip_1"
       kind: "command"
-      index: 0
+      index: 2
       command: "fs.unpack.zip"
       commandRoot: "fs"
       args:

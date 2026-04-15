@@ -12,24 +12,44 @@ executableCtx:
       - "fs"
 steps:
   -
+    id: "fs_archive_zip_prepare"
+    stepId: "fs_archive_zip_prepare"
+    kind: "command"
+    index: 0
+    command: "fs.write.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/source.txt"
+      content: "zip-me\n"
+  -
     id: "fs_archive_zip_1"
     stepId: "fs_archive_zip_1"
     kind: "command"
-    index: 0
+    index: 1
     command: "fs.archive.zip"
     commandRoot: "fs"
     args:
-      source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/dir"
+      source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/source.txt"
       target: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/bundle.zip"
 scenario:
   steps:
     -
+      id: "fs_archive_zip_prepare"
+      stepId: "fs_archive_zip_prepare"
+      kind: "command"
+      index: 0
+      command: "fs.write.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/source.txt"
+        content: "zip-me\n"
+    -
       id: "fs_archive_zip_1"
       stepId: "fs_archive_zip_1"
       kind: "command"
-      index: 0
+      index: 1
       command: "fs.archive.zip"
       commandRoot: "fs"
       args:
-        source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/dir"
+        source: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/source.txt"
         target: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/archive-zip/bundle.zip"

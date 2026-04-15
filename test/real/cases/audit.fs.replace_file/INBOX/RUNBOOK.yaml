@@ -12,10 +12,20 @@ executableCtx:
       - "fs"
 steps:
   -
+    id: "fs_replace_file_prepare"
+    stepId: "fs_replace_file_prepare"
+    kind: "command"
+    index: 0
+    command: "fs.write.file"
+    commandRoot: "fs"
+    args:
+      path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/replace-file/input.txt"
+      content: "OLD\nOLD\n"
+  -
     id: "fs_replace_file_1"
     stepId: "fs_replace_file_1"
     kind: "command"
-    index: 0
+    index: 1
     command: "fs.replace.file"
     commandRoot: "fs"
     args:
@@ -25,10 +35,20 @@ steps:
 scenario:
   steps:
     -
+      id: "fs_replace_file_prepare"
+      stepId: "fs_replace_file_prepare"
+      kind: "command"
+      index: 0
+      command: "fs.write.file"
+      commandRoot: "fs"
+      args:
+        path: "/home/aleksim/uri-runner-next/.tmp-command-audit/fs/replace-file/input.txt"
+        content: "OLD\nOLD\n"
+    -
       id: "fs_replace_file_1"
       stepId: "fs_replace_file_1"
       kind: "command"
-      index: 0
+      index: 1
       command: "fs.replace.file"
       commandRoot: "fs"
       args:

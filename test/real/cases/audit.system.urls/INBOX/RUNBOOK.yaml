@@ -1,0 +1,41 @@
+version: 1
+receiver: "uri"
+project: "uri-runner-next"
+profile: "scenario"
+engine: "scenario"
+cwd: "."
+executableCtx:
+  commands:
+    roots:
+      - "system"
+steps:
+  -
+    id: "system_urls_1"
+    stepId: "system_urls_1"
+    kind: "command"
+    index: 0
+    command: "system.urls"
+    commandRoot: "system"
+    args:
+      reportDir: ".tmp-command-audit/system/urls/report"
+      baseUrl: "http://127.0.0.1:4310"
+      list:
+        - "/"
+      expect:
+        - 200
+scenario:
+  steps:
+    -
+      id: "system_urls_1"
+      stepId: "system_urls_1"
+      kind: "command"
+      index: 0
+      command: "system.urls"
+      commandRoot: "system"
+      args:
+        reportDir: ".tmp-command-audit/system/urls/report"
+        baseUrl: "http://127.0.0.1:4310"
+        list:
+          - "/"
+        expect:
+          - 200

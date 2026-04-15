@@ -95,4 +95,16 @@ async function runDoctor({ cwd, runTests = false }) {
   return { ok: true, exitCode: 0 };
 }
 
-module.exports = { runDoctor };
+async function doctorCommand(args = {}, context = {}) {
+  const cwd =
+    args.cwd ||
+    context.cwd ||
+    process.cwd();
+
+  const runTests = args.runTests === true;
+
+  return await runDoctor({ cwd, runTests });
+}
+
+module.exports = doctorCommand;
+module.exports.runDoctor = runDoctor;
